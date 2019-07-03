@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "vesoil_sensor\\src"
+		},
+		{
+			"path": "vesoil_hub\\src"
+		}
+	],
+	"settings": {}
+}
