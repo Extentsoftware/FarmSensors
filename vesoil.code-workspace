@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "vesoil_hub\\src"
+		},
+		{
+			"path": "docs"
 		}
 	],
 	"settings": {}
