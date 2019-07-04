@@ -5,18 +5,16 @@
 // environment variables
 // LOCALAPPDATA = C:\Users\username\AppData\Local
 
-static const char * TAG = "Vesoil Receiver";
+static const char * TAG = "Hub";
 #define APP_VERSION 1
-#define ESP32
-
 #include <WiFi.h>
 #include <SPI.h>
 #include <Wire.h>  
 #include <HardwareSerial.h>
 #include <LoRa.h>
 #include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
 #include <Preferences.h>
+#include <ESPAsyncWebServer.h>
 
 #define SENSOR_SECRET 13212
 
@@ -43,6 +41,11 @@ struct SensorReport
     int moist2;
 };
 
+struct SenserConfig
+{
+  char  ssid[16] = "VESTRONG_H";
+} config;
+
 #define BLUELED 14   // GPIO14
 #define SCK     5    // GPIO5  -- SX1278's SCK
 #define MISO    19   // GPIO19 -- SX1278's MISO
@@ -54,9 +57,9 @@ struct SensorReport
 #define PSRAM   16    // 8M byte - https://www.electrodragon.com/product/2pcs-ipus-ips6404-iot-ram/
                       // https://drive.google.com/file/d/1-5NtY1bz0l9eYN9U0U4dP3uASwnMmYGP/view        
 
-#define BATTERY_PIN 35 // battery level measurement pin, here is the voltage divider connected
-
-#define STORESIZE 30000
+#define BATTERY_PIN 35    // battery level measurement pin, here is the voltage divider connected
+#define BTN1        39    // GPIO39 On board button
+#define STORESIZE   30000
 
 float vBat; // battery voltage
 SensorReport* store;
@@ -66,11 +69,20 @@ AsyncWebServer server(80);
 float snr = 0;
 float rssi = 0;
 int badpacket=0;
-
-const char* ssid = "VESTRONG_R";
-//const char* password = "YOUR_PASSWORD";
+bool wifiMode=false;
+Preferences preferences;
 
 void setup() {
+
+  preferences.begin(TAG, false);
+  if (preferences.getBool("configinit"))
+    preferences.getBytes("config", &config, sizeof(SenserConfig));
+  else
+  {
+    preferences.putBytes("config", &config, sizeof(SenserConfig));
+    preferences.putBool("configinit", true);
+  }
+
 
   setupBatteryVoltage();
 
@@ -87,7 +99,11 @@ void setup() {
   SystemCheck();
 
   // turn on (for future: if GPIO is off)
-  setupWifi();
+  if (digitalRead(BTN1)==0)
+  {
+    wifiMode=true;
+    setupWifi();
+  }
 
   // turn on LoRa  
   Serial.println("Starting Lora");
@@ -205,7 +221,7 @@ void showBlock(int packetSize) {
 }
 
 void setupWifi() {
-    WiFi.softAP(ssid);
+    WiFi.softAP(config.ssid);
 
     Serial.print("IP Address: ");
     Serial.println(WiFi.softAPIP());
@@ -217,7 +233,7 @@ void setupWifi() {
     // Send a GET request to <IP>/get?message=<message>
     server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
         
-        String reply = "{ \"samples\": [";
+        String reply = "{ \"app\": \"hub\", \"samples\": [";
         SensorReport *ptr=NULL;
         ptr = GetFromStore();
         do {          
@@ -233,6 +249,7 @@ void setupWifi() {
                   ptr->volts
                    );
             reply += msg;
+            free(msg);
           }
 
           // get next packet

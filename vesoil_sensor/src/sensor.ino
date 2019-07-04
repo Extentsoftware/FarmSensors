@@ -1,11 +1,8 @@
-
-
 // https://github.com/LilyGO/TTGO-T-Beam
 // Pin map http://tinymicros.com/wiki/TTGO_T-Beam
 
-static const char * TAG = "Vesoil Sender";
+static const char * TAG = "Sensor";
 #define APP_VERSION 1
-#define ESP32
 
 #define ARDUINO 100
 #include <WiFi.h>
@@ -25,46 +22,43 @@ static const char * TAG = "Vesoil Sender";
 #include <esp_bt.h>
 #include <driver/rtc_io.h>
 #include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
 #include <Preferences.h>
+#include <ESPAsyncWebServer.h>
 
 #include "TinyGPS.h"
 #include "vesensor.h"
 
-
 #define FREQUENCY 868E6
-#define TXPOWER  20   // max power
-
+#define TXPOWER     20   // max power
+#define TXVOLTS    2.7
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  5       /* Time ESP32 will go to sleep (in seconds) */
-
 #define ONE_WIRE_BUS 2
-
-#define BATTERY_PIN 35 // battery level measurement pin, here is the voltage divider connected
-
-#define MOIST1   13    // Analogue soil sensor 1
-#define MOIST2   25    // Analogue soil sensor 2
-#define DHTPIN   22    // DHT11
-
-#define BLUELED  14   // GPIO14
-#define BTN1     39   // GPIO39 On board button
-#define BUSPWR    0   // GPIO00
-
-#define SCK      5    // GPIO5  -- SX1278's SCK
-#define MISO     19   // GPIO19 -- SX1278's MISnO
-#define MOSI     27   // GPIO27 -- SX1278's MOSI
-#define SS       18   // GPIO18 -- SX1278's CS
-#define RST      14   // GPIO14 -- SX1278's RESET
-#define DI0      26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
-
-#define BAND  868E6
+#define BATTERY_PIN 35   // battery level measurement pin, here is the voltage divider connected
+#define MOIST1      13   // Analogue soil sensor 1
+#define MOIST2      25   // Analogue soil sensor 2
+#define DHTPIN      22   // DHT11
+#define BLUELED     14   // GPIO14
+#define BTN1        39   // GPIO39 On board button
+#define BUSPWR       0   // GPIO00
+#define SCK          5   // GPIO5  -- SX1278's SCK
+#define MISO        19   // GPIO19 -- SX1278's MISnO
+#define MOSI        27   // GPIO27 -- SX1278's MOSI
+#define SS          18   // GPIO18 -- SX1278's CS
+#define RST         14   // GPIO14 -- SX1278's RESET
+#define DI0         26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
+#define BAND     868E6
 
 struct ReceiverConfig
 {
-  char  ssid[16] = "VESTRONG_R";
-  int   port = 80;
-  int   gps_timout = 30;        // seconds
-  int   reportEvery = 30 * 60;  // minutes
+  char  ssid[16] = "VESTRONG_S";
+  int   gps_timout = 30;        // wait n seconds to get GPS fix
+  int   failedGPSsleep=60;      // sleep this long if failed to get GPS
+  int   reportEvery = 30 * 60;  // get sample every n seconds
+  int   fromHour;               // between these hours
+  int   toHour;                 // between these hours
+  long  frequency = FREQUENCY;  // LoRa transmit frequency
+  int   txpower = TXPOWER;      // LoRa transmit power
+  float txvolts = TXVOLTS;      // power supply must be delivering this voltage in order to xmit.
 } config;
 
 OneWire oneWire(ONE_WIRE_BUS);
@@ -72,57 +66,85 @@ DallasTemperature tmpsensors(&oneWire);
 TinyGPSPlus gps;                            
 DHT_Unified dht(DHTPIN, DHT22);
 AsyncWebServer server(80);
-const char* ssid = "VESTRONG_R";
 Preferences preferences;
+bool wifiMode=false;
 
 void setup() {
+  preferences.begin(TAG, false);
+  if (preferences.getBool("configinit"))
+    preferences.getBytes("config", &config, sizeof(ReceiverConfig));
+  else
+  {
+    preferences.putBytes("config", &config, sizeof(ReceiverConfig));
+    preferences.putBool("configinit", true);
+  }
+
   pinMode(BLUELED, OUTPUT);   // onboard Blue LED
   pinMode(BTN1,INPUT);        // Button 1
-  pinMode(BUSPWR,OUTPUT);     // turn on power to sensors
-
-  preferences.begin("VESTRONG", false);
-  preferences.getBytes("config", &config, sizeof(ReceiverConfig));
-
-  digitalWrite(BLUELED, HIGH);   // turn the LED off
+  pinMode(BUSPWR,OUTPUT);     // power enable for the sensors
+  
+  digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
   
   setupSerial();  
   setupLoRa();
   setupGPS();
 
+  if (digitalRead(BTN1)==0)
+  {
+    wifiMode=true;
+    setupWifi();
+  }
+
   digitalWrite(BLUELED, LOW);   // turn the LED off
 
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
-
 }
 
 void loop() {
 
-  if (digitalRead(BTN1)==0)
+  // no sampling during wifi mode
+  if (wifiMode=true)
   {
-    setupWifi();
+    return;
   }
 
+  // get GPS and then gather/send a sample if within the time window
+  // best not to send at night as we drain the battery
   SensorReport report;
   for (int i=0; i<30; i++)
   {
+    // check whethe we have  gps sig
     if (gps.location.lat()!=0)
     {
-      digitalWrite(BUSPWR, HIGH);   // turn on power to the sensor bus
-      delay(100);
-      setupTempSensors();
-      delay(100);
-      getSample(&report);
-      digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
+      // in the report window?
+      if (gps.time.hour>=config.fromHour && gps.time.hour < config.toHour)
+      {
+        digitalWrite(BUSPWR, HIGH);   // turn on power to the sensor bus
+        delay(100);
+        setupTempSensors();
+        delay(100);
+        getSample(&report);
+        digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
 
-      Serial.printf("%02u:%02u:%02u %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f\n",report.hour, report.minute, report.second, report.lat,report.lng ,report.alt ,report.sats ,report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
-      sendSampleLora(&report);
+        Serial.printf("%02u:%02u:%02u %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f\n",report.hour, report.minute, report.second, report.lat,report.lng ,report.alt ,report.sats ,report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
+        sendSampleLora(&report);
+        deepSleep((long)config.reportEvery);
+      }
+      else
+      {
+        // not in report window
+        if (config.fromHour > gps.time.hour)
+          deepSleep( (config.fromHour - gps.time.hour) * 60 );
+        else
+          deepSleep( ((24-gps.time.hour) + config.toHour) * 60 );
+      }
       break;    
     }
     Serial.printf("waiting for GPS try: %d\n", i);
     smartDelay(1000);
   }
-
-  deepSleep();
+  // GPS failed - try again in the future
+  deepSleep((long)config.failedGPSsleep);
 }
 
 
@@ -155,19 +177,19 @@ void setupSerial()
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
-  Serial.println("VESTRONG LaPoulton LoRa Sender");
+  Serial.println("VESTRONG LaPoulton LoRa Sensor");
   print_wakeup_reason();
 }
 
 void setupLoRa() {
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
-  int result = LoRa.begin(FREQUENCY);
+  int result = LoRa.begin(config.frequency);
   if (!result) {
     Serial.printf("Starting LoRa failed: err %d", result);
-    deepSleep();
+    deepSleep(10);
   }  
-  LoRa.setTxPower(TXPOWER);
+  LoRa.setTxPower(config.txpower);
 }
 
 float readAirTemp()
@@ -217,14 +239,14 @@ void GPSReset() {
   Serial1.write(RXM_PMREQ, sizeof(RXM_PMREQ));
 }
 
-void deepSleep()
+void deepSleep(long timetosleep)
 {
   GPSReset();
   LoRa.sleep();
   turnOffWifi();
   //isolateGPIO();
   turnOffBluetooth();
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+  esp_sleep_enable_timer_wakeup(timetosleep * uS_TO_S_FACTOR);
   Serial.println("Going to sleep now");
   delay(1000);
   Serial.flush(); 
@@ -344,7 +366,7 @@ void print_wakeup_reason() {
 }
 
 void setupWifi() {
-    WiFi.softAP(ssid);
+    WiFi.softAP(config.ssid);
 
     Serial.print("IP Address: ");
     Serial.println(WiFi.softAPIP());
@@ -354,18 +376,23 @@ void setupWifi() {
     });
 
     // Send a GET request to <IP>/get?message=<message>
-    server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    server.on("/api", HTTP_GET, [] (AsyncWebServerRequest *request) {
         
         String reply = "{ \"config\": [";
         
         char *msg = (char *)malloc(512);
-        sprintf(msg, "{ \"ssid\": \"%s\", \"port\": %d, \"gpstimeout\": %d, \"reportfreq\":%d, \"volts\":%f }\n", 
-              config.ssid, config.port, config.gps_timout, config.reportEvery, getBatteryVoltage() );
+        sprintf(msg, "{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%d, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
+                 config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, getBatteryVoltage() );
         reply += msg;
         reply += " ] }\n";
-
+        free(msg);
         request->send(200, "text/plain",  reply);
     });
+
+    server.on("/api", HTTP_POST, [] (AsyncWebServerRequest *request) {
+        request->send(200, "text/plain",  "done");
+    });
+
 
     server.onNotFound(notFound);
 
