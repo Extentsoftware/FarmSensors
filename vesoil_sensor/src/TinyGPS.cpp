@@ -59,39 +59,39 @@ bool TinyGPSPlus::encode(char c)
 
   switch(c)
   {
-  case ',': // term terminators
-    parity ^= (uint8_t)c;
-  case '\r':
-  case '\n':
-  case '*':
-    {
-      bool isValidSentence = false;
-      if (curTermOffset < sizeof(term))
+    case ',': // term terminators
+      parity ^= (uint8_t)c;
+    case '\r':
+    case '\n':
+    case '*':
       {
-        term[curTermOffset] = 0;
-        isValidSentence = endOfTermHandler();
+        bool isValidSentence = false;
+        if (curTermOffset < sizeof(term))
+        {
+          term[curTermOffset] = 0;
+          isValidSentence = endOfTermHandler();
+        }
+        ++curTermNumber;
+        curTermOffset = 0;
+        isChecksumTerm = c == '*';
+        return isValidSentence;
       }
-      ++curTermNumber;
-      curTermOffset = 0;
-      isChecksumTerm = c == '*';
-      return isValidSentence;
-    }
-    break;
+      break;
 
-  case '$': // sentence begin
-    curTermNumber = curTermOffset = 0;
-    parity = 0;
-    curSentenceType = GPS_SENTENCE_OTHER;
-    isChecksumTerm = false;
-    sentenceHasFix = false;
-    return false;
+    case '$': // sentence begin
+      curTermNumber = curTermOffset = 0;
+      parity = 0;
+      curSentenceType = GPS_SENTENCE_OTHER;
+      isChecksumTerm = false;
+      sentenceHasFix = false;
+      return false;
 
-  default: // ordinary characters
-    if (curTermOffset < sizeof(term) - 1)
-      term[curTermOffset++] = c;
-    if (!isChecksumTerm)
-      parity ^= c;
-    return false;
+    default: // ordinary characters
+      if (curTermOffset < sizeof(term) - 1)
+        term[curTermOffset++] = c;
+      if (!isChecksumTerm)
+        parity ^= c;
+      return false;
   }
 
   return false;

@@ -14,6 +14,15 @@ static const char * TAG = "Hub";
 #include <LoRa.h>
 #include <AsyncTCP.h>
 #include <Preferences.h>
+
+#ifndef ESP32
+#define ESP32
+#endif
+
+#ifndef ARDUINO
+#define ARDUINO 100
+#endif
+
 #include <ESPAsyncWebServer.h>
 
 #define SENSOR_SECRET 13212
@@ -301,3 +310,4 @@ void getBatteryVoltage() {
   // we've set 10-bit ADC resolution 2^10=1024 and voltage divider makes it half of maximum readable value (which is 3.3V)
   vBat = analogRead(BATTERY_PIN) * 2.0 * (3.3 / 1024.0);
 }
+
