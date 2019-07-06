@@ -81,8 +81,30 @@ AsyncWebServer server(80);
 Preferences preferences;
 bool wifiMode=false;
 
-void smartDelay(unsigned long ms)                
-{
+void print_wakeup_reason();
+void  turnOffRTC();
+void turnOffWifi();
+void setupSerial();
+void setupLoRa() ;
+void smartDelay(unsigned long ms);
+void turnOffWifi();
+void isolateGPIO();
+void turnOffBluetooth();
+void deepSleep(uint64_t timetosleep);
+void setupTempSensors();
+float readGroundTemp();
+float readAirTemp();
+float readAirHum();
+void GPSwakeup();
+void GPSReset();
+void setupGPS();
+float getBatteryVoltage();
+void sendSampleLora(SensorReport *report);
+void notFound(AsyncWebServerRequest *request);
+void setupWifi();
+void getSample(SensorReport *report);
+
+void smartDelay(unsigned long ms) {
   unsigned long start = millis();
   do
   {
@@ -98,17 +120,16 @@ void print_wakeup_reason() {
 
   switch (wakeup_reason)
   {
-    case 1  : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
-    case 2  : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
-    case 3  : Serial.println("Wakeup caused by timer"); break;
-    case 4  : Serial.println("Wakeup caused by touchpad"); break;
-    case 5  : Serial.println("Wakeup caused by ULP program"); break;
+    case 2  : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case 3  : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case 4  : Serial.println("Wakeup caused by timer"); break;
+    case 5  : Serial.println("Wakeup caused by touchpad"); break;
+    case 6  : Serial.println("Wakeup caused by ULP program"); break;
     default : Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
   }
 }
 
-void setupSerial()
-{
+void setupSerial() {
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
@@ -116,19 +137,15 @@ void setupSerial()
   print_wakeup_reason();
 }
 
-void setupLoRa() 
-{
+void setupLoRa() {
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
   int result = LoRa.begin(config.frequency);
   if (!result) {
     Serial.printf("Starting LoRa failed: err %d", result);
-//    deepSleep(10);
   }  
   LoRa.setTxPower(config.txpower);
 }
-
-
 
 void  turnOffRTC(){
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
@@ -137,9 +154,7 @@ void  turnOffRTC(){
   esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
 }
 
-//Turn off wifi and clear memory for wifi
-void turnOffWifi()
-{
+void turnOffWifi() {
   esp_wifi_stop();
   esp_wifi_deinit();
 }
@@ -153,30 +168,30 @@ void isolateGPIO() {
   }
 }
 
-//Turn off bluetooth and clear memory for bluetooth
-void turnOffBluetooth(){
+void turnOffBluetooth() {
   esp_bluedroid_disable();
   esp_bluedroid_deinit();
   esp_bt_controller_disable();
   esp_bt_controller_deinit();
 }
 
-void deepSleep(long timetosleep)
-{
-  //GPSReset();
+void deepSleep(uint64_t timetosleep) {
+
+  GPSReset();
   LoRa.sleep();
   turnOffWifi();
   //isolateGPIO();
   turnOffBluetooth();
-  esp_sleep_enable_timer_wakeup(timetosleep * uS_TO_S_FACTOR);
-  Serial.println("Going to sleep now");
+
+  uint64_t ms = timetosleep * uS_TO_S_FACTOR;
+  esp_sleep_enable_timer_wakeup(ms);
+  Serial.printf("Going to sleep now for %d ms", ms);
   delay(1000);
   Serial.flush(); 
   esp_deep_sleep_start();
 }
 
-void setupTempSensors()
-{
+void setupTempSensors() {
   // 1-wire 
   tmpsensors.begin();
   tmpsensors.setResolution(12);  
@@ -187,8 +202,7 @@ void setupTempSensors()
   dht.begin();
 }
 
-float readGroundTemp()
-{
+float readGroundTemp() {
   for (int i=0;i<3;i++)
   {
     tmpsensors.requestTemperatures();
@@ -200,8 +214,7 @@ float readGroundTemp()
 }
 
 
-float readAirTemp()
-{
+float readAirTemp() {
   sensors_event_t event;
   dht.temperature().getEvent(&event);
   
@@ -212,8 +225,7 @@ float readAirTemp()
   return 0;
 }
 
-float readAirHum()
-{
+float readAirHum() {
   sensors_event_t event;
   dht.humidity().getEvent(&event);
   if (!isnan(event.temperature)) 
@@ -223,7 +235,7 @@ float readAirHum()
   return 0;
 }
 
-void GPSwakeup(){
+void GPSwakeup() {
   Serial.println("Wake GPS");
   int data = -1;
   do {
@@ -243,15 +255,12 @@ void GPSReset() {
   Serial1.write(RXM_PMREQ, sizeof(RXM_PMREQ));
 }
 
-
-void setupGPS()
-{
+void setupGPS() {
   Serial1.begin(9600, SERIAL_8N1, 12, 15);   //17-TX 18-RX
   GPSwakeup();
 }
 
-float getBatteryVoltage()
-{
+float getBatteryVoltage() {
   // we've set 10-bit ADC resolution 2^10=1024 and voltage divider makes it half of maximum readable value (which is 3.3V)
   // set battery measurement pin
   adcAttachPin(BATTERY_PIN);
@@ -309,11 +318,9 @@ void setupWifi() {
     server.begin();
 }
 
-
 #endif
 
-void getSample(SensorReport *report) 
-{
+void getSample(SensorReport *report) {
   float vBat = getBatteryVoltage();
 
   analogReadResolution(12);
@@ -348,7 +355,6 @@ void getSample(SensorReport *report)
   report->moist2 = m2;
 }
 
-
 void setup() {
   preferences.begin(TAG, false);
   if (preferences.getBool("configinit"))
@@ -382,14 +388,16 @@ void setup() {
 
   digitalWrite(BLUELED, LOW);   // turn the LED off
 
+  Serial.printf("{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%d, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
+          config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, getBatteryVoltage() );
+
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
-  
 }
 
 void loop() {
 
   // no sampling during wifi mode
-  if (wifiMode=true)
+  if (wifiMode==true)
   {
     return;
   }
@@ -414,7 +422,7 @@ void loop() {
 
         Serial.printf("%02u:%02u:%02u %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f\n",report.hour, report.minute, report.second, report.lat,report.lng ,report.alt ,report.sats ,report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
         sendSampleLora(&report);
-        deepSleep((long)config.reportEvery);
+        deepSleep((uint64_t)config.reportEvery);
       }
       else
       {
@@ -433,5 +441,5 @@ void loop() {
     smartDelay(1000);
   }
   // GPS failed - try again in the future
-  deepSleep((long)config.failedGPSsleep);
+  deepSleep((uint64_t)config.failedGPSsleep);
 }
