@@ -53,50 +53,19 @@ TinyGPSPlus::TinyGPSPlus()
 // public methods
 //
 
-bool TinyGPSPlus::encode(char c)
+bool TinyGPSPlus::handleStar(char c)  
 {
-  ++encodedCharCount;
-
-  switch(c)
+  bool isValidSentence = false;
+  if (curTermOffset < sizeof(term))
   {
-    case ',': // term terminators
-      parity ^= (uint8_t)c;
-    case '\r':
-    case '\n':
-    case '*':
-      {
-        bool isValidSentence = false;
-        if (curTermOffset < sizeof(term))
-        {
-          term[curTermOffset] = 0;
-          isValidSentence = endOfTermHandler();
-        }
-        ++curTermNumber;
-        curTermOffset = 0;
-        isChecksumTerm = c == '*';
-        return isValidSentence;
-      }
-      break;
-
-    case '$': // sentence begin
-      curTermNumber = curTermOffset = 0;
-      parity = 0;
-      curSentenceType = GPS_SENTENCE_OTHER;
-      isChecksumTerm = false;
-      sentenceHasFix = false;
-      return false;
-
-    default: // ordinary characters
-      if (curTermOffset < sizeof(term) - 1)
-        term[curTermOffset++] = c;
-      if (!isChecksumTerm)
-        parity ^= c;
-      return false;
+    term[curTermOffset] = 0;
+    isValidSentence = endOfTermHandler();
   }
-
-  return false;
+  ++curTermNumber;
+  curTermOffset = 0;
+  isChecksumTerm = c == '*';
+  return isValidSentence;
 }
-
 //
 // internal utilities
 //
@@ -500,4 +469,38 @@ void TinyGPSPlus::insertCustom(TinyGPSCustom *pElt, const char *sentenceName, in
 
    pElt->next = *ppelt;
    *ppelt = pElt;
+}
+
+bool TinyGPSPlus::encode(char c)
+{
+  ++encodedCharCount;
+
+  switch(c)
+  {
+    case ',': // term terminators
+      parity ^= (uint8_t)c;
+    case '\r':
+    case '\n':
+    case '*':
+      return handleStar(c);
+
+    case '$': // sentence begin
+      curTermNumber = curTermOffset = 0;
+      parity = 0;
+      curSentenceType = GPS_SENTENCE_OTHER;
+      isChecksumTerm = false;
+      sentenceHasFix = false;
+      break;
+
+    default: // ordinary characters
+      if (curTermOffset < sizeof(term) - 1)
+        term[curTermOffset++] = c;
+
+      if (!isChecksumTerm)
+        parity ^= c;
+
+      break;
+  }
+  
+  return false;
 }

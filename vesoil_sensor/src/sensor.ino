@@ -3,6 +3,7 @@
 
 static const char * TAG = "Sensor";
 #define APP_VERSION 1
+#define VE_HASWIFI 1
 
 #include <Arduino.h>
 #include <SPI.h>
@@ -57,7 +58,7 @@ static const char * TAG = "Sensor";
 #define SS          18   // GPIO18 -- SX1278's CS
 #define RST         14   // GPIO14 -- SX1278's RESET
 #define DI0         26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
-#define BAND     868E6
+#define BAND     868E6P
 
 struct ReceiverConfig
 {
@@ -79,20 +80,6 @@ DHT_Unified dht(DHTPIN, DHT22);
 AsyncWebServer server(80);
 Preferences preferences;
 bool wifiMode=false;
-
-void deepSleep(long timetosleep)
-{
-  //GPSReset();
-  LoRa.sleep();
-  turnOffWifi();
-  //isolateGPIO();
-  turnOffBluetooth();
-  esp_sleep_enable_timer_wakeup(timetosleep * uS_TO_S_FACTOR);
-  Serial.println("Going to sleep now");
-  delay(1000);
-  Serial.flush(); 
-  esp_deep_sleep_start();
-}
 
 void smartDelay(unsigned long ms)                
 {
@@ -174,6 +161,19 @@ void turnOffBluetooth(){
   esp_bt_controller_deinit();
 }
 
+void deepSleep(long timetosleep)
+{
+  //GPSReset();
+  LoRa.sleep();
+  turnOffWifi();
+  //isolateGPIO();
+  turnOffBluetooth();
+  esp_sleep_enable_timer_wakeup(timetosleep * uS_TO_S_FACTOR);
+  Serial.println("Going to sleep now");
+  delay(1000);
+  Serial.flush(); 
+  esp_deep_sleep_start();
+}
 
 void setupTempSensors()
 {
@@ -223,12 +223,6 @@ float readAirHum()
   return 0;
 }
 
-void setupGPS()
-{
-  Serial1.begin(9600, SERIAL_8N1, 12, 15);   //17-TX 18-RX
-  GPSwakeup();
-}
-
 void GPSwakeup(){
   Serial.println("Wake GPS");
   int data = -1;
@@ -250,6 +244,12 @@ void GPSReset() {
 }
 
 
+void setupGPS()
+{
+  Serial1.begin(9600, SERIAL_8N1, 12, 15);   //17-TX 18-RX
+  GPSwakeup();
+}
+
 float getBatteryVoltage()
 {
   // we've set 10-bit ADC resolution 2^10=1024 and voltage divider makes it half of maximum readable value (which is 3.3V)
@@ -259,6 +259,58 @@ float getBatteryVoltage()
   analogReadResolution(10); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.  
   return  analogRead(BATTERY_PIN) * 2.0 * (3.3 / 1024.0);
 }
+
+void sendSampleLora(SensorReport *report) {
+  // send packet
+  digitalWrite(BLUELED, HIGH);   // turn the LED on (HIGH is the voltage level)
+  LoRa.beginPacket();
+  LoRa.write( (const uint8_t *)report, sizeof(SensorReport));
+  LoRa.endPacket();
+  digitalWrite(BLUELED, LOW);   // turn the LED off
+}
+
+#if VE_HASWIFI
+
+void notFound(AsyncWebServerRequest *request) {
+    request->send(404, "text/plain", "Not found");
+}
+
+void setupWifi() {
+    WiFi.softAP(config.ssid);
+
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.softAPIP());
+
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(200, "text/plain", "Hello, from Vestrong");
+    });
+
+    // Send a GET request to <IP>/get?message=<message>
+    server.on("/api", HTTP_GET, [] (AsyncWebServerRequest *request) {
+        
+        String reply = "{ \"config\": [";
+        
+        char *msg = (char *)malloc(512);
+        sprintf(msg, "{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%d, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
+                 config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, getBatteryVoltage() );
+        reply += msg;
+        reply += " ] }\n";
+        free(msg);
+        request->send(200, "text/plain",  reply);
+    });
+
+    server.on("/api", HTTP_POST, [] (AsyncWebServerRequest *request) {
+        request->send(200, "text/plain",  "done");
+    });
+
+
+    server.onNotFound(notFound);
+
+    server.begin();
+}
+
+
+#endif
 
 void getSample(SensorReport *report) 
 {
@@ -296,55 +348,6 @@ void getSample(SensorReport *report)
   report->moist2 = m2;
 }
 
-void sendSampleLora(SensorReport *report) {
-  // send packet
-  digitalWrite(BLUELED, HIGH);   // turn the LED on (HIGH is the voltage level)
-  LoRa.beginPacket();
-  LoRa.write( (const uint8_t *)report, sizeof(SensorReport));
-  LoRa.endPacket();
-  digitalWrite(BLUELED, LOW);   // turn the LED off
-}
-
-#if VE_HASWIFI
-void setupWifi() {
-    WiFi.softAP(config.ssid);
-
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.softAPIP());
-
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send(200, "text/plain", "Hello, from Vestrong");
-    });
-
-    // Send a GET request to <IP>/get?message=<message>
-    server.on("/api", HTTP_GET, [] (AsyncWebServerRequest *request) {
-        
-        String reply = "{ \"config\": [";
-        
-        char *msg = (char *)malloc(512);
-        sprintf(msg, "{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%d, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
-                 config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, getBatteryVoltage() );
-        reply += msg;
-        reply += " ] }\n";
-        free(msg);
-        request->send(200, "text/plain",  reply);
-    });
-
-    server.on("/api", HTTP_POST, [] (AsyncWebServerRequest *request) {
-        request->send(200, "text/plain",  "done");
-    });
-
-
-    server.onNotFound(notFound);
-
-    server.begin();
-}
-
-void notFound(AsyncWebServerRequest *request) {
-    request->send(404, "text/plain", "Not found");
-}
-
-#endif
 
 void setup() {
   preferences.begin(TAG, false);

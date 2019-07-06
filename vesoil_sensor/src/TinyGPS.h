@@ -269,6 +269,7 @@ private:
   // internal utilities
   int fromHex(char a);
   bool endOfTermHandler();
+  bool handleStar(char c);
 };
 
 #endif // def(__TinyGPSPlus_h)
