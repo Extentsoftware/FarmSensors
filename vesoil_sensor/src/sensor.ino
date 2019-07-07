@@ -38,7 +38,7 @@ static const char * TAG = "Sensor";
 #include <DHT_U.h>
 
 #include "TinyGPS.h"
-#include "vesensor.h"
+#include "sensor.h"
 
 #define FREQUENCY 868E6
 #define TXPOWER     20   // max power
@@ -63,23 +63,19 @@ static const char * TAG = "Sensor";
 struct ReceiverConfig
 {
   char  ssid[16] = "VESTRONG_S";
-  int   gps_timout = 30;        // wait n seconds to get GPS fix
-  int   failedGPSsleep=60;      // sleep this long if failed to get GPS
+  int   gps_timout = 60;        // wait n seconds to get GPS fix
+  int   failedGPSsleep = 60;    // sleep this long if failed to get GPS
   int   reportEvery = 60 * 60;  // get sample every n seconds
   int   fromHour = 6;           // between these hours
-  int   toHour = 18;            // between these hours
+  int   toHour = 20;            // between these hours
   long  frequency = FREQUENCY;  // LoRa transmit frequency
   int   txpower = TXPOWER;      // LoRa transmit power
   float txvolts = TXVOLTS;      // power supply must be delivering this voltage in order to xmit.
+  long  bandwidth = 62.5E3;     // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
+  int   speadFactor = 12;       // signal processing gain. higher values give greater range but take longer (more power) to transmit
+  int   codingRate = 5;         // extra info for CRC
+  bool  enableCRC = true;       //
 } config;
-
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature tmpsensors(&oneWire);
-TinyGPSPlus gps;                            
-DHT_Unified dht(DHTPIN, DHT22);
-AsyncWebServer server(80);
-Preferences preferences;
-bool wifiMode=false;
 
 void print_wakeup_reason();
 void  turnOffRTC();
@@ -103,6 +99,46 @@ void sendSampleLora(SensorReport *report);
 void notFound(AsyncWebServerRequest *request);
 void setupWifi();
 void getSample(SensorReport *report);
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature tmpsensors(&oneWire);
+TinyGPSPlus gps;                            
+DHT_Unified dht(DHTPIN, DHT22);
+AsyncWebServer server(80);
+Preferences preferences;
+bool wifiMode=false;
+
+void setupLoRa() {
+  SPI.begin(SCK,MISO,MOSI,SS);
+  LoRa.setPins(SS,RST,DI0);
+  
+  Serial.printf("Starting Lora: freq:%u enableCRC:%d coderate:%d spread:%d bandwidth:%u\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
+
+
+  if (config.enableCRC)
+    LoRa.enableCrc();
+  else 
+    LoRa.disableCrc();
+  LoRa.setCodingRate4(config.codingRate);
+  LoRa.setSpreadingFactor(config.speadFactor);
+  LoRa.setSignalBandwidth(config.bandwidth);
+  LoRa.setTxPower(config.txpower);
+
+  int result = LoRa.begin(config.frequency);
+  if (!result) {
+    Serial.printf("Starting LoRa failed: err %d", result);
+  }  
+}
+
+void sendSampleLora(SensorReport *report) {
+  // send packet
+  digitalWrite(BLUELED, HIGH);   // turn the LED on (HIGH is the voltage level)
+  LoRa.beginPacket();
+  LoRa.write( (const uint8_t *)report, sizeof(SensorReport));
+  LoRa.endPacket();
+  delay(100);
+  digitalWrite(BLUELED, LOW);   // turn the LED off
+}
 
 void smartDelay(unsigned long ms) {
   unsigned long start = millis();
@@ -135,16 +171,6 @@ void setupSerial() {
   Serial.println();
   Serial.println("VESTRONG LaPoulton LoRa Sensor");
   print_wakeup_reason();
-}
-
-void setupLoRa() {
-  SPI.begin(SCK,MISO,MOSI,SS);
-  LoRa.setPins(SS,RST,DI0);
-  int result = LoRa.begin(config.frequency);
-  if (!result) {
-    Serial.printf("Starting LoRa failed: err %d", result);
-  }  
-  LoRa.setTxPower(config.txpower);
 }
 
 void  turnOffRTC(){
@@ -182,12 +208,25 @@ void deepSleep(uint64_t timetosleep) {
   turnOffWifi();
   //isolateGPIO();
   turnOffBluetooth();
-
-  uint64_t ms = timetosleep * uS_TO_S_FACTOR;
-  esp_sleep_enable_timer_wakeup(ms);
-  Serial.printf("Going to sleep now for %d ms", ms);
-  delay(1000);
+  
+  esp_err_t result;
+  do {
+    uint64_t ms = timetosleep * uS_TO_S_FACTOR;
+    result = esp_sleep_enable_timer_wakeup(ms);
+    if (result== ESP_ERR_INVALID_ARG)
+    {
+      Serial.printf("Bad sleep time %u seconds", timetosleep);
+      if (timetosleep>60)
+        timetosleep = timetosleep-60;
+      else
+        timetosleep =10;
+    }
+  } while (result== ESP_ERR_INVALID_ARG);
+  
+  Serial.printf("Going to sleep now for %u seconds", timetosleep);
+  delay(100);
   Serial.flush(); 
+
   esp_deep_sleep_start();
 }
 
@@ -269,15 +308,6 @@ float getBatteryVoltage() {
   return  analogRead(BATTERY_PIN) * 2.0 * (3.3 / 1024.0);
 }
 
-void sendSampleLora(SensorReport *report) {
-  // send packet
-  digitalWrite(BLUELED, HIGH);   // turn the LED on (HIGH is the voltage level)
-  LoRa.beginPacket();
-  LoRa.write( (const uint8_t *)report, sizeof(SensorReport));
-  LoRa.endPacket();
-  digitalWrite(BLUELED, LOW);   // turn the LED off
-}
-
 #if VE_HASWIFI
 
 void notFound(AsyncWebServerRequest *request) {
@@ -334,15 +364,17 @@ void getSample(SensorReport *report) {
   adcStart(MOIST2);
   int m2 = analogRead(MOIST2);  // read the input pin;
 
-  report->secret=SENSOR_SECRET;
-  report->version=1;
+  struct tm curtime;
+  curtime.tm_sec = gps.time.second();
+  curtime.tm_min=gps.time.minute();
+  curtime.tm_hour= gps.time.hour();
+  curtime.tm_mday= gps.date.day();
+  curtime.tm_mon= gps.date.month()-1;
+  curtime.tm_year= gps.date.year()-1900;
+  curtime.tm_isdst=false;
+
   report->volts=vBat;
-  report->year = gps.date.year();
-  report->month = gps.date.month();
-  report->day = gps.date.day();
-  report->hour = gps.time.hour();
-  report->minute = gps.time.minute();
-  report->second = gps.time.second();
+  report->time = mktime(&curtime);
   report->lat = gps.location.lat();
   report->lng = gps.location.lng();
   report->alt = gps.altitude.meters();
@@ -357,15 +389,15 @@ void getSample(SensorReport *report) {
 
 void setup() {
   preferences.begin(TAG, false);
-  if (preferences.getBool("configinit"))
-  {
-    preferences.getBytes("config", &config, sizeof(ReceiverConfig));
-  }
-  else
-  {
+  // if (preferences.getBool("configinit"))
+  // {
+  //   preferences.getBytes("config", &config, sizeof(ReceiverConfig));
+  // }
+  // else
+  // {
     preferences.putBytes("config", &config, sizeof(ReceiverConfig));
     preferences.putBool("configinit", true);
-  }
+  //}
 
   pinMode(BLUELED, OUTPUT);   // onboard Blue LED
   pinMode(BTN1,INPUT);        // Button 1
@@ -420,7 +452,11 @@ void loop() {
         getSample(&report);
         digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
 
-        Serial.printf("%02u:%02u:%02u %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f\n",report.hour, report.minute, report.second, report.lat,report.lng ,report.alt ,report.sats ,report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
+        char *stime = asctime(gmtime(&report.time));
+        stime[24]='\0';
+
+        Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f\n",
+        stime, report.lat, report.lng ,report.alt , +report.sats , +report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
         sendSampleLora(&report);
         deepSleep((uint64_t)config.reportEvery);
       }

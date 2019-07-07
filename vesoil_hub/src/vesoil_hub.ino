@@ -25,24 +25,16 @@ static const char * TAG = "Hub";
 
 #include <ESPAsyncWebServer.h>
 
-#define SENSOR_SECRET 13212
-
 struct SensorReport
 {
-    int secret;
-    int version;
+    time_t time;
+    char version;
     float volts;
     double lat;
-    double lng;    
-    int year;
-    int month;
-    short day;
-    short hour;
-    short minute;
-    short second;
+    double lng; 
     double alt;
-    int sats;
-    int hdop;
+    char sats;
+    char hdop;
     float airtemp;
     float airhum;
     float gndtemp;
@@ -53,7 +45,24 @@ struct SensorReport
 struct SenserConfig
 {
   char  ssid[16] = "VESTRONG_H";
+  long  frequency = 868E6;      // LoRa transmit frequency
+  long  bandwidth = 62.5E3;     // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
+  int   speadFactor = 12;       // signal processing gain. higher values give greater range but take longer (more power) to transmit
+  int   codingRate = 5;         // extra info for CRC
+  bool  enableCRC = true;       //
 } config;
+
+void SystemCheck();
+void getBatteryVoltage();
+void setupBatteryVoltage();
+void notFound(AsyncWebServerRequest *request);
+void setupWifi();
+void showBlock(int packetSize);
+void readLoraData();
+SensorReport *GetFromStore();
+void AddToStore(SensorReport *report);
+int GetNextRingBufferPos(int pointer);
+void MemoryCheck();
 
 #define BLUELED 14   // GPIO14
 #define SCK     5    // GPIO5  -- SX1278's SCK
@@ -77,6 +86,8 @@ int currentStoreReader=0;
 AsyncWebServer server(80);
 float snr = 0;
 float rssi = 0;
+long pfe=0;
+
 int badpacket=0;
 bool wifiMode=false;
 Preferences preferences;
@@ -84,25 +95,27 @@ Preferences preferences;
 void setup() {
 
   preferences.begin(TAG, false);
-  if (preferences.getBool("configinit"))
-    preferences.getBytes("config", &config, sizeof(SenserConfig));
-  else
-  {
+//  if (preferences.getBool("configinit"))
+//    preferences.getBytes("config", &config, sizeof(SenserConfig));
+//  else
+//  {
     preferences.putBytes("config", &config, sizeof(SenserConfig));
     preferences.putBool("configinit", true);
-  }
+//  }
 
 
   setupBatteryVoltage();
 
   Serial.begin(115200);
   while (!Serial);
+  Serial.println();
+  Serial.println("VESTRONG LaPoulton LoRa Hub");
+
+
   esp_log_level_set("*", ESP_LOG_VERBOSE);
 
   // GPS comms settings  
   SPI.begin(SCK,MISO,MOSI,SS);
-
-  Serial.println("LoRa Receiver v3");
   
   MemoryCheck();  
   SystemCheck();
@@ -110,24 +123,35 @@ void setup() {
   // turn on (for future: if GPIO is off)
   if (digitalRead(BTN1)==0)
   {
-    wifiMode=true;
-    setupWifi();
+    //wifiMode=true;
+    //setupWifi();
   }
-
-  // turn on LoRa  
-  Serial.println("Starting Lora");
-  LoRa.setPins(SS,RST,DI0);    
-  if (!LoRa.begin(868E6)) {
-    Serial.println("Starting LoRa failed!");
-    while (1);
-  }
-  LoRa.receive();
 
   getBatteryVoltage();
   Serial.printf("Battery voltage %f\n", vBat);
 
+  // turn on LoRa  
+  Serial.printf("Starting Lora: freq:%u enableCRC:%d coderate:%d spread:%d bandwidth:%u\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
+  LoRa.setPins(SS,RST,DI0);
+  LoRa.setSignalBandwidth(config.bandwidth);
+  if (config.enableCRC)
+      LoRa.enableCrc();
+   else 
+      LoRa.disableCrc();
+  LoRa.setCodingRate4(config.codingRate);
+  LoRa.setSpreadingFactor(config.speadFactor);
+    
+  int result = LoRa.begin(config.frequency);  
+  if (!result) {
+    Serial.printf("Starting LoRa failed: err %d", result);
+  }  
+
+
+  LoRa.receive();
+
   digitalWrite(BLUELED, LOW);   // turn the LED off
 }
+
 
 void loop() {
   readLoraData();
@@ -144,16 +168,14 @@ void MemoryCheck() {
     ESP_LOGI("TAG","Could not allocate memory for %u bytes",size);
 }
 
-int GetNextRingBufferPos(int pointer)
-{
+int GetNextRingBufferPos(int pointer) {
   pointer++;
   if (pointer>=STORESIZE)
     pointer=0;
   return pointer;
 }
 
-void AddToStore(SensorReport *report)
-{
+void AddToStore(SensorReport *report) {
   memcpy( (void *)(&store[currentStoreWriter]), report, sizeof(SensorReport) );
   currentStoreWriter = GetNextRingBufferPos(currentStoreWriter);
   // hit the reader?
@@ -161,8 +183,7 @@ void AddToStore(SensorReport *report)
     currentStoreReader = GetNextRingBufferPos(currentStoreReader);
 }
 
-SensorReport *GetFromStore()
-{
+SensorReport *GetFromStore() {
   if (currentStoreReader==currentStoreWriter)
     return NULL;  // no data
   SensorReport *ptr = &store[currentStoreReader];
@@ -177,10 +198,14 @@ void SystemCheck() {
   ESP_LOGI("TAG", "HEAP  size  %u free  %u", ESP.getHeapSize(), ESP.getFreeHeap());
 }
 
-
 void readLoraData() {
   int packetSize = LoRa.parsePacket();
-  if (packetSize) { 
+  if (packetSize>0) { 
+    Serial.printf("%d.",packetSize); 
+    snr = LoRa.packetSnr();
+    rssi = LoRa.packetRssi();
+    pfe = LoRa.packetFrequencyError();
+
     getBatteryVoltage();
     digitalWrite(BLUELED, HIGH);   // turn the LED on (HIGH is the voltage level)
     showBlock(packetSize);  
@@ -188,6 +213,7 @@ void readLoraData() {
     delay(100);
   }
 }
+
 
 void showBlock(int packetSize) {
   SensorReport report;
@@ -198,35 +224,33 @@ void showBlock(int packetSize) {
       for (int i = 0; i < packetSize; i++, ptr++)
          *ptr = (unsigned char)LoRa.read(); 
 
-      Serial.printf("%02u:%02u:%02u %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f\n", report.hour, report.minute, report.second, report.lat,report.lng ,report.alt ,report.sats ,report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
-      if (report.secret != SENSOR_SECRET )
-      {
-        Serial.printf("BAD SECRET\n");
-        badpacket++;
-      }
-      else
-      {
+      char *stime = asctime(gmtime(&report.time));
+      stime[24]='\0';
+
+      Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f rssi=%f snr=%f pfe=%u\n", 
+            stime, report.lat,report.lng ,report.alt ,report.sats ,report.hdop 
+            ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2
+            , report.volts, rssi, snr, pfe );
+
         AddToStore(&report);
-      }
   }
   else
   {
       badpacket++;
       char * tmp= (char *)calloc(1,101);
       char *ptr = tmp;
-      if (packetSize>100)
-          packetSize=100;
+      
       for (int i = 0; i < packetSize; i++, ptr++)
-         *ptr = (unsigned char)LoRa.read(); 
+      {
+         unsigned char ch = (unsigned char)LoRa.read(); 
+          if (i<100)
+            *ptr = ch;
+      }
+
       Serial.printf("Invalid packet size, got %d instead of %d\n",packetSize, sizeof(SensorReport));
       Serial.printf("%s\n", tmp);
       free(tmp);
   }
-  
-  // save snr
-  snr = LoRa.packetSnr();
-  rssi = LoRa.packetRssi();
-  
 }
 
 void setupWifi() {
@@ -248,10 +272,11 @@ void setupWifi() {
         do {          
           if (ptr!=NULL)
           {
+            char *stime = asctime(gmtime(&(ptr->time)));
+            stime[24]='\0';
             char *msg = (char *)malloc(512);
-            sprintf(msg, "{ \"date\": \"%02u-%02u-%02uT%02u:%02u:%02uZ\", \"lat\": %f, \"lng\": %f, \"alt\":%f, \"sats\":%d, \"hdop\":%d, \"gt\":%f, \"at\":%f, \"ah\":%f, \"m1\":%d, \"m2\":%d, \"volts\":%f }\n", 
-                  ptr->year, ptr->month, ptr->day, 
-                  ptr->hour, ptr->minute, ptr->second, 
+            sprintf(msg, "{ \"date\": \"%s\", \"lat\": %f, \"lng\": %f, \"alt\":%f, \"sats\":%d, \"hdop\":%d, \"gt\":%f, \"at\":%f, \"ah\":%f, \"m1\":%d, \"m2\":%d, \"volts\":%f }\n", 
+                  stime, 
                   ptr->lat,ptr->lng ,ptr->alt ,ptr->sats ,ptr->hdop,
                   ptr->gndtemp,ptr->airtemp,ptr->airhum,
                   ptr->moist1 ,ptr->moist2,
@@ -297,6 +322,7 @@ void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
 
+
 void setupBatteryVoltage()
 {
    // set battery measurement pin
@@ -305,6 +331,7 @@ void setupBatteryVoltage()
   analogReadResolution(10); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.
  
 }
+
 
 void getBatteryVoltage() {
   // we've set 10-bit ADC resolution 2^10=1024 and voltage divider makes it half of maximum readable value (which is 3.3V)
