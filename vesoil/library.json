@@ -1,0 +1,16 @@
+{
+    "name":"Vesoil Common",
+    "description":"Vesoil Common library",
+    "keywords":"",
+    "authors":
+    {
+      "name": "Marcus Poulton",
+      "maintainer": true
+    },
+    "version": "1.0.0",
+    "license": "LGPL-3.0",
+    "frameworks": "arduino",
+    "platforms": ["espressif8266", "espressif32"],
+    "dependencies": {  }
+  }
+  
