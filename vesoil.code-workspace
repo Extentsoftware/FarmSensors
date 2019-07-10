@@ -13,6 +13,10 @@
 			"path": "common"
 		},
 		{
+			"name": "vesoil",
+			"path": "C:\\Users\\PoultoM\\Documents\\PlatformIO\\Projects\\vesoil"
+		},
+		{
 			"name": "Documentation",
 			"path": "docs"
 		},

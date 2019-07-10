@@ -1,7 +1,7 @@
 #ifndef __VESOIL_SENSOR__
 #define __VESOIL_SENSOR__
 
-#include <vesoil.h>
+
 
 #define FREQUENCY 868E6
 #define TXPOWER     20   // max power
