@@ -1,0 +1,18 @@
+#include <stdio.h>
+
+struct SensorReport
+{
+    time_t time;
+    char version;
+    float volts;
+    double lat;
+    double lng; 
+    double alt;
+    char sats;
+    char hdop;
+    float airtemp;
+    float airhum;
+    float gndtemp;
+    int moist1;
+    int moist2;
+};

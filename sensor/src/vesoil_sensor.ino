@@ -34,11 +34,11 @@ static const char * TAG = "Sensor";
 #include <ESPAsyncWebServer.h>
 #include <OneWire.h>            // https://github.com/PaulStoffregen/OneWire
 #include <DallasTemperature.h>  // https://github.com/milesburton/Arduino-Temperature-Control-Library
-#include <DHT.h>
 #include <DHT_U.h>
+#include <DHT.h>
 
 #include "TinyGPS.h"
-#include "sensor.h"
+#include "vesoil_sensor.h"
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature tmpsensors(&oneWire);
