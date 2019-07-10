@@ -1,3 +1,8 @@
+#ifndef __VESOIL_SENSOR__
+#define __VESOIL_SENSOR__
+
+#include <vesoil.h>
+
 #define FREQUENCY 868E6
 #define TXPOWER     20   // max power
 #define TXVOLTS    2.7
@@ -17,23 +22,6 @@
 #define RST         14   // GPIO14 -- SX1278's RESET
 #define DI0         26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
 #define BAND     868E6P
-
-struct SensorReport
-{
-    time_t time;
-    char version;
-    float volts;
-    double lat;
-    double lng; 
-    double alt;
-    char sats;
-    char hdop;
-    float airtemp;
-    float airhum;
-    float gndtemp;
-    int moist1;
-    int moist2;
-};
 
 struct ReceiverConfig
 {
@@ -74,3 +62,5 @@ void sendSampleLora(SensorReport *report);
 void notFound(AsyncWebServerRequest *request);
 void setupWifi();
 void getSample(SensorReport *report);
+
+#endif

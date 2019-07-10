@@ -1,8 +1,6 @@
-#include <stdio.h>
-
 struct SensorReport
 {
-    time_t time;
+    long time;
     char version;
     float volts;
     double lat;

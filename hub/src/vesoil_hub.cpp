@@ -1,3 +1,4 @@
+
 // https://github.com/me-no-dev/ESPAsyncWebServer#basic-response-with-http-code
 // https://github.com/cyberman54/ESP32-Paxcounter/blob/82fdfb9ca129f71973a1f912a04aa8c7c5232a87/src/main.cpp
 // https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/log.html
@@ -15,69 +16,7 @@ static const char * TAG = "Hub";
 #include <AsyncTCP.h>
 #include <Preferences.h>
 
-#ifndef ESP32
-#define ESP32
-#endif
-
-#ifndef ARDUINO
-#define ARDUINO 100
-#endif
-
-#include <ESPAsyncWebServer.h>
-
-struct SensorReport
-{
-    time_t time;
-    char version;
-    float volts;
-    double lat;
-    double lng; 
-    double alt;
-    char sats;
-    char hdop;
-    float airtemp;
-    float airhum;
-    float gndtemp;
-    int moist1;
-    int moist2;
-};
-
-struct SenserConfig
-{
-  char  ssid[16] = "VESTRONG_H";
-  long  frequency = 868E6;      // LoRa transmit frequency
-  long  bandwidth = 62.5E3;     // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
-  int   speadFactor = 12;       // signal processing gain. higher values give greater range but take longer (more power) to transmit
-  int   codingRate = 5;         // extra info for CRC
-  bool  enableCRC = true;       //
-} config;
-
-void SystemCheck();
-void getBatteryVoltage();
-void setupBatteryVoltage();
-void notFound(AsyncWebServerRequest *request);
-void setupWifi();
-void showBlock(int packetSize);
-void readLoraData();
-SensorReport *GetFromStore();
-void AddToStore(SensorReport *report);
-int GetNextRingBufferPos(int pointer);
-void MemoryCheck();
-
-#define BLUELED 14   // GPIO14
-#define SCK     5    // GPIO5  -- SX1278's SCK
-#define MISO    19   // GPIO19 -- SX1278's MISO
-#define MOSI    27   // GPIO27 -- SX1278's MOSI
-#define SS      18   // GPIO18 -- SX1278's CS
-#define RST     14   // GPIO14 -- SX1278's RESET
-#define DI0     26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
-#define BAND    868E6
-#define PSRAM   16    // 8M byte - https://www.electrodragon.com/product/2pcs-ipus-ips6404-iot-ram/
-                      // https://drive.google.com/file/d/1-5NtY1bz0l9eYN9U0U4dP3uASwnMmYGP/view        
-
-#define BATTERY_PIN 35    // battery level measurement pin, here is the voltage divider connected
-#define BTN1        39    // GPIO39 On board button
-#define STORESIZE   30000
+#include "vesoil_hub.h"
 
 float vBat; // battery voltage
 SensorReport* store;
@@ -131,7 +70,7 @@ void setup() {
   Serial.printf("Battery voltage %f\n", vBat);
 
   // turn on LoRa  
-  Serial.printf("Starting Lora: freq:%u enableCRC:%d coderate:%d spread:%d bandwidth:%u\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
+  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
   LoRa.setPins(SS,RST,DI0);
   LoRa.setSignalBandwidth(config.bandwidth);
   if (config.enableCRC)
@@ -158,7 +97,7 @@ void loop() {
 }
 
 void MemoryCheck() {
-  size_t size = STORESIZE * sizeof(SensorReport);
+  
   store = (SensorReport *) ps_calloc(STORESIZE,  sizeof(SensorReport));
   if (store != NULL)
   {
@@ -227,7 +166,7 @@ void showBlock(int packetSize) {
       char *stime = asctime(gmtime(&report.time));
       stime[24]='\0';
 
-      Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f rssi=%f snr=%f pfe=%u\n", 
+      Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f rssi=%f snr=%f pfe=%lu\n", 
             stime, report.lat,report.lng ,report.alt ,report.sats ,report.hdop 
             ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2
             , report.volts, rssi, snr, pfe );

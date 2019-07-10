@@ -23,14 +23,6 @@ static const char * TAG = "Sensor";
 #include <AsyncTCP.h>
 #endif
 
-#ifndef ESP32
-#define ESP32
-#endif
-
-#ifndef ARDUINO
-#define ARDUINO 100
-#endif
-
 #include <ESPAsyncWebServer.h>
 #include <OneWire.h>            // https://github.com/PaulStoffregen/OneWire
 #include <DallasTemperature.h>  // https://github.com/milesburton/Arduino-Temperature-Control-Library
@@ -38,6 +30,7 @@ static const char * TAG = "Sensor";
 #include <DHT.h>
 
 #include "TinyGPS.h"
+#include <vesoil.h>
 #include "vesoil_sensor.h"
 
 OneWire oneWire(ONE_WIRE_BUS);
@@ -52,7 +45,7 @@ void setupLoRa() {
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
   
-  Serial.printf("Starting Lora: freq:%u enableCRC:%d coderate:%d spread:%d bandwidth:%u\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
+  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
 
   if (config.enableCRC)
     LoRa.enableCrc();
@@ -144,7 +137,7 @@ void deepSleep(uint64_t timetosleep) {
     result = esp_sleep_enable_timer_wakeup(ms);
     if (result== ESP_ERR_INVALID_ARG)
     {
-      Serial.printf("Bad sleep time %u seconds", timetosleep);
+      Serial.printf("Bad sleep time %" PRId64  " seconds", timetosleep);
       if (timetosleep>60)
         timetosleep = timetosleep-60;
       else
@@ -152,7 +145,7 @@ void deepSleep(uint64_t timetosleep) {
     }
   } while (result== ESP_ERR_INVALID_ARG);
   
-  Serial.printf("Going to sleep now for %u seconds", timetosleep);
+  Serial.printf("Going to sleep now for %" PRId64  " seconds", timetosleep);
   delay(100);
   Serial.flush(); 
 
@@ -179,6 +172,7 @@ float readGroundTemp() {
     if (temp!=85 && temp!=-127)
       return temp;
   }
+  return 0;
 }
 
 
@@ -259,7 +253,7 @@ void setupWifi() {
         String reply = "{ \"config\": [";
         
         char *msg = (char *)malloc(512);
-        sprintf(msg, "{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%d, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
+        sprintf(msg, "{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
                  config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, getBatteryVoltage() );
         reply += msg;
         reply += " ] }\n";
@@ -349,7 +343,7 @@ void setup() {
 
   digitalWrite(BLUELED, LOW);   // turn the LED off
 
-  Serial.printf("{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%d, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
+  Serial.printf("{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
           config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, getBatteryVoltage() );
 
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
