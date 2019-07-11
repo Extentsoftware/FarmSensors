@@ -1,14 +1,14 @@
-**Vesoil Farm Monitoring**
+# Vesoil Farm Monitoring
 
 This project is for remote soil moisture, ground temperature, air temperature and humidity based on the TTG T-Beam board.
 
 Use VSCode and Platform.io extension to compile and upload firmware to the TTGO board.
 
-**Vesoil Hub**
+## Vesoil Hub
 This code receives sensor measurements from Vesoil sensors and records them in volatile memory.
 
 
-**Vesoil Sensor**
+## Vesoil Sensor
 
 if you reset the device without holding down the GPIO39 button the device enters Sensor mode.
 
@@ -18,15 +18,47 @@ When resetting the device via the reset button, if you hold in the GPIO39 button
 
 The device will sleep for *lowvoltsleep* (600 seonds) if the voltage is below _txvolts_, regardless of WiFi or Sensor mode.
 
-**Sensor Mode**
+### Sensor Mode
 In Sensor mode the device wakes up every hour (configured using _reportEvery_) and attempts to obtain a GPS signal within _gps_timout_ (60) seconds. If no fix can be obtained the device sleeps for _failedGPSsleep_ (60) seconds and reboots.
 
 During sleep mode the device turns off power to virtually all systems on the TTGO T-Beam, drawing approximately 5 microamps.
 
-**WiFi Mode**
+### WiFi Mode
 
 In Wifi mode the sensor can be reached via http://192.168.4.1. Configuration parameters can be set in FLASH memory. Additionally, pressing the GPIO39 button will also send a LoRa sensor sample.
 
+### Settings
+
+| **Name**        | **Description**           |  **Default** |
+| ------------- |-------------| -----:|
+| ssid       | Access point name | VESTRONG_S |
+| gps_timout | Wait n seconds to get GPS fix |   60 |
+| failedGPSsleep | Sleep this long if failed to get GPS  |    3600 |
+| reportEvery | Get sample every n seconds  |    60 |
+| fromHour |  Between these hours | 6  |
+| toHour |  Between these hours | 20 |
+| frequency | LoRa transmit frequency  | 868MHz  |
+| txpower | LoRa transmit power  | 17dB |
+| txvolts | Power supply must be delivering this voltage in order to xmit |  2.7 |
+| lowvoltsleep | Sleep this long if low on volts | 600  |
+| bandwidth | Lower (narrower) bandwidth values give longer range | 62500  |
+| speadFactor | Signal processing gain. higher values give greater range  |  12 |
+| codingRate |  Extra info for CRC |  5 |
+| enableCRC | Enable detection of corrupt packets  |  true |
+
+
+# Useful Links
+https://github.com/LilyGO/TTGO-T-Beam)
+
+http://tinymicros.com/wiki/TTGO_T-Beam
+
+https://github.com/sandeepmistry/arduino-LoRa/blob/master/API.md
+
+https://arduinojson.org/v6/api/
+
+https://github.com/PaulStoffregen/OneWire
+
+https://github.com/milesburton/Arduino-Temperature-Control-Library
 
 
 
