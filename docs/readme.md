@@ -16,12 +16,12 @@ When resetting the device via the reset button, if you hold in the GPIO39 button
 
 When resetting the device via the reset button, if you hold in the GPIO39 button for less than 1 seconds during the reboot then the device enters WiFi mode. It will be accessible on http://192.168.4.1
 
-The device will sleep for *lowvoltsleep* (600 seonds) if the voltage is below *txvolts*, regardless of WiFi or Sensor mode.
+The device will sleep for *lowvoltsleep* (600 seonds) if the voltage is below _txvolts_, regardless of WiFi or Sensor mode.
 
-**Sensor mode**
-In Sensor mode the device Wakes up every hour (or whatever is confiured) and attempts to obtain a GPS signal within _gps_timout_ (60) seconds. If this can't be acheievd then the device sleeps for _failedGPSsleep_ (60) seconds and tries again.
+**Sensor Mode**
+In Sensor mode the device wakes up every hour (configured using _reportEvery_) and attempts to obtain a GPS signal within _gps_timout_ (60) seconds. If no fix can be obtained the device sleeps for _failedGPSsleep_ (60) seconds and reboots.
 
-During sleep mode the device turns off power to virtually all systems on the TTGO T-Beam, drawing only 5 microamps.
+During sleep mode the device turns off power to virtually all systems on the TTGO T-Beam, drawing approximately 5 microamps.
 
 **WiFi Mode**
 
