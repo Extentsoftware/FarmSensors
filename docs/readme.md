@@ -10,4 +10,6 @@ This code receives sensor measurements from Vesoil sensors and records them in v
 
 **Vesoil Sensor**
 
+Wakes up every hour (or whatever is confiured) and attempts to obtain a GPS signal within _gps_timout_ (60) seconds. If this can't be acheievd then the device sleeps for _failedGPSsleep_ (60) seconds and tries again.            
+
 

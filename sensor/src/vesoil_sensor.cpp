@@ -18,6 +18,7 @@ static const char * TAG = "Sensor";
 #include <driver/rtc_io.h>
 #include <Preferences.h>
 
+
 #if VE_HASWIFI
 #include <WiFi.h>
 #include <AsyncTCP.h>
@@ -104,8 +105,6 @@ void setupSerial() {
   Serial.println("VESTRONG LaPoulton LoRa Sensor");
   print_wakeup_reason();
 }
-
-
 
 void deepSleep(uint64_t timetosleep) {
 
@@ -293,17 +292,62 @@ void getSample(SensorReport *report) {
   report->moist2 = m2;
 }
 
-void setup() {
+void flashlight(char code)
+{
+  digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
+  for (char i=0;i<8;i++)
+  {
+    if ((code & 1)==1)
+      digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
+    delay(150);
+    code = code>>1;
+    digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
+  }  
+}
+
+STARTUPMODE getStartupMode() {
+  const int interval = 100;
+  STARTUPMODE startup_mode = NORMAL;
+
+  // get startup by detecting how many seconds the button is held
+  int btndown = 0;
+  while (digitalRead(BTN1)==0)
+  {
+    delay(interval);
+    btndown += interval;
+  }
+  
+  if (btndown==0)
+    startup_mode = NORMAL;   // sensor mode
+  else if (btndown<1000)
+    startup_mode = WIFI;   // wifi
+  else 
+  {
+    startup_mode = RESET;   // reset config
+    flashlight(ERR_LOWPOWER);
+  }
+
+  Serial.printf("button held for %d mode is %d\n", btndown, startup_mode );
+
+  return startup_mode;
+}
+
+void getConfig(STARTUPMODE startup_mode) {
   preferences.begin(TAG, false);
-  // if (preferences.getBool("configinit"))
-  // {
-  //   preferences.getBytes("config", &config, sizeof(ReceiverConfig));
-  // }
-  // else
-  // {
+
+  // if we have a stored config and we're not resetting, then load the config
+  if (preferences.getBool("configinit") && startup_mode != RESET)
+  {
+    preferences.getBytes("config", &config, sizeof(ReceiverConfig));
+  }
+  else
+  {
     preferences.putBytes("config", &config, sizeof(ReceiverConfig));
     preferences.putBool("configinit", true);
-  //}
+  }
+}
+
+void setup() {
 
   pinMode(BLUELED, OUTPUT);   // onboard Blue LED
   pinMode(BTN1,INPUT);        // Button 1
@@ -311,23 +355,36 @@ void setup() {
   
   digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
 
+  // check we have enough juice
+  float currentVoltage = getBatteryVoltage();
+  if (currentVoltage<config.txvolts)
+  {
+    flashlight(ERR_LOWPOWER);
+    deepSleep(config.lowvoltsleep);
+  }
+
   setupSerial();  
+
+  STARTUPMODE startup_mode = getStartupMode();
+
+  getConfig(startup_mode);
+
   setupLoRa();
   setupGPS();
 
-#if VE_HASWIFI
-  if (digitalRead(BTN1)==0)
+  if (startup_mode==WIFI)
   {
+    flashlight(INFO_WIFI);
     Serial.printf("Entering WiFi mode\n");
     wifiMode=true;
     setupWifi();
   }
-#endif  
-
-  digitalWrite(BLUELED, LOW);   // turn the LED off
-
+  else
+    flashlight(INFO_SENSOR);
+  
+  
   Serial.printf("{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
-          config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, getBatteryVoltage() );
+          config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, currentVoltage );
 
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
 }
@@ -343,7 +400,7 @@ void loop() {
   // get GPS and then gather/send a sample if within the time window
   // best not to send at night as we drain the battery
   SensorReport report;
-  for (int i=0; i<30; i++)
+  for (int i=0; i<config.gps_timout; i++)
   {
     // check whethe we have  gps sig
     if (gps.location.lat()!=0)
@@ -384,4 +441,23 @@ void loop() {
   }
   // GPS failed - try again in the future
   deepSleep((uint64_t)config.failedGPSsleep);
+}
+
+void  turnOffRTC(){
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+  esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
+}
+
+void turnOffWifi() {
+  esp_wifi_stop();
+  esp_wifi_deinit();
+}
+
+void turnOffBluetooth() {
+  esp_bluedroid_disable();
+  esp_bluedroid_deinit();
+  esp_bt_controller_disable();
+  esp_bt_controller_deinit();
 }

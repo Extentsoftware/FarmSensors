@@ -23,6 +23,11 @@
 #define DI0         26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
 #define BAND     868E6P
 
+#define ERR_LOWPOWER  0x15  // 010101
+#define ERR_LOWPOWER  0x15  // 010101
+#define INFO_WIFI     0x33  // 110011
+#define INFO_SENSOR   0xAA  // 10101010
+
 struct ReceiverConfig
 {
   char  ssid[16] = "VESTRONG_S";
@@ -34,11 +39,19 @@ struct ReceiverConfig
   long  frequency = FREQUENCY;  // LoRa transmit frequency
   int   txpower = TXPOWER;      // LoRa transmit power
   float txvolts = TXVOLTS;      // power supply must be delivering this voltage in order to xmit.
+  int   lowvoltsleep = 600;     // sleep this long if low on volts
   long  bandwidth = 62.5E3;     // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   int   speadFactor = 12;       // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = 5;         // extra info for CRC
   bool  enableCRC = true;       //
 } config;
+
+enum STARTUPMODE
+{
+    NORMAL=0,
+    WIFI=1,
+    RESET=2
+};
 
 
 void print_wakeup_reason();
