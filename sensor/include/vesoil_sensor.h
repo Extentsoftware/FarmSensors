@@ -44,7 +44,7 @@ struct ReceiverConfig
   int   speadFactor = 12;       // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = 5;         // extra info for CRC
   bool  enableCRC = true;       //
-} config;
+} default_config;
 
 enum STARTUPMODE
 {
@@ -53,15 +53,19 @@ enum STARTUPMODE
     RESET=2
 };
 
+enum GPSLOCK
+{
+    LOCK_OK,
+    LOCK_FAIL,
+    LOCK_WINDOW
+};
 
+GPSLOCK getGpsLock();
+void getSampleAndSend();
 void print_wakeup_reason();
-void  turnOffRTC();
-void turnOffWifi();
 void setupSerial();
 void setupLoRa() ;
 void smartDelay(unsigned long ms);
-void turnOffWifi();
-void turnOffBluetooth();
 void deepSleep(uint64_t timetosleep);
 void setupTempSensors();
 float readGroundTemp();

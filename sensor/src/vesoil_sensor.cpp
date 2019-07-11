@@ -41,6 +41,7 @@ DHT_Unified dht(DHTPIN, DHT22);
 AsyncWebServer server(80);
 Preferences preferences;
 bool wifiMode=false;
+struct ReceiverConfig config;
 
 void setupLoRa() {
   SPI.begin(SCK,MISO,MOSI,SS);
@@ -61,16 +62,6 @@ void setupLoRa() {
   if (!result) {
     Serial.printf("Starting LoRa failed: err %d", result);
   }  
-}
-
-void sendSampleLora(SensorReport *report) {
-  // send packet
-  digitalWrite(BLUELED, HIGH);   // turn the LED on (HIGH is the voltage level)
-  LoRa.beginPacket();
-  LoRa.write( (const uint8_t *)report, sizeof(SensorReport));
-  LoRa.endPacket();
-  delay(100);
-  digitalWrite(BLUELED, LOW);   // turn the LED off
 }
 
 void smartDelay(unsigned long ms) {
@@ -110,8 +101,23 @@ void deepSleep(uint64_t timetosleep) {
 
   GPSReset();
   LoRa.sleep();
-  turnOffWifi();
-  turnOffBluetooth();
+
+  // turnOffRTC
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+  esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
+
+  // turnOffWifi()
+  esp_wifi_stop();
+  esp_wifi_deinit();
+
+  // turnOffBluetooth(
+  esp_bluedroid_disable();
+  esp_bluedroid_deinit();
+  esp_bt_controller_disable();
+  esp_bt_controller_deinit();
+
   
   esp_err_t result;
   do {
@@ -342,8 +348,10 @@ void getConfig(STARTUPMODE startup_mode) {
   }
   else
   {
-    preferences.putBytes("config", &config, sizeof(ReceiverConfig));
+    // we're resetting the config or there isn't one
+    preferences.putBytes("config", &default_config, sizeof(ReceiverConfig));
     preferences.putBool("configinit", true);
+    memcpy( &config, &default_config, sizeof(ReceiverConfig));
   }
 }
 
@@ -391,15 +399,45 @@ void setup() {
 
 void loop() {
 
-  // no sampling during wifi mode
-  if (wifiMode==true)
-  {
+  // no sampling during wifi mode if btn not held down
+  if (wifiMode==true && digitalRead(BTN1)!=0)
     return;
+
+  GPSLOCK lock = getGpsLock();
+
+  if (wifiMode)
+  {
+    if (lock!=LOCK_FAIL)
+    {
+      getSampleAndSend();
+      return;
+    }
   }
 
-  // get GPS and then gather/send a sample if within the time window
-  // best not to send at night as we drain the battery
-  SensorReport report;
+  switch (lock)
+  {
+    case LOCK_OK:
+      getSampleAndSend();
+      deepSleep((uint64_t)config.reportEvery);
+
+    case LOCK_FAIL:
+      // GPS failed - try again in the future
+      deepSleep((uint64_t)config.failedGPSsleep);
+
+    case LOCK_WINDOW:
+      // not in report window - calc sleep time
+      long timeToSleep=0;
+      if (config.fromHour > gps.time.hour())
+        timeToSleep = (config.fromHour - gps.time.hour()) * 60;
+      else
+        timeToSleep = ((24-gps.time.hour()) + config.toHour) * 60;
+
+      deepSleep( timeToSleep );
+  }
+}
+
+GPSLOCK getGpsLock() 
+{
   for (int i=0; i<config.gps_timout; i++)
   {
     // check whethe we have  gps sig
@@ -407,57 +445,39 @@ void loop() {
     {
       // in the report window?
       if (gps.time.hour() >=config.fromHour && gps.time.hour() < config.toHour)
-      {
-        digitalWrite(BUSPWR, HIGH);   // turn on power to the sensor bus
-        delay(100);
-        setupTempSensors();
-        delay(100);
-        getSample(&report);
-        digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
-
-        char *stime = asctime(gmtime(&report.time));
-        stime[24]='\0';
-
-        Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f\n",
-        stime, report.lat, report.lng ,report.alt , +report.sats , +report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
-        sendSampleLora(&report);
-        deepSleep((uint64_t)config.reportEvery);
-      }
+        return LOCK_OK;          
       else
-      {
-        long timeToSleep=0;
-        // not in report window
-        if (config.fromHour > gps.time.hour())
-          timeToSleep = (config.fromHour - gps.time.hour()) * 60;
-        else
-          timeToSleep = ((24-gps.time.hour()) + config.toHour) * 60;
-
-        deepSleep( timeToSleep );
-      }
-      break;    
+        return LOCK_WINDOW;
     }
     Serial.printf("waiting for GPS try: %d\n", i);
     smartDelay(1000);
   }
-  // GPS failed - try again in the future
-  deepSleep((uint64_t)config.failedGPSsleep);
+  return LOCK_FAIL;
 }
 
-void  turnOffRTC(){
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
-}
+void getSampleAndSend() 
+{
+  // get GPS and then gather/send a sample if within the time window
+  // best not to send at night as we drain the battery
+  SensorReport report;
 
-void turnOffWifi() {
-  esp_wifi_stop();
-  esp_wifi_deinit();
-}
+  digitalWrite(BUSPWR, HIGH);   // turn on power to the sensor bus
+  delay(100);
+  setupTempSensors();
+  delay(100);
+  getSample(&report);
+  digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
 
-void turnOffBluetooth() {
-  esp_bluedroid_disable();
-  esp_bluedroid_deinit();
-  esp_bt_controller_disable();
-  esp_bt_controller_deinit();
+  char *stime = asctime(gmtime(&report.time));
+  stime[24]='\0';
+
+  Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f\n",
+  stime, report.lat, report.lng ,report.alt , +report.sats , +report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
+  // send packet
+  digitalWrite(BLUELED, HIGH);   // turn the LED on (HIGH is the voltage level)
+  LoRa.beginPacket();
+  LoRa.write( (const uint8_t *)&report, sizeof(SensorReport));
+  LoRa.endPacket();
+  delay(100);
+  digitalWrite(BLUELED, LOW);   // turn the LED off
 }
