@@ -1,16 +1,17 @@
 # Vesoil Farm Monitoring
 
-This project is for remote soil moisture, ground temperature, air temperature and humidity based on the TTG T-Beam board.
+Plant health is, in part, dependent on good soil condition which includes correct moisture and nutriants. Our initial project is for remote sensing of soil moisture, ground temperature, air temperature and humidity, based on the TTGO T-Beam board. You need at least one sensor board and one hub for a working system. The sensor board transmits using [LoRa](https://en.wikipedia.org/wiki/LoRa) (long range radio) on 868Mhz to the hub. The frequency can be changed if desired.
 
-Use VSCode and Platform.io extension to compile and upload firmware to the TTGO board.
+The devices are designed to run on a small Macadamia plantation in Zimbabwe, and will therefore run off solar energy as sunlight is generally not a problem in this part of the world. Unfortunately, internet access is restricted on this remote farm so samples must be captured and stored until they can be retrieved. We use farmOs in this project to retreive the samples from the device and then sync them with the FarmOs database when internet access is availalable.
 
-## Vesoil Hub
-This code receives sensor measurements from Vesoil sensors and records them in volatile memory.
-
+We have use VSCode and Platform.io extension to compile and upload firmware to the TTGO board. Autodesk Eagle was used to prepare the PCBs.
 
 ## Vesoil Sensor
 
-if you reset the device without holding down the GPIO39 button the device enters Sensor mode.
+
+The device is designed to measure current location, soil moisture at two depths, air temperature, air humidity and ground temperature. Sample rate can be configured using Wifi Mode. Samples are not stored, but transmitted via LoRa to the Vesoil Hub.
+
+If you reset the device without holding down the GPIO39 button the device enters Sensor mode.
 
 When resetting the device via the reset button, if you hold in the GPIO39 button for more that 2 seconds during the reboot then the device resets it stored configuration to factory defaults.
 
@@ -45,7 +46,33 @@ In Wifi mode the sensor can be reached via http://192.168.4.1. Configuration par
 | speadFactor | Signal processing gain. higher values give greater range  |  12 |
 | codingRate |  Extra info for CRC |  5 |
 | enableCRC | Enable detection of corrupt packets  |  true |
+||||
 
+### Blue light code
+The onboard blue LED is used to indicate software state as follows:
+
+| **Description**        | Flashes |
+| ------------- |-------------|
+| Power too low  | 3 short flashes |
+| WiFi Mode  | 2 long flashes |
+| Sensor Mode  | 4 short flashes |
+| LoRa Transmit  | 1 long flash |
+|||
+
+### Sensors
+* 1 x DS18B20 for ground temperature
+* 2 x [Soil Moisture Sensors](https://www.banggood.com/Capacitive-Soil-Moisture-Sensor-Not-Easy-To-Corrode-Wide-Voltage-Module-For-Arduino-p-1309033.html?rmmds=buy&cur_warehouse=UK) based on 555 chip
+* 1 x DHT22 for air temperature and humidity
+
+## Vesoil Hub
+This code receives sensor measurements from Vesoil sensors and records them in volatile memory.
+
+*To be completed*
+
+## FarmOs Mobile App
+Sensor reading collected by the hub can be retrieved by a FarmOs mobile device for onward synchronisation with a farmOs database.
+
+*To be completed*
 
 # Useful Links
 https://github.com/LilyGO/TTGO-T-Beam)

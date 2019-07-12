@@ -1,8 +1,6 @@
 #ifndef __VESOIL_SENSOR__
 #define __VESOIL_SENSOR__
 
-
-
 #define FREQUENCY 868E6
 #define TXPOWER     20   // max power
 #define TXVOLTS    2.7
@@ -23,12 +21,11 @@
 #define DI0         26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
 #define BAND     868E6P
 
-#define ERR_LOWPOWER  0x15  // 010101
-#define ERR_LOWPOWER  0x15  // 010101
-#define INFO_WIFI     0x33  // 110011
+#define ERR_LOWPOWER  0x15  // 00010101
+#define INFO_WIFI     0x33  // 00110011
 #define INFO_SENSOR   0xAA  // 10101010
 
-struct ReceiverConfig
+struct SenderConfig
 {
   char  ssid[16] = "VESTRONG_S";
   int   gps_timout = 60;        // wait n seconds to get GPS fix

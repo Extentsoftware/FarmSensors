@@ -41,7 +41,7 @@ DHT_Unified dht(DHTPIN, DHT22);
 AsyncWebServer server(80);
 Preferences preferences;
 bool wifiMode=false;
-struct ReceiverConfig config;
+struct SenderConfig config;
 
 void setupLoRa() {
   SPI.begin(SCK,MISO,MOSI,SS);
@@ -344,14 +344,14 @@ void getConfig(STARTUPMODE startup_mode) {
   // if we have a stored config and we're not resetting, then load the config
   if (preferences.getBool("configinit") && startup_mode != RESET)
   {
-    preferences.getBytes("config", &config, sizeof(ReceiverConfig));
+    preferences.getBytes("config", &config, sizeof(SenderConfig));
   }
   else
   {
     // we're resetting the config or there isn't one
-    preferences.putBytes("config", &default_config, sizeof(ReceiverConfig));
+    preferences.putBytes("config", &default_config, sizeof(SenderConfig));
     preferences.putBool("configinit", true);
-    memcpy( &config, &default_config, sizeof(ReceiverConfig));
+    memcpy( &config, &default_config, sizeof(SenderConfig));
   }
 }
 
