@@ -2,7 +2,7 @@
 
 Plant health is, in part, dependent on good soil condition which includes correct moisture and nutriants. Our initial project is for remote sensing of soil moisture, ground temperature, air temperature and humidity, based on the TTGO T-Beam board. You need at least one sensor board and one hub for a working system. The sensor board transmits using [LoRa](https://en.wikipedia.org/wiki/LoRa) (long range radio) on 868Mhz to the hub. The frequency can be changed if desired.
 
-The devices are designed to run on a small Macadamia plantation in Zimbabwe, and will therefore run off solar energy as sunlight is generally not a problem in this part of the world. Unfortunately, internet access is restricted on this remote farm so samples must be captured and stored until they can be retrieved. We use farmOs in this project to retreive the samples from the device and then sync them with the FarmOs database when internet access is availalable.
+The devices are designed to run on a small Macadamia plantation in Zimbabwe, and will therefore run off solar energy as sunlight is generally not a problem in this part of the world. Unfortunately, internet access is restricted on this remote farm so samples must be captured and stored until they can be retrieved. We use [farmOS](https://farmos.org) in this project to retreive the samples from the device and then sync them with the FarmOS database when internet access is availalable.
 
 We have use VSCode and Platform.io extension to compile and upload firmware to the TTGO board. Autodesk Eagle was used to prepare the PCBs.
 
@@ -69,8 +69,8 @@ This code receives sensor measurements from Vesoil sensors and records them in v
 
 *To be completed*
 
-## FarmOs Mobile App
-Sensor reading collected by the hub can be retrieved by a FarmOs mobile device for onward synchronisation with a farmOs database.
+## FarmOS Mobile App
+Sensor reading collected by the hub can be retrieved by a FarmOS mobile device for onward synchronisation with a farmOS database.
 
 *To be completed*
 
@@ -86,6 +86,10 @@ https://arduinojson.org/v6/api/
 https://github.com/PaulStoffregen/OneWire
 
 https://github.com/milesburton/Arduino-Temperature-Control-Library
+
+https://farmos.org/development/client/
+
+
 
 
 
