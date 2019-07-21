@@ -14,13 +14,14 @@ struct SenserConfig
   bool  enableCRC = true;       //
 } config;
 
+void onReceive(int packetSize);
 void SystemCheck();
 void getBatteryVoltage();
 void setupBatteryVoltage();
 void notFound(AsyncWebServerRequest *request);
 void setupWifi();
 void showBlock(int packetSize);
-void readLoraData();
+void readLoraData(int packetSize);
 SensorReport *GetFromStore();
 void AddToStore(SensorReport *report);
 int GetNextRingBufferPos(int pointer);

@@ -1,4 +1,3 @@
-
 // https://github.com/me-no-dev/ESPAsyncWebServer#basic-response-with-http-code
 // https://github.com/cyberman54/ESP32-Paxcounter/blob/82fdfb9ca129f71973a1f912a04aa8c7c5232a87/src/main.cpp
 // https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/log.html
@@ -15,7 +14,6 @@ static const char * TAG = "Hub";
 #include <LoRa.h>
 #include <AsyncTCP.h>
 #include <Preferences.h>
-
 #include "vesoil_hub.h"
 
 float vBat; // battery voltage
@@ -23,16 +21,16 @@ SensorReport* store;
 int currentStoreWriter=0;
 int currentStoreReader=0;
 AsyncWebServer server(80);
+Preferences preferences;
 float snr = 0;
 float rssi = 0;
 long pfe=0;
 
 int badpacket=0;
 bool wifiMode=false;
-Preferences preferences;
+
 
 void setup() {
-
   preferences.begin(TAG, false);
 //  if (preferences.getBool("configinit"))
 //    preferences.getBytes("config", &config, sizeof(SenserConfig));
@@ -42,7 +40,6 @@ void setup() {
     preferences.putBool("configinit", true);
 //  }
 
-
   setupBatteryVoltage();
 
   Serial.begin(115200);
@@ -50,12 +47,9 @@ void setup() {
   Serial.println();
   Serial.println("VESTRONG LaPoulton LoRa Hub");
 
-
   esp_log_level_set("*", ESP_LOG_VERBOSE);
 
   // GPS comms settings  
-  SPI.begin(SCK,MISO,MOSI,SS);
-  
   MemoryCheck();  
   SystemCheck();
 
@@ -71,6 +65,8 @@ void setup() {
 
   // turn on LoRa  
   Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
+
+  SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
   LoRa.setSignalBandwidth(config.bandwidth);
   if (config.enableCRC)
@@ -79,21 +75,25 @@ void setup() {
       LoRa.disableCrc();
   LoRa.setCodingRate4(config.codingRate);
   LoRa.setSpreadingFactor(config.speadFactor);
-    
   int result = LoRa.begin(config.frequency);  
-  if (!result) {
-    Serial.printf("Starting LoRa failed: err %d", result);
-  }  
-
+  
+  //int result = LoRa.begin(868E6);    
+  if (!result) 
+    Serial.printf("Starting LoRa failed: err %d\n", result);
+  else
+    Serial.println("Started LoRa OK");
 
   LoRa.receive();
 
   digitalWrite(BLUELED, LOW);   // turn the LED off
+  Serial.printf("LoRa Receive");
+
 }
 
-
 void loop() {
-  readLoraData();
+  int packetSize = LoRa.parsePacket();
+  readLoraData(packetSize);
+  delay(100);
 }
 
 void MemoryCheck() {
@@ -137,14 +137,12 @@ void SystemCheck() {
   ESP_LOGI("TAG", "HEAP  size  %u free  %u", ESP.getHeapSize(), ESP.getFreeHeap());
 }
 
-void readLoraData() {
-  int packetSize = LoRa.parsePacket();
+void readLoraData(int packetSize) {  
   if (packetSize>0) { 
-    Serial.printf("%d.",packetSize); 
     snr = LoRa.packetSnr();
     rssi = LoRa.packetRssi();
     pfe = LoRa.packetFrequencyError();
-
+    Serial.printf("%d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
     getBatteryVoltage();
     digitalWrite(BLUELED, HIGH);   // turn the LED on (HIGH is the voltage level)
     showBlock(packetSize);  
@@ -261,19 +259,15 @@ void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
 
-
 void setupBatteryVoltage()
 {
    // set battery measurement pin
   adcAttachPin(BATTERY_PIN);
   adcStart(BATTERY_PIN);
   analogReadResolution(10); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.
- 
 }
-
 
 void getBatteryVoltage() {
   // we've set 10-bit ADC resolution 2^10=1024 and voltage divider makes it half of maximum readable value (which is 3.3V)
   vBat = analogRead(BATTERY_PIN) * 2.0 * (3.3 / 1024.0);
 }
-

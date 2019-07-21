@@ -25,12 +25,12 @@
 #define INFO_WIFI     0x33  // 00110011
 #define INFO_SENSOR   0xAA  // 10101010
 
-struct SenderConfig
+struct SensorConfig
 {
   char  ssid[16] = "VESTRONG_S";
   int   gps_timout = 60;        // wait n seconds to get GPS fix
   int   failedGPSsleep = 60;    // sleep this long if failed to get GPS
-  int   reportEvery = 60 * 60;  // get sample every n seconds
+  int   reportEvery = 10;       // get sample every n seconds
   int   fromHour = 6;           // between these hours
   int   toHour = 20;            // between these hours
   long  frequency = FREQUENCY;  // LoRa transmit frequency

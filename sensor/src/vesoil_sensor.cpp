@@ -3,6 +3,9 @@
 //
 // to upload new html files use this command:
 // pio run --target uploadfs
+// pio device monitor -p COM5: -b 115200
+// 
+
 static const char * TAG = "Sensor";
 #define APP_VERSION 1
 #define VE_HASWIFI 1
@@ -45,9 +48,9 @@ DHT_Unified dht(DHTPIN, DHT22);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 AsyncEventSource events("/events");
-Preferences preferences;
 bool wifiMode=false;
-struct SenderConfig config;
+struct SensorConfig config;
+Preferences preferences;
 
 void setupLoRa() {
   SPI.begin(SCK,MISO,MOSI,SS);
@@ -63,8 +66,8 @@ void setupLoRa() {
   LoRa.setSpreadingFactor(config.speadFactor);
   LoRa.setSignalBandwidth(config.bandwidth);
   LoRa.setTxPower(config.txpower);
-
   int result = LoRa.begin(config.frequency);
+  //int result = LoRa.begin(868E6);
   if (!result) {
     Serial.printf("Starting LoRa failed: err %d", result);
   }  
@@ -95,7 +98,8 @@ void print_wakeup_reason() {
   }
 }
 
-void setupSerial() {
+
+void setupSerial() { 
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
@@ -225,8 +229,6 @@ float getBatteryVoltage() {
   return  analogRead(BATTERY_PIN) * 2.0 * (3.3 / 1024.0);
 }
 
-#if VE_HASWIFI
-
 void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
@@ -293,8 +295,6 @@ void setupWifi() {
 
     server.begin();
 }
-
-#endif
 
 void getSample(SensorReport *report) {
   float vBat = getBatteryVoltage();
@@ -379,95 +379,14 @@ void getConfig(STARTUPMODE startup_mode) {
   // if we have a stored config and we're not resetting, then load the config
   if (preferences.getBool("configinit") && startup_mode != RESET)
   {
-    preferences.getBytes("config", &config, sizeof(SenderConfig));
+    preferences.getBytes("config", &config, sizeof(SensorConfig));
   }
   else
   {
     // we're resetting the config or there isn't one
-    preferences.putBytes("config", &default_config, sizeof(SenderConfig));
+    preferences.putBytes("config", &default_config, sizeof(SensorConfig));
     preferences.putBool("configinit", true);
-    memcpy( &config, &default_config, sizeof(SenderConfig));
-  }
-}
-
-void setup() {
-
-  pinMode(BLUELED, OUTPUT);   // onboard Blue LED
-  pinMode(BTN1,INPUT);        // Button 1
-  pinMode(BUSPWR,OUTPUT);     // power enable for the sensors
-  
-  digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
-
-  // check we have enough juice
-  float currentVoltage = getBatteryVoltage();
-  if (currentVoltage<config.txvolts)
-  {
-    flashlight(ERR_LOWPOWER);
-    deepSleep(config.lowvoltsleep);
-  }
-
-  setupSerial();  
-
-  STARTUPMODE startup_mode = getStartupMode();
-
-  getConfig(startup_mode);
-
-  setupLoRa();
-  setupGPS();
-
-  if (startup_mode==WIFI)
-  {
-    flashlight(INFO_WIFI);
-    Serial.printf("Entering WiFi mode\n");
-    wifiMode=true;
-    setupWifi();
-  }
-  else
-    flashlight(INFO_SENSOR);
-  
-  
-  Serial.printf("{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
-          config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, currentVoltage );
-
-  Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
-}
-
-void loop() {
-
-  // no sampling during wifi mode if btn not held down
-  if (wifiMode==true && digitalRead(BTN1)!=0)
-    return;
-
-  GPSLOCK lock = getGpsLock();
-
-  if (wifiMode)
-  {
-    if (lock!=LOCK_FAIL)
-    {
-      getSampleAndSend();
-      return;
-    }
-  }
-
-  switch (lock)
-  {
-    case LOCK_OK:
-      getSampleAndSend();
-      deepSleep((uint64_t)config.reportEvery);
-
-    case LOCK_FAIL:
-      // GPS failed - try again in the future
-      deepSleep((uint64_t)config.failedGPSsleep);
-
-    case LOCK_WINDOW:
-      // not in report window - calc sleep time
-      long timeToSleep=0;
-      if (config.fromHour > gps.time.hour())
-        timeToSleep = (config.fromHour - gps.time.hour()) * 60;
-      else
-        timeToSleep = ((24-gps.time.hour()) + config.toHour) * 60;
-
-      deepSleep( timeToSleep );
+    memcpy( &config, &default_config, sizeof(SensorConfig));
   }
 }
 
@@ -513,6 +432,86 @@ void getSampleAndSend()
   LoRa.beginPacket();
   LoRa.write( (const uint8_t *)&report, sizeof(SensorReport));
   LoRa.endPacket();
-  delay(100);
+  delay(1000);
   digitalWrite(BLUELED, LOW);   // turn the LED off
+}
+
+void setup() {
+
+  pinMode(BLUELED, OUTPUT);   // onboard Blue LED
+  pinMode(BTN1,INPUT);        // Button 1
+  pinMode(BUSPWR,OUTPUT);     // power enable for the sensors
+  
+  digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
+
+  // check we have enough juice
+  float currentVoltage = getBatteryVoltage();
+  if (currentVoltage<config.txvolts)
+  {
+    flashlight(ERR_LOWPOWER);
+    deepSleep(config.lowvoltsleep);
+  }
+  setupSerial();  
+
+  STARTUPMODE startup_mode = getStartupMode();
+
+  getConfig(startup_mode);
+
+  setupLoRa();
+
+  setupGPS();
+
+  if (startup_mode==WIFI)
+  {
+    flashlight(INFO_WIFI);
+    Serial.printf("Entering WiFi mode\n");
+    wifiMode=true;
+    setupWifi();
+  }
+  else
+    flashlight(INFO_SENSOR);
+  
+  
+  Serial.printf("{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
+          config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, currentVoltage );
+
+  Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
+}
+
+void loop() {
+  // no sampling during wifi mode if btn not held down
+  if (wifiMode==true && digitalRead(BTN1)!=0)
+    return;
+
+  GPSLOCK lock = getGpsLock();
+
+  if (wifiMode)
+  {
+    if (lock!=LOCK_FAIL)
+    {
+      getSampleAndSend();
+      return;
+    }
+  }
+
+  switch (lock)
+  {
+    case LOCK_OK:
+      getSampleAndSend();
+      deepSleep((uint64_t)config.reportEvery);
+
+    case LOCK_FAIL:
+      // GPS failed - try again in the future
+      deepSleep((uint64_t)config.failedGPSsleep);
+
+    case LOCK_WINDOW:
+      // not in report window - calc sleep time
+      long timeToSleep=0;
+      if (config.fromHour > gps.time.hour())
+        timeToSleep = (config.fromHour - gps.time.hour()) * 60;
+      else
+        timeToSleep = ((24-gps.time.hour()) + config.toHour) * 60;
+
+      deepSleep( timeToSleep );
+  }
 }
