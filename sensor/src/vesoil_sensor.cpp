@@ -557,6 +557,8 @@ void loop() {
     }
   }
 
+  Serial.printf("GPS lock mode %d\n", lock);
+
   switch (lock)
   {
     case LOCK_OK:

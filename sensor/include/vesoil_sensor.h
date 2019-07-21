@@ -29,9 +29,9 @@ struct SensorConfig
 {
   char  ssid[16] = "VESTRONG_S";
   char  password[16] = "";
-  int   gps_timeout = 60;        // wait n seconds to get GPS fix
+  int   gps_timeout = 60;       // wait n seconds to get GPS fix
   int   failedGPSsleep = 60;    // sleep this long if failed to get GPS
-  int   reportEvery = 10;       // get sample every n seconds
+  int   reportEvery = 30* 60;   // get sample every n seconds
   int   fromHour = 6;           // between these hours
   int   toHour = 20;            // between these hours
   long  frequency = FREQUENCY;  // LoRa transmit frequency
