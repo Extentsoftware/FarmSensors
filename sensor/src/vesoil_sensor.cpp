@@ -1,6 +1,8 @@
 // https://github.com/LilyGO/TTGO-T-Beam
 // Pin map http://tinymicros.com/wiki/TTGO_T-Beam
-
+//
+// to upload new html files use this command:
+// pio run --target uploadfs
 static const char * TAG = "Sensor";
 #define APP_VERSION 1
 #define VE_HASWIFI 1
@@ -17,7 +19,9 @@ static const char * TAG = "Sensor";
 #include <esp_bt.h>
 #include <driver/rtc_io.h>
 #include <Preferences.h>
-
+#include <ArduinoOTA.h>
+#include <FS.h>
+#include <SPIFFS.h>
 
 #if VE_HASWIFI
 #include <WiFi.h>
@@ -39,6 +43,8 @@ DallasTemperature tmpsensors(&oneWire);
 TinyGPSPlus gps;                            
 DHT_Unified dht(DHTPIN, DHT22);
 AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
+AsyncEventSource events("/events");
 Preferences preferences;
 bool wifiMode=false;
 struct SenderConfig config;
@@ -225,15 +231,30 @@ void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
 
+String processor(const String& var)
+{
+  if(var == "SSID")
+    return config.ssid;
+  return String();
+}
+
 void setupWifi() {
+    if (!SPIFFS.begin())
+    {
+      Serial.println("Failed to initialise SPIFFS");
+    }
+
     WiFi.softAP(config.ssid);
 
-    Serial.print("IP Address: ");
+    Serial.println("IP Address:");
     Serial.println(WiFi.softAPIP());
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send(200, "text/plain", "Hello, from Vestrong");
+        Serial.printf("Web request %s", request->url().c_str());
+        request->send(SPIFFS, "/index.html", String(), false, processor);
     });
+
+    server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
     // Send a GET request to <IP>/get?message=<message>
     server.on("/api", HTTP_GET, [] (AsyncWebServerRequest *request) {
@@ -249,8 +270,22 @@ void setupWifi() {
         request->send(200, "text/plain",  reply);
     });
 
+    // post JSON to api
     server.on("/api", HTTP_POST, [] (AsyncWebServerRequest *request) {
+        Serial.printf("API post %s", request->url().c_str());
         request->send(200, "text/plain",  "done");
+    });
+
+    // post form
+    server.on( "/",HTTP_POST, [](AsyncWebServerRequest * request){},  NULL, [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+      Serial.printf("root post %s", request->url().c_str());
+      for (size_t i = 0; i < len; i++) {
+        Serial.write(data[i]);
+      }
+ 
+      Serial.println();
+ 
+      request->send(SPIFFS, "/index.html", String(), false, processor);
     });
 
 
