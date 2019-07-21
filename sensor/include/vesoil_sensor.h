@@ -28,7 +28,8 @@
 struct SensorConfig
 {
   char  ssid[16] = "VESTRONG_S";
-  int   gps_timout = 60;        // wait n seconds to get GPS fix
+  char  password[16] = "";
+  int   gps_timeout = 60;        // wait n seconds to get GPS fix
   int   failedGPSsleep = 60;    // sleep this long if failed to get GPS
   int   reportEvery = 10;       // get sample every n seconds
   int   fromHour = 6;           // between these hours
@@ -38,7 +39,7 @@ struct SensorConfig
   float txvolts = TXVOLTS;      // power supply must be delivering this voltage in order to xmit.
   int   lowvoltsleep = 600;     // sleep this long if low on volts
   long  bandwidth = 62.5E3;     // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
-  int   speadFactor = 12;       // signal processing gain. higher values give greater range but take longer (more power) to transmit
+  int   spreadFactor = 12;      // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = 5;         // extra info for CRC
   bool  enableCRC = true;       //
 } default_config;
@@ -57,6 +58,7 @@ enum GPSLOCK
     LOCK_WINDOW
 };
 
+void setConfigParam(const String& var, const char *value);
 GPSLOCK getGpsLock();
 void getSampleAndSend();
 void print_wakeup_reason();

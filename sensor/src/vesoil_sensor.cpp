@@ -56,14 +56,14 @@ void setupLoRa() {
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
   
-  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
+  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth);
 
   if (config.enableCRC)
     LoRa.enableCrc();
   else 
     LoRa.disableCrc();
   LoRa.setCodingRate4(config.codingRate);
-  LoRa.setSpreadingFactor(config.speadFactor);
+  LoRa.setSpreadingFactor(config.spreadFactor);
   LoRa.setSignalBandwidth(config.bandwidth);
   LoRa.setTxPower(config.txpower);
   int result = LoRa.begin(config.frequency);
@@ -237,7 +237,72 @@ String processor(const String& var)
 {
   if(var == "SSID")
     return config.ssid;
+  if(var == "failedGPSsleep")
+    return String(config.failedGPSsleep);
+  if(var == "frequency")
+    return String(config.frequency);
+  if(var == "fromHour")
+    return String(config.fromHour);
+  if(var == "gps_timeout")
+    return String(config.gps_timeout);
+  if(var == "lowvoltsleep")
+    return String(config.lowvoltsleep);
+  if(var == "password")
+    return config.password;
+  if(var == "reportEvery")
+    return String(config.reportEvery);
+  if(var == "spreadFactor")
+    return String(config.spreadFactor);
+  if(var == "toHour")
+    return String(config.toHour);
+  if(var == "txpower")
+    return String(config.txpower);
+  if(var == "txvolts")
+    return String(config.txvolts);
+  if(var == "enableCRC")
+    return String(config.enableCRC?"checked":"");
+  if(var == "codingRate")
+    return String(config.codingRate);
+  if(var == "bandwidth")
+    return String(config.bandwidth);
+    
   return String();
+}
+
+void setConfigParam(const String& var, const char *value)
+{
+  Serial.printf("param %s %s\n", var.c_str(), value);
+
+  if(var == "SSID")
+    memcpy(config.ssid, value, strlen(value));
+  if(var == "password")
+    memcpy(config.password, value, strlen(value));
+  if(var == "failedGPSsleep")
+    config.failedGPSsleep = atoi(value);
+  if(var == "frequency")
+    config.frequency = atol(value);
+  if(var == "fromHour")
+    config.fromHour = atoi(value);
+  if(var == "gps_timeout")
+    config.gps_timeout = atoi(value);
+  if(var == "lowvoltsleep")
+    config.lowvoltsleep = atoi(value);
+  if(var == "reportEvery")
+    config.reportEvery = atoi(value);
+  if(var == "spreadFactor")
+    config.spreadFactor = atoi(value);
+  if(var == "toHour")
+    config.toHour = atoi(value);
+  if(var == "txpower")
+    config.txpower = atoi(value);
+  if(var == "txvolts")
+    config.txvolts = atof(value);
+  if(var == "enableCRC")
+    config.enableCRC = strcmp(value, "on")==0;
+  if(var == "codingRate")
+    config.codingRate = atoi(value);
+  if(var == "bandwidth")
+    config.bandwidth = atol(value);
 }
 
 void setupWifi() {
@@ -246,13 +311,16 @@ void setupWifi() {
       Serial.println("Failed to initialise SPIFFS");
     }
 
-    WiFi.softAP(config.ssid);
+    if (strlen(config.password)==0)
+      WiFi.softAP(config.ssid);
+    else
+      WiFi.softAP(config.ssid, config.password);
 
     Serial.println("IP Address:");
     Serial.println(WiFi.softAPIP());
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-        Serial.printf("Web request %s", request->url().c_str());
+        Serial.printf("Web request %s\n", request->url().c_str());
         request->send(SPIFFS, "/index.html", String(), false, processor);
     });
 
@@ -265,28 +333,25 @@ void setupWifi() {
         
         char *msg = (char *)malloc(512);
         sprintf(msg, "{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
-                 config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, getBatteryVoltage() );
+                 config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, getBatteryVoltage() );
         reply += msg;
         reply += " ] }\n";
         free(msg);
         request->send(200, "text/plain",  reply);
     });
 
-    // post JSON to api
-    server.on("/api", HTTP_POST, [] (AsyncWebServerRequest *request) {
-        Serial.printf("API post %s", request->url().c_str());
-        request->send(200, "text/plain",  "done");
-    });
-
     // post form
-    server.on( "/",HTTP_POST, [](AsyncWebServerRequest * request){},  NULL, [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+    server.on("/setconfig", HTTP_POST, [] (AsyncWebServerRequest *request) {
       Serial.printf("root post %s", request->url().c_str());
-      for (size_t i = 0; i < len; i++) {
-        Serial.write(data[i]);
+
+      for (int i=0; i< request->params(); i++)
+      {
+        AsyncWebParameter *p = request->getParam(i);
+        setConfigParam(p->name(), p->value().c_str());
       }
  
-      Serial.println();
- 
+      preferences.putBytes("config", &config, sizeof(SensorConfig));
+
       request->send(SPIFFS, "/index.html", String(), false, processor);
     });
 
@@ -338,8 +403,7 @@ void flashlight(char code)
   digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
   for (char i=0;i<8;i++)
   {
-    if ((code & 1)==1)
-      digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
+    digitalWrite(BLUELED, ((code & 1)==1));   // turn the LED off - we're doing stuff
     delay(150);
     code = code>>1;
     digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
@@ -392,7 +456,7 @@ void getConfig(STARTUPMODE startup_mode) {
 
 GPSLOCK getGpsLock() 
 {
-  for (int i=0; i<config.gps_timout; i++)
+  for (int i=0; i<config.gps_timeout; i++)
   {
     // check whethe we have  gps sig
     if (gps.location.lat()!=0)
@@ -471,9 +535,8 @@ void setup() {
   else
     flashlight(INFO_SENSOR);
   
-  
   Serial.printf("{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
-          config.ssid, config.gps_timout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, currentVoltage );
+          config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, currentVoltage );
 
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
 }
