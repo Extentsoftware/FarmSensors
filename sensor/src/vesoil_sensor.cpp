@@ -325,7 +325,7 @@ STARTUPMODE getStartupMode() {
   
   if (btndown==0)
     startup_mode = NORMAL;   // sensor mode
-  else if (btndown<1000)
+  else if (btndown<2000)
     startup_mode = WIFI;   // wifi
   else 
   {
