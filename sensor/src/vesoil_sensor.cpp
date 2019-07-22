@@ -53,23 +53,23 @@ struct SensorConfig config;
 Preferences preferences;
 
 void setupLoRa() {
-  SPI.begin(SCK,MISO,MOSI,SS);
-  LoRa.setPins(SS,RST,DI0);
   
   Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu txpower:%d\n", 
     config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth, config.txpower);
 
+  SPI.begin(SCK,MISO,MOSI,SS);
+  LoRa.setPins(SS,RST,DI0);
   int result = LoRa.begin(config.frequency);
 
-  // LoRa.setTxPower(config.txpower);
-  // LoRa.setSpreadingFactor(config.spreadFactor);
-  // if (config.enableCRC)
-  //   LoRa.enableCrc();
-  // else 
-  //   LoRa.disableCrc();
-  // LoRa.setCodingRate4(config.codingRate);
-  // LoRa.setSignalBandwidth(config.bandwidth);
-  // LoRa.idle();
+  LoRa.setSignalBandwidth(config.bandwidth);
+  if (config.enableCRC)
+    LoRa.enableCrc();
+  else 
+    LoRa.disableCrc();
+  LoRa.setCodingRate4(config.codingRate);
+  LoRa.setSpreadingFactor(config.spreadFactor);
+  LoRa.setTxPower(config.txpower);
+  LoRa.idle();
   
   if (!result) {
     Serial.printf("Starting LoRa failed: err %d", result);
