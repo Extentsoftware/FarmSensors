@@ -3,9 +3,9 @@ struct SensorReport
     long time;
     char version;
     float volts;
-    double lat;
-    double lng; 
-    double alt;
+    float lat;
+    float lng; 
+    float alt;
     char sats;
     char hdop;
     float airtemp;

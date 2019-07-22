@@ -2,6 +2,7 @@
 #define __VESOIL_SENSOR__
 
 #define FREQUENCY 868E6
+#define BAND    62.5E3   
 #define TXPOWER     20   // max power
 #define TXVOLTS    2.7
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
@@ -19,7 +20,6 @@
 #define SS          18   // GPIO18 -- SX1278's CS
 #define RST         14   // GPIO14 -- SX1278's RESET
 #define DI0         26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
-#define BAND     868E6P
 
 #define ERR_LOWPOWER  0x15  // 00010101
 #define INFO_WIFI     0x33  // 00110011
@@ -38,7 +38,7 @@ struct SensorConfig
   int   txpower = TXPOWER;      // LoRa transmit power
   float txvolts = TXVOLTS;      // power supply must be delivering this voltage in order to xmit.
   int   lowvoltsleep = 600;     // sleep this long if low on volts
-  long  bandwidth = 62.5E3;     // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
+  long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   int   spreadFactor = 12;      // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = 5;         // extra info for CRC
   bool  enableCRC = true;       //

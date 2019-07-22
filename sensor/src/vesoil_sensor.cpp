@@ -56,18 +56,21 @@ void setupLoRa() {
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
   
-  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth);
+  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu txpower:%d\n", 
+    config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth, config.txpower);
 
-  if (config.enableCRC)
-    LoRa.enableCrc();
-  else 
-    LoRa.disableCrc();
-  LoRa.setCodingRate4(config.codingRate);
-  LoRa.setSpreadingFactor(config.spreadFactor);
-  LoRa.setSignalBandwidth(config.bandwidth);
-  LoRa.setTxPower(config.txpower);
   int result = LoRa.begin(config.frequency);
-  //int result = LoRa.begin(868E6);
+
+  // LoRa.setTxPower(config.txpower);
+  // LoRa.setSpreadingFactor(config.spreadFactor);
+  // if (config.enableCRC)
+  //   LoRa.enableCrc();
+  // else 
+  //   LoRa.disableCrc();
+  // LoRa.setCodingRate4(config.codingRate);
+  // LoRa.setSignalBandwidth(config.bandwidth);
+  // LoRa.idle();
+  
   if (!result) {
     Serial.printf("Starting LoRa failed: err %d", result);
   }  
@@ -109,25 +112,31 @@ void setupSerial() {
 
 void deepSleep(uint64_t timetosleep) {
 
+  Serial.printf("preparing sleep mode for %" PRId64  " seconds", timetosleep);
   GPSReset();
+  Serial.printf("GPS sleeping");
+
   LoRa.sleep();
+  Serial.printf("LoRa sleeping");
 
   // turnOffRTC
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
+  Serial.printf("RTC sleeping");
 
   // turnOffWifi()
   esp_wifi_stop();
   esp_wifi_deinit();
+  Serial.printf("WiFi sleeping");
 
   // turnOffBluetooth(
   esp_bluedroid_disable();
   esp_bluedroid_deinit();
   esp_bt_controller_disable();
   esp_bt_controller_deinit();
-
+  Serial.printf("BT sleeping");
   
   esp_err_t result;
   do {
@@ -235,6 +244,8 @@ void notFound(AsyncWebServerRequest *request) {
 
 String processor(const String& var)
 {
+  if(var == "vbatt")
+    return String(getBatteryVoltage());
   if(var == "SSID")
     return config.ssid;
   if(var == "failedGPSsleep")
@@ -344,12 +355,13 @@ void setupWifi() {
     server.on("/setconfig", HTTP_POST, [] (AsyncWebServerRequest *request) {
       Serial.printf("root post %s", request->url().c_str());
 
-      for (int i=0; i< request->params(); i++)
-      {
-        AsyncWebParameter *p = request->getParam(i);
-        setConfigParam(p->name(), p->value().c_str());
-      }
- 
+      // for (int i=0; i< request->params(); i++)
+      // {
+      //   AsyncWebParameter *p = request->getParam(i);
+      //   setConfigParam(p->name(), p->value().c_str());
+      // }
+      
+      config.enableCRC=false;
       preferences.putBytes("config", &config, sizeof(SensorConfig));
 
       request->send(SPIFFS, "/index.html", String(), false, processor);
@@ -494,8 +506,11 @@ void getSampleAndSend()
   // send packet
   digitalWrite(BLUELED, HIGH);   // turn the LED on (HIGH is the voltage level)
   LoRa.beginPacket();
+  Serial.println("LoRa begin");
   LoRa.write( (const uint8_t *)&report, sizeof(SensorReport));
+  Serial.println("LoRa Write");
   LoRa.endPacket();
+  Serial.println("LoRa End");
   delay(1000);
   digitalWrite(BLUELED, LOW);   // turn the LED off
 }
@@ -544,7 +559,13 @@ void setup() {
 void loop() {
   // no sampling during wifi mode if btn not held down
   if (wifiMode==true && digitalRead(BTN1)!=0)
-    return;
+  {
+      LoRa.end();
+      setupLoRa();
+      getSampleAndSend();
+      delay(2000);
+      return;
+  }
 
   GPSLOCK lock = getGpsLock();
 

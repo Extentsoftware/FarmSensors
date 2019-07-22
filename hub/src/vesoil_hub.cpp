@@ -28,17 +28,13 @@ long pfe=0;
 
 int badpacket=0;
 bool wifiMode=false;
-
+struct HubConfig config;
 
 void setup() {
-  preferences.begin(TAG, false);
-//  if (preferences.getBool("configinit"))
-//    preferences.getBytes("config", &config, sizeof(SenserConfig));
-//  else
-//  {
-    preferences.putBytes("config", &config, sizeof(SenserConfig));
-    preferences.putBool("configinit", true);
-//  }
+  pinMode(BLUELED, OUTPUT);   // onboard Blue LED
+  pinMode(BTN1,INPUT);        // Button 1
+
+  digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
 
   setupBatteryVoltage();
 
@@ -47,47 +43,119 @@ void setup() {
   Serial.println();
   Serial.println("VESTRONG LaPoulton LoRa Hub");
 
-  esp_log_level_set("*", ESP_LOG_VERBOSE);
+  Serial.println("get startup");
+  STARTUPMODE startup_mode = getStartupMode();
+  
+  Serial.println("get gonfig");
+  getConfig(startup_mode);
 
+  Serial.println("memory check");
   // GPS comms settings  
   MemoryCheck();  
-  SystemCheck();
 
-  // turn on (for future: if GPIO is off)
-  if (digitalRead(BTN1)==0)
-  {
-    //wifiMode=true;
-    //setupWifi();
-  }
+  Serial.println("system check");
+  SystemCheck();
 
   getBatteryVoltage();
   Serial.printf("Battery voltage %f\n", vBat);
 
+  Serial.println("start lora");
+  startLoRa();
+
+  digitalWrite(BLUELED, LOW);   // turn the LED off
+
+  if (startup_mode==WIFI)
+  {
+    flashlight(INFO_WIFI);
+    Serial.printf("Entering WiFi mode\n");
+    wifiMode=true;
+    setupWifi();
+  }
+  else
+    flashlight(INFO_SENSOR);
+  
+  Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
+}
+
+void startLoRa()
+{
   // turn on LoRa  
   Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
 
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
-  LoRa.setSignalBandwidth(config.bandwidth);
-  if (config.enableCRC)
-      LoRa.enableCrc();
-   else 
-      LoRa.disableCrc();
-  LoRa.setCodingRate4(config.codingRate);
-  LoRa.setSpreadingFactor(config.speadFactor);
+  // LoRa.setSignalBandwidth(config.bandwidth);
+  // if (config.enableCRC)
+  //     LoRa.enableCrc();
+  //  else 
+  //     LoRa.disableCrc();
+  // LoRa.setCodingRate4(config.codingRate);
+  // LoRa.setSpreadingFactor(config.speadFactor);
   int result = LoRa.begin(config.frequency);  
   
-  //int result = LoRa.begin(868E6);    
   if (!result) 
     Serial.printf("Starting LoRa failed: err %d\n", result);
   else
     Serial.println("Started LoRa OK");
 
   LoRa.receive();
+}
 
-  digitalWrite(BLUELED, LOW);   // turn the LED off
-  Serial.printf("LoRa Receive");
+void getConfig(STARTUPMODE startup_mode) {
+  preferences.begin(TAG, false);
 
+  // if we have a stored config and we're not resetting, then load the config
+  if (preferences.getBool("configinit") && startup_mode != RESET)
+  {
+    preferences.getBytes("config", &config, sizeof(HubConfig));
+  }
+  else
+  {
+    // we're resetting the config or there isn't one
+    preferences.putBytes("config", &default_config, sizeof(HubConfig));
+    preferences.putBool("configinit", true);
+    memcpy( &config, &default_config, sizeof(HubConfig));
+  }
+}
+
+
+STARTUPMODE getStartupMode() {
+  const int interval = 100;
+  STARTUPMODE startup_mode = NORMAL;
+
+  // get startup by detecting how many seconds the button is held
+  int btndown = 0;
+  while (digitalRead(BTN1)==0)
+  {
+    delay(interval);
+    btndown += interval;
+  }
+  
+  if (btndown==0)
+    startup_mode = NORMAL;   // sensor mode
+  else if (btndown<2000)
+    startup_mode = WIFI;   // wifi
+  else 
+  {
+    startup_mode = RESET;   // reset config
+    flashlight(ERR_LOWPOWER);
+  }
+
+  Serial.printf("button held for %d mode is %d\n", btndown, startup_mode );
+
+  return startup_mode;
+}
+
+void flashlight(char code)
+{
+  digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
+  for (char i=0;i<8;i++)
+  {
+    digitalWrite(BLUELED, ((code & 1)==1));   // turn the LED off - we're doing stuff
+    delay(150);
+    code = code>>1;
+    digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
+  }  
 }
 
 void loop() {
