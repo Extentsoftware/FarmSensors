@@ -6595,7 +6595,7 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 </modules>
 <parts>
 <part name="FRAME1" library="frames" library_urn="urn:adsk.eagle:library:229" deviceset="A4-35SC" device=""/>
-<part name="DS18B20" library="con-amp-quick" library_urn="urn:adsk.eagle:library:125" deviceset="M03" device="" package3d_urn="urn:adsk.eagle:package:5957/1"/>
+<part name="DS18B0" library="con-amp-quick" library_urn="urn:adsk.eagle:library:125" deviceset="M03" device="" package3d_urn="urn:adsk.eagle:package:5957/1"/>
 <part name="R1" library="resistor-power" library_urn="urn:adsk.eagle:library:344" deviceset="R" device="AC01" package3d_urn="urn:adsk.eagle:package:25124/1" value="4.7K"/>
 <part name="JP1" library="adafruit" library_urn="urn:adsk.eagle:library:420" deviceset="PINHD-1X13" device="" package3d_urn="urn:adsk.eagle:package:6240833/1"/>
 <part name="JP3" library="adafruit" library_urn="urn:adsk.eagle:library:420" deviceset="PINHD-1X13" device="" package3d_urn="urn:adsk.eagle:package:6240833/1"/>
@@ -6635,7 +6635,7 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <attribute name="SHEET" x="64.135" y="680.593" size="1.524" layer="94" ratio="10"/>
 <attribute name="LAST_DATE_TIME" x="17.145" y="680.593" size="1.524" layer="94" ratio="12"/>
 </instance>
-<instance part="DS18B20" gate="G$1" x="-50.8" y="599.44" smashed="yes" rot="R90">
+<instance part="DS18B0" gate="G$1" x="-50.8" y="599.44" smashed="yes" rot="R90">
 <attribute name="VALUE" x="-43.18" y="596.9" size="1.778" layer="96" rot="R90"/>
 <attribute name="NAME" x="-56.642" y="596.9" size="1.778" layer="95" rot="R90"/>
 </instance>
@@ -6714,10 +6714,10 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <label x="1.524" y="611.886" size="1.778" layer="95" rot="R90"/>
 </segment>
 <segment>
-<pinref part="DS18B20" gate="G$1" pin="3"/>
-<junction x="-53.34" y="607.06"/>
-<wire x1="-53.34" y1="607.06" x2="-53.34" y2="617.22" width="0.1524" layer="91"/>
-<label x="-50.8" y="612.14" size="1.778" layer="95" rot="R90"/>
+<pinref part="DS18B0" gate="G$1" pin="1"/>
+<junction x="-48.26" y="607.06"/>
+<wire x1="-48.26" y1="607.06" x2="-48.26" y2="617.22" width="0.1524" layer="91"/>
+<label x="-45.974" y="610.616" size="1.778" layer="95" rot="R90"/>
 </segment>
 <segment>
 <pinref part="JP3" gate="A" pin="11"/>
@@ -6794,10 +6794,10 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <label x="-35.56" y="655.32" size="1.778" layer="95" rot="R90"/>
 </segment>
 <segment>
-<pinref part="DS18B20" gate="G$1" pin="1"/>
-<wire x1="-48.26" y1="607.06" x2="-48.26" y2="617.22" width="0.1524" layer="91"/>
-<junction x="-48.26" y="607.06"/>
-<label x="-45.72" y="612.14" size="1.778" layer="95" rot="R90"/>
+<pinref part="DS18B0" gate="G$1" pin="2"/>
+<wire x1="-50.8" y1="607.06" x2="-50.8" y2="617.22" width="0.1524" layer="91"/>
+<junction x="-50.8" y="607.06"/>
+<label x="-49.022" y="610.362" size="1.778" layer="95" rot="R90"/>
 </segment>
 <segment>
 <pinref part="SW_MODE" gate="G$1" pin="1"/>
@@ -6822,17 +6822,22 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <wire x1="-2.54" y1="607.06" x2="-2.54" y2="612.14" width="0.1524" layer="91"/>
 <label x="-1.778" y="611.886" size="1.778" layer="95" rot="R90"/>
 </segment>
+<segment>
+<pinref part="PWRC" gate="G$1" pin="S"/>
+<junction x="58.42" y="637.54"/>
+<label x="58.42" y="629.92" size="1.778" layer="95"/>
+</segment>
 </net>
 <net name="1WIRE" class="0">
 <segment>
 <pinref part="R1" gate="G$1" pin="2"/>
 <wire x1="-68.58" y1="629.92" x2="-60.96" y2="629.92" width="0.1524" layer="91"/>
-<wire x1="-60.96" y1="629.92" x2="-50.8" y2="629.92" width="0.1524" layer="91"/>
+<wire x1="-60.96" y1="629.92" x2="-53.34" y2="629.92" width="0.1524" layer="91"/>
 <junction x="-60.96" y="629.92"/>
-<pinref part="DS18B20" gate="G$1" pin="2"/>
-<wire x1="-50.8" y1="629.92" x2="-50.8" y2="607.06" width="0.1524" layer="91"/>
-<junction x="-50.8" y="607.06"/>
-<label x="-48.26" y="612.14" size="1.778" layer="95" rot="R90"/>
+<pinref part="DS18B0" gate="G$1" pin="3"/>
+<wire x1="-53.34" y1="629.92" x2="-53.34" y2="607.06" width="0.1524" layer="91"/>
+<junction x="-53.34" y="607.06"/>
+<label x="-51.562" y="610.362" size="1.778" layer="95" rot="R90"/>
 <junction x="-68.58" y="629.92"/>
 </segment>
 <segment>
@@ -6849,16 +6854,11 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <junction x="12.7" y="635"/>
 </segment>
 </net>
-<net name="N$3" class="0">
-<segment>
-<pinref part="PWRC" gate="G$1" pin="S"/>
-<junction x="58.42" y="637.54"/>
-</segment>
-</net>
-<net name="N$4" class="0">
+<net name="EXTGND" class="0">
 <segment>
 <pinref part="PWRC" gate="G$1" pin="D"/>
 <junction x="58.42" y="650.24"/>
+<label x="55.88" y="655.32" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="SENS_EN" class="0">
