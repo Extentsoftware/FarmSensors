@@ -354,14 +354,14 @@ void setupWifi() {
     // post form
     server.on("/setconfig", HTTP_POST, [] (AsyncWebServerRequest *request) {
       Serial.printf("root post %s", request->url().c_str());
-
-      // for (int i=0; i< request->params(); i++)
-      // {
-      //   AsyncWebParameter *p = request->getParam(i);
-      //   setConfigParam(p->name(), p->value().c_str());
-      // }
-      
       config.enableCRC=false;
+
+      for (int i=0; i< request->params(); i++)
+      {
+        AsyncWebParameter *p = request->getParam(i);
+        setConfigParam(p->name(), p->value().c_str());
+      }
+      
       preferences.putBytes("config", &config, sizeof(SensorConfig));
 
       request->send(SPIFFS, "/index.html", String(), false, processor);

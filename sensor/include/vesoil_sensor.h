@@ -2,8 +2,8 @@
 #define __VESOIL_SENSOR__
 
 #define FREQUENCY 868E6
-#define BAND    62.5E3   
-#define TXPOWER     20   // max power
+#define BAND    12.5E3   
+#define TXPOWER     17   // max power
 #define TXVOLTS    2.7
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 #define ONE_WIRE_BUS 2
