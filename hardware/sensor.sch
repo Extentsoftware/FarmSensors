@@ -4846,91 +4846,6 @@ You are welcome to use this library for commercial purposes. For attribution, we
 </deviceset>
 </devicesets>
 </library>
-<library name="diy-modules">
-<description>&lt;b&gt;DIY Modules for Arduino, Raspberry Pi, CubieBoard etc.&lt;/b&gt;
-&lt;br&gt;&lt;br&gt;
-The library contains a list of symbols and footprints for popular, cheap and easy-to-use electronic modules.&lt;br&gt;
-The modules are intend to work with microprocessor-based platforms such as &lt;a href="http://arduino.cc"&gt;Arduino&lt;/a&gt;, &lt;a href="http://raspberrypi.org/"&gt;Raspberry Pi&lt;/a&gt;, &lt;a href="http://cubieboard.org/"&gt;CubieBoard&lt;/a&gt;, &lt;a href="http://beagleboard.org/"&gt;BeagleBone&lt;/a&gt; and many others. There are many manufacturers of the modules in the world. Almost all of them can be bought on &lt;a href="ebay.com"&gt;ebay.com&lt;/a&gt;.&lt;br&gt;
-&lt;br&gt;
-By using this library, you can design a PCB for devices created with usage of modules. Even if you do not need to create PCB design, you can also use the library to quickly document your work by drawing schematics of devices built by you.&lt;br&gt;
-&lt;br&gt;
-The latest version, examples, photos and much more can be found at: &lt;b&gt;&lt;a href="http://diymodules.org/eagle"&gt;diymodules.org/eagle&lt;/a&gt;&lt;/b&gt;&lt;br&gt;&lt;br&gt;
-Comments, suggestions and bug reports please send to: &lt;b&gt;&lt;a href="mailto:eagle@diymodules.org"&gt;eagle@diymodules.org&lt;/b&gt;&lt;br&gt;&lt;br&gt;
-&lt;i&gt;Version: 1.0.0 (2015-Feb-02)&lt;/i&gt;&lt;br&gt;
-&lt;i&gt;Created by: Miroslaw Brudnowski&lt;/i&gt;&lt;br&gt;&lt;br&gt;
-&lt;i&gt;Released under the Creative Commons Attribution 4.0 International License: &lt;a href="http://creativecommons.org/licenses/by/4.0"&gt;http://creativecommons.org/licenses/by/4.0&lt;/a&gt;&lt;/i&gt;
-&lt;br&gt;&lt;br&gt;
-&lt;center&gt;&lt;a href="http://diymodules.org"&gt;&lt;img src="http://diymodules.org/img/diymodules-page-logo.png" alt="DIYmodules.org"&gt;&lt;/a&gt;&lt;/center&gt;</description>
-<packages>
-<package name="BATTERY-CHARGER-LI-5V">
-<description>&lt;b&gt;Lithium Battery 5V Charger&lt;/b&gt;</description>
-<wire x1="-12.7" y1="10.16" x2="12.7" y2="10.16" width="0.127" layer="21"/>
-<wire x1="12.7" y1="10.16" x2="12.7" y2="-9.525" width="0.127" layer="21"/>
-<wire x1="12.7" y1="-9.525" x2="-12.7" y2="-9.525" width="0.127" layer="21"/>
-<pad name="IN+" x="-10.795" y="8.255" drill="1.2" diameter="3" shape="square"/>
-<pad name="IN-" x="-10.795" y="-7.62" drill="1.2" diameter="3" shape="square"/>
-<pad name="BAT+" x="10.795" y="8.255" drill="1.2" diameter="3" shape="square"/>
-<pad name="BAT-" x="10.795" y="-7.62" drill="1.2" diameter="3" shape="square"/>
-<text x="-8.255" y="8.255" size="1.27" layer="21" align="center-left">IN+</text>
-<text x="-8.255" y="-7.62" size="1.27" layer="21" align="center-left">IN-</text>
-<text x="8.255" y="8.255" size="1.27" layer="21" align="center-right">BAT+</text>
-<text x="8.255" y="-7.62" size="1.27" layer="21" align="center-right">BAT-</text>
-<wire x1="-12.7" y1="10.16" x2="-12.7" y2="4.1275" width="0.127" layer="21"/>
-<wire x1="-12.7" y1="-9.525" x2="-12.7" y2="-3.4925" width="0.127" layer="21"/>
-<wire x1="-14.605" y1="4.1275" x2="-12.7" y2="4.1275" width="0.127" layer="21"/>
-<wire x1="-12.7" y1="4.1275" x2="-5.08" y2="4.1275" width="0.127" layer="21"/>
-<wire x1="-14.605" y1="-3.4925" x2="-12.7" y2="-3.4925" width="0.127" layer="21"/>
-<wire x1="-12.7" y1="-3.4925" x2="-5.08" y2="-3.4925" width="0.127" layer="21"/>
-<wire x1="-14.605" y1="4.1275" x2="-14.605" y2="-3.4925" width="0.127" layer="21"/>
-<wire x1="-5.08" y1="4.1275" x2="-5.08" y2="-3.4925" width="0.127" layer="21"/>
-<text x="-10.16" y="0.3175" size="1.778" layer="21" align="center">USB</text>
-<text x="0" y="11.43" size="1.27" layer="25" align="bottom-center">&gt;NAME</text>
-<text x="0" y="-10.795" size="1.27" layer="27" align="top-center">&gt;VALUE</text>
-</package>
-</packages>
-<symbols>
-<symbol name="BATTERY-CHARGER-LI-5V">
-<description>&lt;b&gt;Lithium Battery 5V Charger&lt;/b&gt;</description>
-<pin name="IN+" x="-15.24" y="7.62" visible="pin" length="middle"/>
-<pin name="IN-" x="-15.24" y="-7.62" visible="pin" length="middle"/>
-<pin name="BAT+" x="15.24" y="7.62" visible="pin" length="middle" rot="R180"/>
-<pin name="BAT-" x="15.24" y="-7.62" visible="pin" length="middle" rot="R180"/>
-<wire x1="-10.16" y1="10.16" x2="10.16" y2="10.16" width="0.254" layer="94"/>
-<wire x1="10.16" y1="10.16" x2="10.16" y2="-10.16" width="0.254" layer="94"/>
-<wire x1="10.16" y1="-10.16" x2="-10.16" y2="-10.16" width="0.254" layer="94"/>
-<wire x1="-10.16" y1="-10.16" x2="-10.16" y2="-3.81" width="0.254" layer="94"/>
-<wire x1="-10.16" y1="-3.81" x2="-10.16" y2="3.81" width="0.254" layer="94"/>
-<wire x1="-10.16" y1="3.81" x2="-10.16" y2="10.16" width="0.254" layer="94"/>
-<wire x1="-10.16" y1="3.81" x2="-1.27" y2="3.81" width="0.254" layer="94"/>
-<wire x1="-1.27" y1="3.81" x2="-1.27" y2="-3.81" width="0.254" layer="94"/>
-<wire x1="-1.27" y1="-3.81" x2="-10.16" y2="-3.81" width="0.254" layer="94"/>
-<text x="-5.842" y="0" size="1.778" layer="94" align="center">USB</text>
-<text x="-10.16" y="15.24" size="1.778" layer="95">&gt;NAME</text>
-<text x="-10.16" y="12.7" size="1.778" layer="96">&gt;VALUE</text>
-</symbol>
-</symbols>
-<devicesets>
-<deviceset name="BATTERY-CHARGER-LI-5V">
-<description>&lt;b&gt;Lithium Battery 5V Charger&lt;/b&gt;</description>
-<gates>
-<gate name="G$1" symbol="BATTERY-CHARGER-LI-5V" x="0" y="0"/>
-</gates>
-<devices>
-<device name="" package="BATTERY-CHARGER-LI-5V">
-<connects>
-<connect gate="G$1" pin="BAT+" pad="BAT+"/>
-<connect gate="G$1" pin="BAT-" pad="BAT-"/>
-<connect gate="G$1" pin="IN+" pad="IN+"/>
-<connect gate="G$1" pin="IN-" pad="IN-"/>
-</connects>
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-</devicesets>
-</library>
 <library name="m-pad-2.1">
 <description>&lt;h1&gt;&lt;u&gt;&lt;b&gt;M-Pad&lt;/b&gt; Library&lt;br&gt; &lt;/h1&gt;&lt;/u&gt;
 &lt;br&gt;
@@ -6530,67 +6445,8 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 ************************************************************************************************************************&lt;br&gt;
 &lt;br&gt;</description>
 <packages>
-<package name="TO92">
-<description>&lt;b&gt;TO-92&lt;/b&gt; Pads Triangle</description>
-<wire x1="-2.0946" y1="-1.651" x2="-2.655" y2="-0.254" width="0.127" layer="21" curve="-32.781693" cap="flat"/>
-<wire x1="-2.655" y1="-0.254" x2="-0.7863" y2="2.5485" width="0.127" layer="21" curve="-78.320107" cap="flat"/>
-<wire x1="0.7868" y1="2.5484" x2="2.095" y2="-1.651" width="0.127" layer="21" curve="-111.09954" cap="flat"/>
-<wire x1="-2.095" y1="-1.651" x2="2.095" y2="-1.651" width="0.127" layer="21"/>
-<wire x1="-2.254" y1="-0.254" x2="-0.286" y2="-0.254" width="0.127" layer="51"/>
-<wire x1="-2.655" y1="-0.254" x2="-2.254" y2="-0.254" width="0.127" layer="21"/>
-<wire x1="-0.286" y1="-0.254" x2="0.286" y2="-0.254" width="0.127" layer="21"/>
-<wire x1="2.254" y1="-0.254" x2="2.655" y2="-0.254" width="0.127" layer="21"/>
-<wire x1="0.286" y1="-0.254" x2="2.254" y2="-0.254" width="0.127" layer="51"/>
-<wire x1="-0.7863" y1="2.5485" x2="0.7863" y2="2.5485" width="0.127" layer="51" curve="-34.293591" cap="flat"/>
-<pad name="1" x="1.27" y="0" drill="0.8128" shape="octagon"/>
-<pad name="2" x="0" y="1.905" drill="0.8128" shape="octagon"/>
-<pad name="3" x="-1.27" y="0" drill="0.8128" shape="octagon"/>
-<text x="3.175" y="0.635" size="1.27" layer="25" ratio="10">&gt;NAME</text>
-<text x="3.175" y="-1.27" size="1.27" layer="27" ratio="10">&gt;VALUE</text>
-<text x="1.143" y="0" size="1.27" layer="51" ratio="10">1</text>
-<text x="-0.635" y="0.635" size="1.27" layer="51" ratio="10">2</text>
-<text x="-2.159" y="0" size="1.27" layer="51" ratio="10">3</text>
-</package>
 </packages>
 <symbols>
-<symbol name="IGFET-3-N-CH">
-<wire x1="-2.54" y1="-2.54" x2="-1.2192" y2="-2.54" width="0.1524" layer="94"/>
-<wire x1="0" y1="0.762" x2="0" y2="0" width="0.254" layer="94"/>
-<wire x1="0" y1="0" x2="0" y2="-0.762" width="0.254" layer="94"/>
-<wire x1="0" y1="2.413" x2="0" y2="1.905" width="0.254" layer="94"/>
-<wire x1="0" y1="1.905" x2="0" y2="1.397" width="0.254" layer="94"/>
-<wire x1="1.905" y1="0.635" x2="0.635" y2="0" width="0.254" layer="94"/>
-<wire x1="1.905" y1="-0.635" x2="0.635" y2="0" width="0.254" layer="94"/>
-<wire x1="0" y1="0" x2="0.635" y2="0" width="0.1524" layer="94"/>
-<wire x1="0.635" y1="0" x2="2.54" y2="0" width="0.1524" layer="94"/>
-<wire x1="2.54" y1="0" x2="2.54" y2="-1.905" width="0.1524" layer="94"/>
-<wire x1="0" y1="-1.397" x2="0" y2="-1.905" width="0.254" layer="94"/>
-<wire x1="0" y1="-1.905" x2="0" y2="-2.413" width="0.254" layer="94"/>
-<wire x1="-1.143" y1="1.905" x2="-1.143" y2="-2.54" width="0.254" layer="94"/>
-<wire x1="0" y1="-1.905" x2="2.54" y2="-1.905" width="0.1524" layer="94"/>
-<wire x1="2.54" y1="2.54" x2="5.08" y2="2.54" width="0.1524" layer="94"/>
-<wire x1="5.08" y1="2.54" x2="5.08" y2="-2.54" width="0.1524" layer="94"/>
-<wire x1="5.08" y1="-2.54" x2="2.54" y2="-2.54" width="0.1524" layer="94"/>
-<wire x1="2.54" y1="-1.905" x2="2.54" y2="-2.54" width="0.1524" layer="94"/>
-<wire x1="2.54" y1="-2.54" x2="2.54" y2="-5.08" width="0.1524" layer="94"/>
-<wire x1="0" y1="1.905" x2="2.54" y2="1.905" width="0.1524" layer="94"/>
-<wire x1="2.54" y1="1.905" x2="2.54" y2="2.54" width="0.1524" layer="94"/>
-<wire x1="2.54" y1="2.54" x2="2.54" y2="5.08" width="0.1524" layer="94"/>
-<circle x="2.54" y="2.54" radius="0.127" width="0.254" layer="94"/>
-<circle x="2.54" y="-2.54" radius="0.127" width="0.254" layer="94"/>
-<circle x="2.54" y="-1.905" radius="0.127" width="0.254" layer="94"/>
-<text x="6.35" y="1.27" size="1.778" layer="96">&gt;VALUE</text>
-<text x="6.35" y="3.81" size="1.778" layer="95">&gt;NAME</text>
-<rectangle x1="4.572" y1="0.635" x2="5.588" y2="0.889" layer="94"/>
-<pin name="D" x="2.54" y="5.08" visible="off" length="point" direction="pas" rot="R180"/>
-<pin name="G" x="-5.08" y="-2.54" visible="off" length="short" direction="pas"/>
-<pin name="S" x="2.54" y="-5.08" visible="off" length="point" direction="pas" rot="R180"/>
-<polygon width="0.1524" layer="94">
-<vertex x="5.08" y="0.635"/>
-<vertex x="4.572" y="-0.127"/>
-<vertex x="5.588" y="-0.127"/>
-</polygon>
-</symbol>
 <symbol name="GND">
 <text x="-1.905" y="-3.81" size="1.778" layer="96">&gt;VALUE</text>
 <pin name="GND" x="0" y="2.54" visible="off" length="short" direction="sup" rot="R270"/>
@@ -6602,41 +6458,6 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 </symbol>
 </symbols>
 <devicesets>
-<deviceset name="2N7000KL/BS170KL" prefix="Q">
-<description>Vishay Siliconix &lt;b&gt;2N7000KL/BS170KL&lt;/b&gt; N-Channel 60-V (D-S) MOSFET&lt;br&gt;
-&lt;br&gt;
-
-&lt;b&gt;FEATURES:&lt;/b&gt;
-&lt;ul&gt;
-	&lt;li&gt;TrenchFET  Power MOSFET
-	&lt;li&gt;ESD Protected: 2000 V
-&lt;/ul&gt;
-&lt;b&gt;APPLICATIONS:&lt;/b&gt;
-&lt;ul&gt;
-	&lt;li&gt;Direct Logic-Level Interface: TTL/CMOS
-	&lt;li&gt; Soild State Relays
-	&lt;li&gt;Drivers: Relays, Solenoids, Lamps, Hammers, Displays, Memories, Transistors, etc.
-	&lt;li&gt;Battery Operated Systems
-&lt;/ul&gt;
-&lt;br&gt;
-Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;messi@users.sourceforge.net&lt;/a&gt;
-&lt;br&gt;</description>
-<gates>
-<gate name="G$1" symbol="IGFET-3-N-CH" x="0" y="0"/>
-</gates>
-<devices>
-<device name="" package="TO92">
-<connects>
-<connect gate="G$1" pin="D" pad="3"/>
-<connect gate="G$1" pin="G" pad="2"/>
-<connect gate="G$1" pin="S" pad="1"/>
-</connects>
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
 <deviceset name="GND" prefix="V">
 <description>&lt;b&gt;SUPPLY SYMBOL&lt;/b&gt;</description>
 <gates>
@@ -6646,6 +6467,71 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <device name="">
 <technologies>
 <technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+</devicesets>
+</library>
+<library name="2N7000">
+<packages>
+<package name="TO92">
+<wire x1="1.5875" y1="-2.2225" x2="1.5875" y2="2.2225" width="0.127" layer="21" curve="-247.381"/>
+<wire x1="1.5875" y1="2.2225" x2="1.5875" y2="-2.2225" width="0.127" layer="21"/>
+<text x="3.81" y="-2.54" size="1.016" layer="25" rot="R90">&gt;NAME</text>
+<text x="5.08" y="-2.54" size="1.016" layer="27" rot="R90">&gt;VALUE</text>
+<pad name="B" x="0" y="0" drill="0.8" diameter="1.27" shape="long"/>
+<pad name="C" x="0" y="-1.905" drill="0.8" diameter="1.27" shape="long"/>
+<pad name="E" x="0" y="1.905" drill="0.8" diameter="1.27" shape="long"/>
+</package>
+</packages>
+<symbols>
+<symbol name="N-MOS">
+<wire x1="-2.54" y1="-2.54" x2="-2.54" y2="1.27" width="0.4064" layer="94"/>
+<wire x1="-1.5875" y1="2.54" x2="-1.5875" y2="1.905" width="0.4064" layer="94"/>
+<wire x1="-1.5875" y1="1.905" x2="-1.5875" y2="-0.635" width="0.4064" layer="94" style="shortdash"/>
+<wire x1="-1.5875" y1="-0.635" x2="-1.5875" y2="-3.175" width="0.4064" layer="94" style="shortdash"/>
+<wire x1="-1.5875" y1="-3.175" x2="-1.5875" y2="-3.81" width="0.4064" layer="94"/>
+<wire x1="-1.5875" y1="1.905" x2="2.54" y2="1.905" width="0.254" layer="94"/>
+<wire x1="2.54" y1="1.905" x2="2.54" y2="2.54" width="0.1524" layer="94"/>
+<wire x1="-1.5875" y1="-3.175" x2="2.54" y2="-3.175" width="0.254" layer="94"/>
+<wire x1="2.54" y1="-3.175" x2="2.54" y2="-5.08" width="0.1524" layer="94"/>
+<wire x1="-1.5875" y1="-0.635" x2="2.54" y2="-0.635" width="0.254" layer="94"/>
+<wire x1="2.54" y1="-0.635" x2="2.54" y2="-3.175" width="0.254" layer="94"/>
+<circle x="2.54" y="-3.175" radius="0.3175" width="0.4064" layer="94"/>
+<text x="5.08" y="0" size="1.778" layer="95">&gt;NAME</text>
+<text x="5.08" y="-3.81" size="1.778" layer="96">&gt;VALUE</text>
+<polygon width="0.254" layer="94">
+<vertex x="-1.27" y="-0.635"/>
+<vertex x="0" y="0"/>
+<vertex x="0" y="-1.27"/>
+</polygon>
+<pin name="G" x="-5.08" y="-2.54" visible="off" length="short" direction="pas"/>
+<pin name="D" x="2.54" y="5.08" visible="off" length="short" direction="pas" rot="R270"/>
+<pin name="S" x="2.54" y="-7.62" visible="off" length="short" direction="pas" rot="R90"/>
+</symbol>
+</symbols>
+<devicesets>
+<deviceset name="2N7000">
+<gates>
+<gate name="G$1" symbol="N-MOS" x="0" y="0"/>
+</gates>
+<devices>
+<device name="" package="TO92">
+<connects>
+<connect gate="G$1" pin="D" pad="E"/>
+<connect gate="G$1" pin="G" pad="B"/>
+<connect gate="G$1" pin="S" pad="C"/>
+</connects>
+<technologies>
+<technology name="">
+<attribute name="AVAILABILITY" value="Unavailable"/>
+<attribute name="DESCRIPTION" value="  MOSFETs- Power and Small Signal 60V 200mA N-Channel No-Cancel/No-Return "/>
+<attribute name="MF" value="STMicroelectronics"/>
+<attribute name="MP" value="2N7000"/>
+<attribute name="PACKAGE" value="TO-92 ON Semiconductor"/>
+<attribute name="PRICE" value="None"/>
+</technology>
 </technologies>
 </device>
 </devices>
@@ -6717,11 +6603,11 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <part name="SW_MODE" library="con-amp-quick" library_urn="urn:adsk.eagle:library:125" deviceset="M02" device="" package3d_urn="urn:adsk.eagle:package:5956/1" value="1"/>
 <part name="SW_RST" library="con-amp-quick" library_urn="urn:adsk.eagle:library:125" deviceset="M02" device="" package3d_urn="urn:adsk.eagle:package:5956/1" value="2"/>
 <part name="SUPPLY1" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
-<part name="U$2" library="diy-modules" deviceset="BATTERY-CHARGER-LI-5V" device=""/>
 <part name="DS18B1" library="con-amp-quick" library_urn="urn:adsk.eagle:library:125" deviceset="M03" device="" package3d_urn="urn:adsk.eagle:package:5957/1"/>
 <part name="DS18B2" library="con-amp-quick" library_urn="urn:adsk.eagle:library:125" deviceset="M03" device="" package3d_urn="urn:adsk.eagle:package:5957/1"/>
-<part name="Q1" library="m-pad-2.1" deviceset="2N7000KL/BS170KL" device=""/>
 <part name="V1" library="m-pad-2.1" deviceset="GND" device=""/>
+<part name="PWRC" library="2N7000" deviceset="2N7000" device=""/>
+<part name="EXTGND" library="m-pad-2.1" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -6761,9 +6647,9 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <attribute name="NAME" x="-82.55" y="658.495" size="1.778" layer="95"/>
 <attribute name="VALUE" x="-82.55" y="619.76" size="1.778" layer="96"/>
 </instance>
-<instance part="JP3" gate="A" x="43.18" y="637.54" smashed="yes">
-<attribute name="NAME" x="41.91" y="658.495" size="1.778" layer="95"/>
-<attribute name="VALUE" x="36.83" y="617.22" size="1.778" layer="96"/>
+<instance part="JP3" gate="A" x="15.24" y="637.54" smashed="yes">
+<attribute name="NAME" x="13.97" y="658.495" size="1.778" layer="95"/>
+<attribute name="VALUE" x="8.89" y="617.22" size="1.778" layer="96"/>
 </instance>
 <instance part="DHT22" gate="A" x="-15.24" y="655.32" smashed="yes" rot="R90">
 <attribute name="NAME" x="-20.955" y="648.97" size="1.778" layer="95" rot="R90"/>
@@ -6777,12 +6663,8 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <attribute name="VALUE" x="-30.48" y="640.08" size="1.778" layer="96" rot="R90"/>
 <attribute name="NAME" x="-41.402" y="640.08" size="1.778" layer="95" rot="R90"/>
 </instance>
-<instance part="SUPPLY1" gate="G$1" x="-88.9" y="576.58" smashed="yes">
-<attribute name="VALUE" x="-88.9" y="579.374" size="1.778" layer="96" align="bottom-center"/>
-</instance>
-<instance part="U$2" gate="G$1" x="-68.58" y="566.42" smashed="yes">
-<attribute name="NAME" x="-78.74" y="581.66" size="1.778" layer="95"/>
-<attribute name="VALUE" x="-78.74" y="579.12" size="1.778" layer="96"/>
+<instance part="SUPPLY1" gate="G$1" x="-20.32" y="584.2" smashed="yes">
+<attribute name="VALUE" x="-20.32" y="586.994" size="1.778" layer="96" align="bottom-center"/>
 </instance>
 <instance part="DS18B1" gate="G$1" x="-2.54" y="599.44" smashed="yes" rot="R90">
 <attribute name="VALUE" x="5.08" y="596.9" size="1.778" layer="96" rot="R90"/>
@@ -6792,12 +6674,15 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <attribute name="VALUE" x="-10.16" y="596.9" size="1.778" layer="96" rot="R90"/>
 <attribute name="NAME" x="-23.622" y="596.9" size="1.778" layer="95" rot="R90"/>
 </instance>
-<instance part="Q1" gate="G$1" x="20.32" y="607.06" smashed="yes">
-<attribute name="VALUE" x="26.67" y="608.33" size="1.778" layer="96"/>
-<attribute name="NAME" x="26.67" y="610.87" size="1.778" layer="95"/>
+<instance part="V1" gate="GND" x="10.16" y="589.28" smashed="yes">
+<attribute name="VALUE" x="8.255" y="585.47" size="1.778" layer="96"/>
 </instance>
-<instance part="V1" gate="GND" x="38.1" y="591.82" smashed="yes">
-<attribute name="VALUE" x="36.195" y="588.01" size="1.778" layer="96"/>
+<instance part="PWRC" gate="G$1" x="55.88" y="645.16" smashed="yes">
+<attribute name="NAME" x="60.96" y="645.16" size="1.778" layer="95"/>
+<attribute name="VALUE" x="60.96" y="641.35" size="1.778" layer="96"/>
+</instance>
+<instance part="EXTGND" gate="GND" x="27.94" y="589.28" smashed="yes">
+<attribute name="VALUE" x="26.035" y="585.47" size="1.778" layer="96"/>
 </instance>
 </instances>
 <busses>
@@ -6836,9 +6721,9 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 </segment>
 <segment>
 <pinref part="JP3" gate="A" pin="11"/>
-<wire x1="40.64" y1="627.38" x2="25.4" y2="627.38" width="0.1524" layer="91"/>
-<label x="26.416" y="627.888" size="1.778" layer="95"/>
-<junction x="40.64" y="627.38"/>
+<wire x1="12.7" y1="627.38" x2="25.4" y2="627.38" width="0.1524" layer="91"/>
+<label x="18.034" y="627.634" size="1.778" layer="95"/>
+<junction x="12.7" y="627.38"/>
 </segment>
 </net>
 <net name="AOUT1" class="0">
@@ -6875,11 +6760,11 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <pinref part="JP3" gate="A" pin="9"/>
 <pinref part="DHT22" gate="A" pin="2"/>
 <wire x1="-15.24" y1="652.78" x2="-15.24" y2="632.46" width="0.1524" layer="91"/>
-<wire x1="-15.24" y1="632.46" x2="40.64" y2="632.46" width="0.1524" layer="91"/>
+<wire x1="-15.24" y1="632.46" x2="12.7" y2="632.46" width="0.1524" layer="91"/>
 <junction x="-15.24" y="652.78"/>
 <label x="-14.478" y="657.86" size="1.778" layer="95" rot="R90"/>
-<label x="25.4" y="632.968" size="1.778" layer="95"/>
-<junction x="40.64" y="632.46"/>
+<label x="18.034" y="631.698" size="1.778" layer="95"/>
+<junction x="12.7" y="632.46"/>
 </segment>
 </net>
 <net name="MODE" class="0">
@@ -6913,11 +6798,6 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 <wire x1="-48.26" y1="607.06" x2="-48.26" y2="617.22" width="0.1524" layer="91"/>
 <junction x="-48.26" y="607.06"/>
 <label x="-45.72" y="612.14" size="1.778" layer="95" rot="R90"/>
-</segment>
-<segment>
-<pinref part="Q1" gate="G$1" pin="D"/>
-<junction x="22.86" y="612.14"/>
-<label x="25.4" y="617.22" size="1.778" layer="95" rot="R180"/>
 </segment>
 <segment>
 <pinref part="SW_MODE" gate="G$1" pin="1"/>
@@ -6963,29 +6843,31 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 </net>
 <net name="EXT_GND" class="0">
 <segment>
-<pinref part="Q1" gate="G$1" pin="S"/>
-<junction x="22.86" y="601.98"/>
-<label x="22.86" y="594.36" size="1.778" layer="95" rot="R90"/>
-</segment>
-<segment>
 <pinref part="JP3" gate="A" pin="8"/>
-<wire x1="40.64" y1="635" x2="-5.08" y2="635" width="0.1524" layer="91"/>
-<label x="23.368" y="636.016" size="1.778" layer="95"/>
-<junction x="40.64" y="635"/>
+<wire x1="12.7" y1="635" x2="-5.08" y2="635" width="0.1524" layer="91"/>
+<label x="18.034" y="634.492" size="1.778" layer="95"/>
+<junction x="12.7" y="635"/>
+</segment>
+</net>
+<net name="N$3" class="0">
+<segment>
+<pinref part="PWRC" gate="G$1" pin="S"/>
+<junction x="58.42" y="637.54"/>
+</segment>
+</net>
+<net name="N$4" class="0">
+<segment>
+<pinref part="PWRC" gate="G$1" pin="D"/>
+<junction x="58.42" y="650.24"/>
 </segment>
 </net>
 <net name="SENS_EN" class="0">
 <segment>
 <pinref part="JP3" gate="A" pin="5"/>
-<wire x1="40.64" y1="642.62" x2="25.4" y2="642.62" width="0.1524" layer="91"/>
-<junction x="40.64" y="642.62"/>
-<label x="22.606" y="643.636" size="1.778" layer="95"/>
-</segment>
-<segment>
-<pinref part="Q1" gate="G$1" pin="G"/>
-<junction x="15.24" y="604.52"/>
-<label x="5.08" y="607.06" size="1.778" layer="95"/>
-<wire x1="15.24" y1="604.52" x2="10.16" y2="604.52" width="0.1524" layer="91"/>
+<wire x1="50.8" y1="642.62" x2="12.7" y2="642.62" width="0.1524" layer="91"/>
+<junction x="12.7" y="642.62"/>
+<label x="45.72" y="640.08" size="1.778" layer="95"/>
+<pinref part="PWRC" gate="G$1" pin="G"/>
 </segment>
 </net>
 </nets>
@@ -7003,12 +6885,6 @@ Please send any comments to: &lt;a href="mailto:messi@users.sourceforge.net"&gt;
 </sheets>
 <errors>
 <approved hash="113,1,-19.154,551.076,FRAME1,,,,,"/>
-<approved hash="113,1,-52.3596,603.843,DS18B20,,,,,"/>
-<approved hash="113,1,-78.5029,641.576,JP1,,,,,"/>
-<approved hash="113,1,41.6036,640.306,JP3,,,,,"/>
-<approved hash="113,1,-16.7361,653.017,DHT22,,,,,"/>
-<approved hash="113,1,-4.09956,603.843,DS18B1,,,,,"/>
-<approved hash="113,1,-19.3396,603.843,DS18B2,,,,,"/>
 </errors>
 </schematic>
 </drawing>
