@@ -31,11 +31,13 @@ struct SensorConfig
   char  password[16] = "";
   int   gps_timeout = 60;       // wait n seconds to get GPS fix
   int   failedGPSsleep = 60;    // sleep this long if failed to get GPS
-  int   reportEvery = 30* 60;   // get sample every n seconds
+  int   reportEvery = 1 * 60;   // get sample every n seconds
   int   fromHour = 6;           // between these hours
-  int   toHour = 20;            // between these hours
+  int   toHour = 22;            // between these hours
   long  frequency = FREQUENCY;  // LoRa transmit frequency
   int   txpower = TXPOWER;      // LoRa transmit power
+  long  preamble = 8;
+  int   syncword = 0xa5a5;
   float txvolts = TXVOLTS;      // power supply must be delivering this voltage in order to xmit.
   int   lowvoltsleep = 600;     // sleep this long if low on volts
   long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency

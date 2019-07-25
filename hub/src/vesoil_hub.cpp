@@ -84,8 +84,9 @@ void startLoRa()
 
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
-  int result = LoRa.begin(config.frequency);  
-  
+
+  LoRa.setPreambleLength(config.preamble);
+  LoRa.setSyncWord(config.syncword);    
   LoRa.setSignalBandwidth(config.bandwidth);
   if (config.enableCRC)
       LoRa.enableCrc();
@@ -93,6 +94,8 @@ void startLoRa()
       LoRa.disableCrc();
   LoRa.setCodingRate4(config.codingRate);
   LoRa.setSpreadingFactor(config.speadFactor);
+
+  int result = LoRa.begin(config.frequency);  
 
   if (!result) 
     Serial.printf("Starting LoRa failed: err %d\n", result);

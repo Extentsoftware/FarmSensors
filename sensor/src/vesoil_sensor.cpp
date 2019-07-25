@@ -59,8 +59,8 @@ void setupLoRa() {
 
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
-  int result = LoRa.begin(config.frequency);
-
+  LoRa.setPreambleLength(config.preamble);
+  LoRa.setSyncWord(config.syncword);    
   LoRa.setSignalBandwidth(config.bandwidth);
   if (config.enableCRC)
     LoRa.enableCrc();
@@ -68,6 +68,7 @@ void setupLoRa() {
     LoRa.disableCrc();
   LoRa.setCodingRate4(config.codingRate);
   LoRa.setSpreadingFactor(config.spreadFactor);
+  int result = LoRa.begin(config.frequency);
   LoRa.setTxPower(config.txpower);
   LoRa.idle();
   
