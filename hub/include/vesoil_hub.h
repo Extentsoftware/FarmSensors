@@ -17,7 +17,7 @@ struct HubConfig
   long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   long  preamble = 8;
   int   syncword = 0xa5a5;
-  int   speadFactor = 12;       // signal processing gain. higher values give greater range but take longer (more power) to transmit
+  int   speadFactor = 6;        // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = 5;         // extra info for CRC
   bool  enableCRC = true;       //
 } default_config;

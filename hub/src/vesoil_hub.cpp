@@ -77,14 +77,20 @@ void setup() {
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
 }
 
-void startLoRa()
-{
-  // turn on LoRa  
+void startLoRa() {
+
   Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
 
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
 
+  int result = LoRa.begin(config.frequency);  
+  if (!result) 
+    Serial.printf("Starting LoRa failed: err %d\n", result);
+  else
+    Serial.println("Started LoRa OK");
+    
+#if false
   LoRa.setPreambleLength(config.preamble);
   LoRa.setSyncWord(config.syncword);    
   LoRa.setSignalBandwidth(config.bandwidth);
@@ -94,13 +100,7 @@ void startLoRa()
       LoRa.disableCrc();
   LoRa.setCodingRate4(config.codingRate);
   LoRa.setSpreadingFactor(config.speadFactor);
-
-  int result = LoRa.begin(config.frequency);  
-
-  if (!result) 
-    Serial.printf("Starting LoRa failed: err %d\n", result);
-  else
-    Serial.println("Started LoRa OK");
+#endif
 
   LoRa.receive();
 }
@@ -150,8 +150,7 @@ STARTUPMODE getStartupMode() {
   return startup_mode;
 }
 
-void flashlight(char code)
-{
+void flashlight(char code) {
   digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
   for (char i=0;i<8;i++)
   {
