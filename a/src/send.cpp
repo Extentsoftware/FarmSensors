@@ -74,11 +74,13 @@ void getSample(SensorReport *report);
 
 void setupLoRa() {
   
+  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth);
+
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
 
   //LoRa.setSpreadingFactor(config.spreadFactor);
-  //LoRa.setCodingRate4(config.codingRate);
+  LoRa.setCodingRate4(config.codingRate);
 
   int result = LoRa.begin(FREQUENCY);
   if (!result) 

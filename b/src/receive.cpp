@@ -1,3 +1,5 @@
+// pio run --target upload
+// pio device monitor -p COM12 -b 115200
 #include <SPI.h>
 #include <Wire.h>  
 #include <HardwareSerial.h>
@@ -34,10 +36,12 @@ struct HubConfig
   long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   long  preamble = 8;
   int   syncword = 0xa5a5;
-  int   speadFactor = 6;        // signal processing gain. higher values give greater range but take longer (more power) to transmit
+  int   spreadFactor = 6;       // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = 5;         // extra info for CRC
   bool  enableCRC = true;       //
 } config;
+
+// spreadfactor 6 is special, p.27 must be implicit
 
 void onReceive(int packetSize);
 void showBlock(int packetSize);
@@ -51,13 +55,6 @@ void startLoRa();
 #define SS      18   // GPIO18 -- SX1278's CS
 #define RST     14   // GPIO14 -- SX1278's RESET
 #define DI0     26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
-#define PSRAM   16    // 8M byte - https://www.electrodragon.com/product/2pcs-ipus-ips6404-iot-ram/
-                      // https://drive.google.com/file/d/1-5NtY1bz0l9eYN9U0U4dP3uASwnMmYGP/view        
-
-#define BATTERY_PIN 35    // battery level measurement pin, here is the voltage divider connected
-#define BTN1        39    // GPIO39 On board button
-#define STORESIZE   30000
-
 
 SensorReport* store;
 Preferences preferences;
@@ -68,8 +65,6 @@ int badpacket=0;
 
 void setup() {
   pinMode(BLUELED, OUTPUT);   // onboard Blue LED
-  pinMode(BTN1,INPUT);        // Button 1
-
   digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
 
   Serial.begin(115200);
@@ -83,13 +78,13 @@ void setup() {
 
 void startLoRa() {
 
-  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
+  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth);
 
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
 
   //LoRa.setSpreadingFactor(config.speadFactor);
-  //LoRa.setCodingRate4(config.codingRate);
+  LoRa.setCodingRate4(config.codingRate);
 
   int result = LoRa.begin(FREQUENCY);  
   if (!result) 
