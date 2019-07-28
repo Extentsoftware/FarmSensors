@@ -568,7 +568,7 @@ void loop() {
   if (wifiMode==true && digitalRead(BTN1)!=0)
   {
       getSampleAndSend();
-      delay(2000);
+      smartDelay(2000);
       return;
   }
 

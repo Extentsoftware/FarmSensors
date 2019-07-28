@@ -7,7 +7,7 @@
 #define CODERATE      6
 #define SYNCWORD 0xa5a5
 #define PREAMBLE      8
-#define TXPOWER      17   // max power
+#define TXPOWER      20   // max power
 #define TXVOLTS     2.7
 #define ONE_WIRE_BUS  2
 #define BATTERY_PIN  35   // battery level measurement pin, here is the voltage divider connected
