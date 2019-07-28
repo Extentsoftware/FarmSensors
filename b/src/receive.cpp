@@ -27,7 +27,7 @@ struct SensorReport
 #define INFO_WIFI     0x33  // 00110011
 #define INFO_SENSOR   0xAA  // 10101010
 #define FREQUENCY    868E6
-#define BAND        12.5E3   
+#define BAND         125E3   
 
 struct HubConfig
 {
@@ -36,8 +36,8 @@ struct HubConfig
   long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   long  preamble = 8;
   int   syncword = 0xa5a5;
-  int   spreadFactor = 6;       // signal processing gain. higher values give greater range but take longer (more power) to transmit
-  int   codingRate = 5;         // extra info for CRC
+  int   spreadFactor = 12;      // signal processing gain. higher values give greater range but take longer (more power) to transmit
+  int   codingRate = 6;         // extra info for CRC
   bool  enableCRC = true;       //
 } config;
 
@@ -83,9 +83,7 @@ void startLoRa() {
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
 
-  //LoRa.setSpreadingFactor(config.speadFactor);
-  LoRa.setCodingRate4(config.codingRate);
-
+  
   int result = LoRa.begin(FREQUENCY);  
   if (!result) 
     Serial.printf("Starting LoRa failed: err %d\n", result);
@@ -93,13 +91,17 @@ void startLoRa() {
     Serial.println("Started LoRa OK");
 
 #if true
-    LoRa.setPreambleLength(config.preamble);
-    LoRa.setSyncWord(config.syncword);    
-    LoRa.setSignalBandwidth(config.bandwidth);
-    if (config.enableCRC)
+
+  LoRa.setPreambleLength(config.preamble);
+  LoRa.setSyncWord(config.syncword);    
+  LoRa.setSignalBandwidth(config.bandwidth);
+  LoRa.setSpreadingFactor(config.spreadFactor);
+  LoRa.setCodingRate4(config.codingRate);
+  if (config.enableCRC)
       LoRa.enableCrc();
     else 
       LoRa.disableCrc();
+
 #else
   
   

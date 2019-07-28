@@ -65,17 +65,15 @@ void setupLoRa() {
   else
     Serial.println("Started LoRa OK");
 
-#if false
   LoRa.setPreambleLength(config.preamble);
   LoRa.setSyncWord(config.syncword);    
   LoRa.setSignalBandwidth(config.bandwidth);
-  if (config.enableCRC)
-    LoRa.enableCrc();
-  else 
-    LoRa.disableCrc();
-  LoRa.setCodingRate4(config.codingRate);
   LoRa.setSpreadingFactor(config.spreadFactor);
-#endif
+  LoRa.setCodingRate4(config.codingRate);
+  if (config.enableCRC)
+      LoRa.enableCrc();
+    else 
+      LoRa.disableCrc();
 
   LoRa.setTxPower(config.txpower);
   LoRa.idle();

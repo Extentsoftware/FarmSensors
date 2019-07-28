@@ -79,7 +79,7 @@ void setup() {
 
 void startLoRa() {
 
-  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
+  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth);
 
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
@@ -90,17 +90,15 @@ void startLoRa() {
   else
     Serial.println("Started LoRa OK");
     
-#if false
   LoRa.setPreambleLength(config.preamble);
   LoRa.setSyncWord(config.syncword);    
   LoRa.setSignalBandwidth(config.bandwidth);
+  LoRa.setSpreadingFactor(config.spreadFactor);
+  LoRa.setCodingRate4(config.codingRate);
   if (config.enableCRC)
       LoRa.enableCrc();
-   else 
+    else 
       LoRa.disableCrc();
-  LoRa.setCodingRate4(config.codingRate);
-  LoRa.setSpreadingFactor(config.speadFactor);
-#endif
 
   LoRa.receive();
 }

@@ -5,8 +5,8 @@
 #include <LoRa.h>         // https://github.com/sandeepmistry/arduino-LoRa/blob/master/API.md
 
 #define FREQUENCY 868E6
-#define BAND    12.5E3   
-#define TXPOWER     14   // max power
+#define BAND     125E3 
+#define TXPOWER     17   // max power
 #define TXVOLTS    2.7
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 #define ONE_WIRE_BUS 2
@@ -44,7 +44,7 @@ struct SensorConfig
   float txvolts = TXVOLTS;      // power supply must be delivering this voltage in order to xmit.
   int   lowvoltsleep = 600;     // sleep this long if low on volts
   long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
-  int   spreadFactor = 6;       // signal processing gain. higher values give greater range but take longer (more power) to transmit
+  int   spreadFactor = 12;      // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = 5;         // extra info for CRC
   bool  enableCRC = true;       //
 } config;
@@ -79,26 +79,21 @@ void setupLoRa() {
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
 
-  //LoRa.setSpreadingFactor(config.spreadFactor);
-  LoRa.setCodingRate4(config.codingRate);
-
   int result = LoRa.begin(FREQUENCY);
   if (!result) 
     Serial.printf("Starting LoRa failed: err %d\n", result);
   else
     Serial.println("Started LoRa OK");
 
-#if true
   LoRa.setPreambleLength(config.preamble);
   LoRa.setSyncWord(config.syncword);    
   LoRa.setSignalBandwidth(config.bandwidth);
+  LoRa.setSpreadingFactor(config.spreadFactor);
+  LoRa.setCodingRate4(config.codingRate);
   if (config.enableCRC)
       LoRa.enableCrc();
-   else 
+    else 
       LoRa.disableCrc();
-#else
-  
-#endif   
 
   LoRa.setTxPower(TXPOWER);
   LoRa.idle();
