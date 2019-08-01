@@ -41,7 +41,7 @@ void setup() {
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
-  Serial.println("VESTRONG LaPoulton LoRa Hub");
+  Serial.println("VESTRONG LaPoulton LoRa HUB");
 
   Serial.println("get startup");
   STARTUPMODE startup_mode = getStartupMode();
@@ -233,7 +233,7 @@ void showBlock(int packetSize) {
       char *stime = asctime(gmtime(&report.time));
       stime[24]='\0';
 
-      Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f rssi=%f snr=%f pfe=%lu\n", 
+      Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f rssi=%f snr=%f pfe=%ld\n", 
             stime, report.lat,report.lng ,report.alt ,report.sats ,report.hdop 
             ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2
             , report.volts, rssi, snr, pfe );
