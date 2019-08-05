@@ -49,7 +49,7 @@ void setup() {
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
-  Serial.println("VESTRONG LaPoulton LoRa Hub");
+  Serial.println("VESTRONG LaPoulton LoRa HUB");
 
   Serial.println("get startup");
   STARTUPMODE startup_mode = getStartupMode();
@@ -77,30 +77,28 @@ void setup() {
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
 }
 
-void startLoRa()
-{
-  // turn on LoRa  
-  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.speadFactor, config.bandwidth);
+void startLoRa() {
+
+  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth);
 
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
 
-  LoRa.setPreambleLength(config.preamble);
-  LoRa.setSyncWord(config.syncword);    
-  LoRa.setSignalBandwidth(config.bandwidth);
-  if (config.enableCRC)
-      LoRa.enableCrc();
-   else 
-      LoRa.disableCrc();
-  LoRa.setCodingRate4(config.codingRate);
-  LoRa.setSpreadingFactor(config.speadFactor);
-
   int result = LoRa.begin(config.frequency);  
-
   if (!result) 
     Serial.printf("Starting LoRa failed: err %d\n", result);
   else
     Serial.println("Started LoRa OK");
+    
+  LoRa.setPreambleLength(config.preamble);
+  LoRa.setSyncWord(config.syncword);    
+  LoRa.setSignalBandwidth(config.bandwidth);
+  LoRa.setSpreadingFactor(config.spreadFactor);
+  LoRa.setCodingRate4(config.codingRate);
+  if (config.enableCRC)
+      LoRa.enableCrc();
+    else 
+      LoRa.disableCrc();
 
   LoRa.receive();
 }
@@ -150,8 +148,7 @@ STARTUPMODE getStartupMode() {
   return startup_mode;
 }
 
-void flashlight(char code)
-{
+void flashlight(char code) {
   digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
   for (char i=0;i<8;i++)
   {
@@ -264,7 +261,7 @@ void showBlock(int packetSize) {
       char *stime = asctime(gmtime(&report.time));
       stime[24]='\0';
 
-      Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f rssi=%f snr=%f pfe=%lu\n", 
+      Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f rssi=%f snr=%f pfe=%ld\n", 
             stime, report.lat,report.lng ,report.alt ,report.sats ,report.hdop 
             ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2
             , report.volts, rssi, snr, pfe );

@@ -3,7 +3,7 @@
 //
 // to upload new html files use this command:
 // pio run --target uploadfs
-// pio device monitor -p COM5: -b 115200
+// pio device monitor -p COM5 -b 115200
 // 
 
 static const char * TAG = "Sensor";
@@ -54,21 +54,27 @@ Preferences preferences;
 
 void setupLoRa() {
   
-  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu txpower:%d\n", 
-    config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth, config.txpower);
+  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu txpower:%d\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth, config.txpower);
 
   SPI.begin(SCK,MISO,MOSI,SS);
   LoRa.setPins(SS,RST,DI0);
+
+  int result = LoRa.begin(config.frequency);
+  if (!result) 
+    Serial.printf("Starting LoRa failed: err %d\n", result);
+  else
+    Serial.println("Started LoRa OK");
+
   LoRa.setPreambleLength(config.preamble);
   LoRa.setSyncWord(config.syncword);    
   LoRa.setSignalBandwidth(config.bandwidth);
-  if (config.enableCRC)
-    LoRa.enableCrc();
-  else 
-    LoRa.disableCrc();
-  LoRa.setCodingRate4(config.codingRate);
   LoRa.setSpreadingFactor(config.spreadFactor);
-  int result = LoRa.begin(config.frequency);
+  LoRa.setCodingRate4(config.codingRate);
+  if (config.enableCRC)
+      LoRa.enableCrc();
+    else 
+      LoRa.disableCrc();
+
   LoRa.setTxPower(config.txpower);
   LoRa.idle();
   
@@ -364,7 +370,8 @@ void setupWifi() {
       }
       
       preferences.putBytes("config", &config, sizeof(SensorConfig));
-
+      LoRa.end();
+      setupLoRa();
       request->send(SPIFFS, "/index.html", String(), false, processor);
     });
 
@@ -512,7 +519,6 @@ void getSampleAndSend()
   Serial.println("LoRa Write");
   LoRa.endPacket();
   Serial.println("LoRa End");
-  delay(1000);
   digitalWrite(BLUELED, LOW);   // turn the LED off
 }
 
@@ -532,7 +538,8 @@ void setup() {
     deepSleep(config.lowvoltsleep);
   }
   setupSerial();  
-
+  Serial.println("VESTRONG LaPoulton LoRa SENSOR");
+ 
   STARTUPMODE startup_mode = getStartupMode();
 
   getConfig(startup_mode);
@@ -561,10 +568,8 @@ void loop() {
   // no sampling during wifi mode if btn not held down
   if (wifiMode==true && digitalRead(BTN1)!=0)
   {
-      LoRa.end();
-      setupLoRa();
       getSampleAndSend();
-      delay(2000);
+      smartDelay(2000);
       return;
   }
 
