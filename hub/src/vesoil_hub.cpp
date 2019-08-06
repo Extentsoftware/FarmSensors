@@ -28,8 +28,8 @@ long pfe=0;
 
 int badpacket=0;
 bool wifiMode=false;
-int buttonState;             // the current reading from the input pin
-int lastButtonState = LOW;   // the previous reading from the input pin
+int buttonState = HIGH;       // the current reading from the input pin
+int lastButtonState = HIGH;   // the previous reading from the input pin
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
 unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
@@ -159,8 +159,7 @@ void flashlight(char code) {
   }  
 }
 
-void loop() {
-
+bool detectDebouncedBtnPush() {
   int reading = digitalRead(BTN1);
 
   // check to see if you just pressed the button
@@ -171,22 +170,29 @@ void loop() {
   if (reading != lastButtonState) {
     // reset the debouncing timer
     lastDebounceTime = millis();
+    lastButtonState = reading;
   }
 
   if ((millis() - lastDebounceTime) > debounceDelay) {
     // whatever the reading is at, it's been there for longer than the debounce
     // delay, so take it as the actual current state:
-
     // if the button state has changed:
     if (reading != buttonState) {
       buttonState = reading;
 
       // only toggle the LED if the new button state is HIGH
-      if (buttonState == HIGH) {
-        toggleWifi();
+      if (buttonState == LOW) {
+        return true;
       }
     }
   }
+  return false;
+}
+
+void loop() {
+
+  if (detectDebouncedBtnPush())
+    toggleWifi();
 
   int packetSize = LoRa.parsePacket();
   readLoraData(packetSize);

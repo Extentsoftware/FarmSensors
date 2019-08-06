@@ -6,7 +6,7 @@
 
 #define ERR_LOWPOWER  0x15  // 00010101
 #define INFO_WIFI     0x33  // 00110011
-#define INFO_SENSOR   0xAA  // 10101010
+#define INFO_NORMAL   0xAA  // 10101010
 
 #define FREQUENCY 868E6
 #define BAND      125E3   
@@ -33,6 +33,7 @@ enum STARTUPMODE
     RESET=2
 };
 
+bool detectDebouncedBtnPush();
 void onReceive(int packetSize);
 void SystemCheck();
 void getBatteryVoltage();
