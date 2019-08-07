@@ -372,7 +372,7 @@ void notFound(AsyncWebServerRequest *request) {
 
 void setupBatteryVoltage()
 {
-   // set battery measurement pin
+  // set battery measurement pin
   adcAttachPin(BATTERY_PIN);
   adcStart(BATTERY_PIN);
   analogReadResolution(10); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.
