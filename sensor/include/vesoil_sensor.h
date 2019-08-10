@@ -16,7 +16,7 @@
 #define DHTPIN       22   // DHT11
 #define BLUELED      14   // GPIO14
 #define BTN1         39   // GPIO39 On board button
-#define BUSPWR        0   // GPIO00
+#define BUSPWR        4   // GPIO04
 #define SCK           5   // GPIO5  -- SX1278's SCK
 #define MISO         19   // GPIO19 -- SX1278's MISnO
 #define MOSI         27   // GPIO27 -- SX1278's MOSI
