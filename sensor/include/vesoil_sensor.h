@@ -8,7 +8,7 @@
 #define SYNCWORD 0xa5a5
 #define PREAMBLE      8
 #define TXPOWER      20   // max power
-#define TXVOLTS     2.7
+#define                                                                 TXVOLTS     2.7
 #define ONE_WIRE_BUS  2
 #define BATTERY_PIN  35   // battery level measurement pin, here is the voltage divider connected
 #define MOIST1       13   // Analogue soil sensor 1
@@ -34,9 +34,9 @@ struct SensorConfig
 {
   char  ssid[16] = "VESTRONG_S";
   char  password[16] = "";
-  int   gps_timeout = 60;       // wait n seconds to get GPS fix
+  int   gps_timeout = 120;      // wait n seconds to get GPS fix
   int   failedGPSsleep = 60;    // sleep this long if failed to get GPS
-  int   reportEvery = 15 * 60;  // get sample every n seconds
+  int   reportEvery = 60 * 60;  // get sample every n seconds
   int   fromHour = 6;           // between these hours
   int   toHour = 22;            // between these hours
   long  frequency = FREQUENCY;  // LoRa transmit frequency
@@ -44,7 +44,7 @@ struct SensorConfig
   long  preamble = PREAMBLE;
   int   syncword = SYNCWORD;
   float txvolts = TXVOLTS;      // power supply must be delivering this voltage in order to xmit.
-  int   lowvoltsleep = 600;     // sleep this long if low on volts
+  int   lowvoltsleep = 60*60*8; // sleep this long (seconds) if low on volts (8hrs)
   long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   int   spreadFactor = SPREAD;  // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = CODERATE;  // extra info for CRC

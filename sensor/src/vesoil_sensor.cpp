@@ -119,11 +119,15 @@ void setupSerial() {
 
 void deepSleep(uint64_t timetosleep) {
 
+  digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
+
   Serial.printf("preparing sleep mode for %" PRId64  " seconds", timetosleep);
   GPSReset();
   Serial.printf("GPS sleeping");
 
   LoRa.sleep();
+  LoRa.end();
+  pinMode(14,INPUT);
   Serial.printf("LoRa sleeping");
 
   // turnOffRTC
@@ -162,6 +166,9 @@ void deepSleep(uint64_t timetosleep) {
   Serial.printf("Going to sleep now for %" PRId64  " seconds", timetosleep);
   delay(100);
   Serial.flush(); 
+  digitalWrite(BLUELED, 1);   // turn the LED off - we're doing stuff
+  delay(100);
+  digitalWrite(BLUELED, 0);   // turn the LED off - we're doing stuff
 
   esp_deep_sleep_start();
 }
@@ -488,6 +495,11 @@ GPSLOCK getGpsLock()
         return LOCK_WINDOW;
     }
     Serial.printf("waiting for GPS try: %d\n", i);
+
+    digitalWrite(BLUELED, 1);   // turn the LED off - we're doing stuff
+    delay(10);
+    digitalWrite(BLUELED, 0);   // turn the LED off - we're doing stuff
+
     smartDelay(1000);
   }
   return LOCK_FAIL;
@@ -524,10 +536,11 @@ void getSampleAndSend()
 
 void setup() {
 
-  pinMode(BLUELED, OUTPUT);   // onboard Blue LED
-  pinMode(BTN1,INPUT);        // Button 1
-  pinMode(BUSPWR,OUTPUT);     // power enable for the sensors
-  
+  pinMode(BLUELED, OUTPUT);    // onboard Blue LED
+  pinMode(BTN1,INPUT);         // Button 1
+  pinMode(BUSPWR,OUTPUT);      // power enable for the sensors
+  digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
+
   digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
 
   // check we have enough juice
