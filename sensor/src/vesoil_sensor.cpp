@@ -121,33 +121,28 @@ void deepSleep(uint64_t timetosleep) {
 
   digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
 
-  Serial.printf("preparing sleep mode for %" PRId64  " seconds", timetosleep);
+  //Serial.printf("preparing sleep mode for %" PRId64  " seconds", timetosleep);
   GPSReset();
-  Serial.printf("GPS sleeping");
 
   LoRa.sleep();
   LoRa.end();
-  pinMode(14,INPUT);
-  Serial.printf("LoRa sleeping");
+  //pinMode(14,INPUT);
 
   // turnOffRTC
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
-  Serial.printf("RTC sleeping");
 
   // turnOffWifi()
   esp_wifi_stop();
   esp_wifi_deinit();
-  Serial.printf("WiFi sleeping");
 
   // turnOffBluetooth(
   esp_bluedroid_disable();
   esp_bluedroid_deinit();
   esp_bt_controller_disable();
   esp_bt_controller_deinit();
-  Serial.printf("BT sleeping");
   
   esp_err_t result;
   do {
@@ -155,7 +150,6 @@ void deepSleep(uint64_t timetosleep) {
     result = esp_sleep_enable_timer_wakeup(ms);
     if (result== ESP_ERR_INVALID_ARG)
     {
-      Serial.printf("Bad sleep time %" PRId64  " seconds", timetosleep);
       if (timetosleep>60)
         timetosleep = timetosleep-60;
       else
@@ -163,11 +157,6 @@ void deepSleep(uint64_t timetosleep) {
     }
   } while (result== ESP_ERR_INVALID_ARG);
   
-  Serial.printf("Going to sleep now for %" PRId64  " seconds", timetosleep);
-  delay(100);
-  Serial.flush(); 
-  digitalWrite(BLUELED, 1);   // turn the LED off - we're doing stuff
-  delay(100);
   digitalWrite(BLUELED, 0);   // turn the LED off - we're doing stuff
 
   esp_deep_sleep_start();
