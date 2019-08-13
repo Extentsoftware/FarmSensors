@@ -501,6 +501,7 @@ void getSampleAndSend()
   SensorReport report;
 
   digitalWrite(BUSPWR, HIGH);   // turn on power to the sensor bus
+  setupLoRa();
   delay(100);
   setupTempSensors();
   delay(100);
@@ -546,8 +547,6 @@ void setup() {
 
   getConfig(startup_mode);
 
-  setupLoRa();
-
   setupGPS();
 
   if (startup_mode==WIFI)
@@ -566,27 +565,30 @@ void setup() {
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
 }
 
-void loop() {
-  // no sampling during wifi mode if btn not held down
-  if (wifiMode==true && digitalRead(BTN1)!=0)
-  {
-      getSampleAndSend();
-      smartDelay(2000);
-      return;
-  }
-
+void loopWifiMode() {
   GPSLOCK lock = getGpsLock();
 
-  if (wifiMode)
+  // mode button held down
+  if (digitalRead(BTN1)!=0)
   {
-    if (lock!=LOCK_FAIL)
-    {
+    if (lock==LOCK_OK)
       getSampleAndSend();
-      return;
-    }
-  }
+    else
+      flashlight(INFO_NOGPS);
 
-  Serial.printf("GPS lock mode %d\n", lock);
+    deepSleep(2000);
+    return;
+  }
+  else
+  {
+    flashlight(INFO_WIFI);
+    deepSleep(2000);
+    return;
+  }
+}
+
+void loopSensorMode() {
+  GPSLOCK lock = getGpsLock();
 
   switch (lock)
   {
@@ -608,4 +610,12 @@ void loop() {
 
       deepSleep( timeToSleep );
   }
+}
+
+void loop() {
+  // no sampling during wifi mode if btn not held down
+  if (wifiMode==true)
+    loopWifiMode();
+  else
+    loopSensorMode();
 }

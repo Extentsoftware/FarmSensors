@@ -27,6 +27,7 @@
 #define ERR_LOWPOWER  0x15  // 00010101
 #define INFO_WIFI     0x33  // 00110011
 #define INFO_SENSOR   0xAA  // 10101010
+#define INFO_NOGPS    0x49  // 01001001
 
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 
@@ -34,21 +35,21 @@ struct SensorConfig
 {
   char  ssid[16] = "VESTRONG_S";
   char  password[16] = "";
-  int   gps_timeout = 120;      // wait n seconds to get GPS fix
-  int   failedGPSsleep = 60;    // sleep this long if failed to get GPS
-  int   reportEvery = 60 * 60;  // get sample every n seconds
-  int   fromHour = 6;           // between these hours
-  int   toHour = 22;            // between these hours
-  long  frequency = FREQUENCY;  // LoRa transmit frequency
-  int   txpower = TXPOWER;      // LoRa transmit power
+  int   gps_timeout = 4 * 60;    // wait n seconds to get GPS fix
+  int   failedGPSsleep = 5 * 60; // sleep this long if failed to get GPS
+  int   reportEvery = 60 * 60;   // get sample every n seconds
+  int   fromHour = 6;            // between these hours
+  int   toHour = 22;             // between these hours
+  long  frequency = FREQUENCY;   // LoRa transmit frequency
+  int   txpower = TXPOWER;       // LoRa transmit power
   long  preamble = PREAMBLE;
   int   syncword = SYNCWORD;
-  float txvolts = TXVOLTS;      // power supply must be delivering this voltage in order to xmit.
-  int   lowvoltsleep = 60*60*8; // sleep this long (seconds) if low on volts (8hrs)
-  long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
-  int   spreadFactor = SPREAD;  // signal processing gain. higher values give greater range but take longer (more power) to transmit
-  int   codingRate = CODERATE;  // extra info for CRC
-  bool  enableCRC = true;       //
+  float txvolts = TXVOLTS;       // power supply must be delivering this voltage in order to xmit.
+  int   lowvoltsleep = 60*60*8;  // sleep this long (seconds) if low on volts (8hrs)
+  long  bandwidth = BAND;        // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
+  int   spreadFactor = SPREAD;   // signal processing gain. higher values give greater range but take longer (more power) to transmit
+  int   codingRate = CODERATE;   // extra info for CRC
+  bool  enableCRC = true;        //
 } default_config;
 
 enum STARTUPMODE
@@ -65,6 +66,8 @@ enum GPSLOCK
     LOCK_WINDOW
 };
 
+void loopSensorMode();
+void loopWifiMode();
 void setConfigParam(const String& var, const char *value);
 GPSLOCK getGpsLock();
 void getSampleAndSend();
