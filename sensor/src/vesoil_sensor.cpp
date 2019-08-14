@@ -121,7 +121,7 @@ void deepSleep(uint64_t timetosleep) {
 
   digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
 
-  //Serial.printf("preparing sleep mode for %" PRId64  " seconds", timetosleep);
+  Serial.printf("preparing sleep mode for %" PRId64  " seconds", timetosleep);
   GPSReset();
 
   LoRa.sleep();
@@ -474,8 +474,11 @@ GPSLOCK getGpsLock()
 {
   for (int i=0; i<config.gps_timeout; i++)
   {
+    
+    Serial.printf("waiting for GPS try: %d  Age:%u  valid: %d   %d\n", i, gps.location.age(), gps.location.isValid(), gps.time.isValid());
+
     // check whethe we have  gps sig
-    if (gps.location.lat()!=0)
+    if (gps.location.lat()!=0 && gps.location.isValid() )
     {
       // in the report window?
       if (gps.time.hour() >=config.fromHour && gps.time.hour() < config.toHour)
@@ -483,7 +486,7 @@ GPSLOCK getGpsLock()
       else
         return LOCK_WINDOW;
     }
-    Serial.printf("waiting for GPS try: %d\n", i);
+    
 
     digitalWrite(BLUELED, 1);   // turn the LED off - we're doing stuff
     delay(10);
@@ -567,7 +570,7 @@ void setup() {
 
 void loopWifiMode() {
   GPSLOCK lock = getGpsLock();
-
+  Serial.printf("GPS Lock is  %d", lock);
   // mode button held down
   if (digitalRead(BTN1)!=0)
   {
@@ -589,6 +592,7 @@ void loopWifiMode() {
 
 void loopSensorMode() {
   GPSLOCK lock = getGpsLock();
+  Serial.printf("GPS Lock is  %d", lock);
 
   switch (lock)
   {
@@ -608,7 +612,7 @@ void loopSensorMode() {
       else
         timeToSleep = ((24-gps.time.hour()) + config.toHour) * 60;
 
-      deepSleep( timeToSleep );
+      deepSleep( timeToSleep * 60);
   }
 }
 

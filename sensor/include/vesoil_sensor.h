@@ -38,7 +38,7 @@ struct SensorConfig
   int   gps_timeout = 4 * 60;    // wait n seconds to get GPS fix
   int   failedGPSsleep = 5 * 60; // sleep this long if failed to get GPS
   int   reportEvery = 60 * 60;   // get sample every n seconds
-  int   fromHour = 6;            // between these hours
+  int   fromHour = 4;            // between these hours
   int   toHour = 22;             // between these hours
   long  frequency = FREQUENCY;   // LoRa transmit frequency
   int   txpower = TXPOWER;       // LoRa transmit power
