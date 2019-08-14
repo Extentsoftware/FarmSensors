@@ -28,6 +28,14 @@ long pfe=0;
 
 int badpacket=0;
 bool wifiMode=false;
+int buttonState = HIGH;       // the current reading from the input pin
+int lastButtonState = HIGH;   // the previous reading from the input pin
+// the following variables are unsigned longs because the time, measured in
+// milliseconds, will quickly become a bigger number than can be stored in an int.
+unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
+unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
+
+
 struct HubConfig config;
 
 void setup() {
@@ -64,15 +72,7 @@ void setup() {
 
   digitalWrite(BLUELED, LOW);   // turn the LED off
 
-  if (startup_mode==WIFI)
-  {
-    flashlight(INFO_WIFI);
-    Serial.printf("Entering WiFi mode\n");
-    wifiMode=true;
-    setupWifi();
-  }
-  else
-    flashlight(INFO_SENSOR);
+  flashlight(INFO_NORMAL);
   
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
 }
@@ -136,7 +136,7 @@ STARTUPMODE getStartupMode() {
   if (btndown==0)
     startup_mode = NORMAL;   // sensor mode
   else if (btndown<2000)
-    startup_mode = WIFI;   // wifi
+    startup_mode = NORMAL;   // NORMAL
   else 
   {
     startup_mode = RESET;   // reset config
@@ -159,7 +159,41 @@ void flashlight(char code) {
   }  
 }
 
+bool detectDebouncedBtnPush() {
+  int reading = digitalRead(BTN1);
+
+  // check to see if you just pressed the button
+  // (i.e. the input went from LOW to HIGH), and you've waited long enough
+  // since the last press to ignore any noise:
+
+  // If the switch changed, due to noise or pressing:
+  if (reading != lastButtonState) {
+    // reset the debouncing timer
+    lastDebounceTime = millis();
+    lastButtonState = reading;
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    // whatever the reading is at, it's been there for longer than the debounce
+    // delay, so take it as the actual current state:
+    // if the button state has changed:
+    if (reading != buttonState) {
+      buttonState = reading;
+
+      // only toggle the LED if the new button state is HIGH
+      if (buttonState == LOW) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void loop() {
+
+  if (detectDebouncedBtnPush())
+    toggleWifi();
+
   int packetSize = LoRa.parsePacket();
   readLoraData(packetSize);
   delay(100);
@@ -259,9 +293,23 @@ void showBlock(int packetSize) {
   }
 }
 
+void toggleWifi() {
+  wifiMode = !wifiMode;
+  if (wifiMode)
+    setupWifi();
+  else
+    exitWifi();
+}
+
+void exitWifi() {
+  Serial.printf("Exit WiFi mode\n");
+  WiFi.softAPdisconnect( true );
+  server.reset();
+}
+
 void setupWifi() {
     WiFi.softAP(config.ssid);
-
+    Serial.printf("Entering WiFi mode\n");
     Serial.print("IP Address: ");
     Serial.println(WiFi.softAPIP());
 
@@ -330,7 +378,7 @@ void notFound(AsyncWebServerRequest *request) {
 
 void setupBatteryVoltage()
 {
-   // set battery measurement pin
+  // set battery measurement pin
   adcAttachPin(BATTERY_PIN);
   adcStart(BATTERY_PIN);
   analogReadResolution(10); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.

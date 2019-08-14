@@ -13,7 +13,7 @@ The device is designed to measure current location, soil moisture at two depths,
 
 If you reset the device without holding down the GPIO39 button the device enters Sensor mode.
 
-When resetting the device via the reset button, if you hold in the GPIO39 button for more that 2 seconds during the reboot then the device resets it stored configuration to factory defaults.
+If you hold in the GPIO39 button for more that 2 seconds when resetting the device via the reset button the device resets it stored configuration to factory defaults.
 
 When resetting the device via the reset button, if you hold in the GPIO39 button for less than 1 seconds during the reboot then the device enters WiFi mode. It will be accessible on http://192.168.4.1
 
@@ -33,18 +33,18 @@ In Wifi mode the sensor can be reached via http://192.168.4.1. Configuration par
 | **Name**        | **Description**           |  **Default** |
 | ------------- |-------------| -----:|
 | ssid       | Access point name | VESTRONG_S |
-| gps_timout | Wait n seconds to get GPS fix |   60 |
-| failedGPSsleep | Sleep this long if failed to get GPS  |    3600 |
-| reportEvery | Get sample every n seconds  |    60 |
+| gps_timout | Wait n seconds to get GPS fix |   240 |
+| failedGPSsleep | Sleep this long if failed to get GPS  |    360 |
+| reportEvery | Get sample every n seconds  |    360 |
 | fromHour |  Between these hours | 6  |
-| toHour |  Between these hours | 20 |
+| toHour |  Between these hours | 22 |
 | frequency | LoRa transmit frequency  | 868MHz  |
 | txpower | LoRa transmit power  | 17dB |
 | txvolts | Power supply must be delivering this voltage in order to xmit |  2.7 |
 | lowvoltsleep | Sleep this long if low on volts | 600  |
-| bandwidth | Lower (narrower) bandwidth values give longer range | 62500  |
+| bandwidth | Lower (narrower) bandwidth values give longer range | 125000  |
 | speadFactor | Signal processing gain. higher values give greater range  |  12 |
-| codingRate |  Extra info for CRC |  5 |
+| codingRate |  Extra info for CRC |  6 |
 | enableCRC | Enable detection of corrupt packets  |  true |
 ||||
 

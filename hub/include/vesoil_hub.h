@@ -6,7 +6,7 @@
 
 #define ERR_LOWPOWER  0x15  // 00010101
 #define INFO_WIFI     0x33  // 00110011
-#define INFO_SENSOR   0xAA  // 10101010
+#define INFO_NORMAL   0xAA  // 10101010
 
 #define FREQUENCY 868E6
 #define BAND      125E3   
@@ -30,16 +30,18 @@ struct HubConfig
 enum STARTUPMODE
 {
     NORMAL=0,
-    WIFI=1,
     RESET=2
 };
 
+bool detectDebouncedBtnPush();
 void onReceive(int packetSize);
 void SystemCheck();
 void getBatteryVoltage();
 void setupBatteryVoltage();
 void notFound(AsyncWebServerRequest *request);
 void setupWifi();
+void exitWifi();
+void toggleWifi();
 void showBlock(int packetSize);
 void readLoraData(int packetSize);
 SensorReport *GetFromStore();
