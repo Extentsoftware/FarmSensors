@@ -12,7 +12,7 @@ static const char * TAG = "Sensor";
 #include <Arduino.h>
 #include <SPI.h>
 #include <Wire.h>  
-#include <SparkFunLSM9DS1.h>
+#include <Adafruit_ADS1015.h>
 #include <HardwareSerial.h>
 #include <LoRa.h>         // https://github.com/sandeepmistry/arduino-LoRa/blob/master/API.md
 #include <ArduinoJson.h>  // https://arduinojson.org/v6/api/
@@ -41,6 +41,7 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature tmpsensors(&oneWire);
 TinyGPSPlus gps;                            
 DHT_Unified dht(DHTPIN, DHT22);
+Adafruit_ADS1115 ads;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 AsyncEventSource events("/events");
@@ -376,17 +377,13 @@ void setupWifi() {
 void getSample(SensorReport *report) {
   float vBat = getBatteryVoltage();
 
-  analogReadResolution(12);
-  pinMode(MOIST1,INPUT_PULLUP);
-  adcAttachPin(MOIST1);
-  adcStart(MOIST1);
-  int m1 = analogRead(MOIST1);  // read the input pin;
-
-  pinMode(MOIST2,INPUT_PULLUP);
-  adcAttachPin(MOIST2);
-  adcStart(MOIST2);
-  int m2 = analogRead(MOIST2);  // read the input pin;
-
+  ads.setGain(GAIN_ONE);
+  ads.begin();
+  
+  // Setup 3V comparator on channel 0
+  int m1 = ads.readADC_SingleEnded(0);
+  int m2 = ads.readADC_SingleEnded(1);
+ 
   struct tm curtime;
   curtime.tm_sec = gps.time.second();
   curtime.tm_min=gps.time.minute();
@@ -466,8 +463,7 @@ void getConfig(STARTUPMODE startup_mode) {
   }
 }
 
-GPSLOCK getGpsLock() 
-{
+GPSLOCK getGpsLock() {
   for (int i=0; i<config.gps_timeout; i++)
   {
     
@@ -501,9 +497,9 @@ void getSampleAndSend()
 
   digitalWrite(BUSPWR, HIGH);   // turn on power to the sensor bus
   setupLoRa();
-  delay(100);
+  delay(10);
   setupTempSensors();
-  delay(100);
+  delay(10);
   getSample(&report);
   digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
 

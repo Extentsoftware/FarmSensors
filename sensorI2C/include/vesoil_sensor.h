@@ -8,12 +8,14 @@
 #define SYNCWORD 0xa5a5
 #define PREAMBLE      8
 #define TXPOWER      20   // max power
-#define                                                                 TXVOLTS     2.7
+#define TXVOLTS     2.7
 #define ONE_WIRE_BUS  2   // used for 
 #define BATTERY_PIN  35   // battery level measurement pin, here is the voltage divider connected
-//#define MOIST1       13   // Analogue soil sensor 1
-//#define MOIST2       25   // Analogue soil sensor 2
-//#define DHTPIN       22   // DHT11/DHT22 - Move to pin  13/25
+
+#define SDA       21      // I2C
+#define SCL       22      // I2C
+#define ADC_ADDR  0x48    // Base address of ADS1115
+
 #define DHTPIN       25   // DHT11/DHT22
 #define BLUELED      14   // GPIO14
 #define BTN1         39   // GPIO39 On board button
