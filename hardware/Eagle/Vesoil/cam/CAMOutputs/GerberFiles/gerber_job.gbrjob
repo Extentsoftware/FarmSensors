@@ -1,7 +1,7 @@
 {
     "Header": {
         "Comment": "All values are metric (mm)",
-        "CreationDate": "2019-08-19T05:36:53Z",
+        "CreationDate": "2019-08-19T07:14:44Z",
         "GenerationSoftware": {
             "Application": "EAGLE",
             "Vendor": "Autodesk",
@@ -17,7 +17,7 @@
         },
         "Owner": "marcus poulton <marcus.poulton@gmail.com>",
         "Size": {
-            "X": 48.24,
+            "X": 45.7,
             "Y": 46.66
         }
     }
