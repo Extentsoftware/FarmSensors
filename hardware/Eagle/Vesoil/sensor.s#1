@@ -5135,9 +5135,9 @@ Number of pins: &lt;b&gt;4&lt;/b&gt;&lt;b&gt;&lt;P&gt;
 <label x="-55.88" y="650.24" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="RST" gate="-1" pin="S"/>
-<wire x1="-63.5" y1="665.48" x2="-73.66" y2="665.48" width="0.1524" layer="91"/>
-<label x="-73.66" y="665.48" size="1.778" layer="95"/>
+<pinref part="RST" gate="-2" pin="S"/>
+<wire x1="-63.5" y1="662.94" x2="-73.66" y2="662.94" width="0.1524" layer="91"/>
+<label x="-73.66" y="662.94" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="GND" class="1">
@@ -5158,14 +5158,14 @@ Number of pins: &lt;b&gt;4&lt;/b&gt;&lt;b&gt;&lt;P&gt;
 <label x="35.56" y="624.84" size="1.778" layer="95"/>
 </segment>
 <segment>
+<pinref part="RST" gate="-1" pin="S"/>
+<wire x1="-63.5" y1="665.48" x2="-73.66" y2="665.48" width="0.1524" layer="91"/>
+<label x="-73.66" y="665.48" size="1.778" layer="95"/>
+</segment>
+<segment>
 <pinref part="MODE" gate="-2" pin="S"/>
 <wire x1="-33.02" y1="662.94" x2="-48.26" y2="662.94" width="0.1524" layer="91"/>
 <label x="-48.26" y="662.94" size="1.778" layer="95"/>
-</segment>
-<segment>
-<pinref part="RST" gate="-2" pin="S"/>
-<wire x1="-63.5" y1="662.94" x2="-73.66" y2="662.94" width="0.1524" layer="91"/>
-<label x="-73.66" y="662.94" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="1WIRE" class="1">
