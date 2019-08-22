@@ -41,18 +41,18 @@ struct SensorConfig
   int   gps_timeout = 4 * 60;    // wait n seconds to get GPS fix
   int   failedGPSsleep = 5 * 60; // sleep this long if failed to get GPS
   int   reportEvery = 60 * 60;   // get sample every n seconds
-  int   fromHour = 4;            // between these hours
+  int   fromHour = 6;            // between these hours
   int   toHour = 22;             // between these hours
   long  frequency = FREQUENCY;   // LoRa transmit frequency
   int   txpower = TXPOWER;       // LoRa transmit power
-  long  preamble = PREAMBLE;
-  int   syncword = SYNCWORD;
+  long  preamble = PREAMBLE;     // bits to send before transmition
+  int   syncword = SYNCWORD;     // unique packet identifier
   float txvolts = TXVOLTS;       // power supply must be delivering this voltage in order to xmit.
   int   lowvoltsleep = 60*60*8;  // sleep this long (seconds) if low on volts (8hrs)
   long  bandwidth = BAND;        // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   int   spreadFactor = SPREAD;   // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = CODERATE;   // extra info for CRC
-  bool  enableCRC = true;        //
+  bool  enableCRC = true;        // cyclic redundancy check mode
 } default_config;
 
 enum STARTUPMODE

@@ -105,7 +105,6 @@ void print_wakeup_reason() {
   }
 }
 
-
 void setupSerial() { 
   Serial.begin(115200);
   while (!Serial);
@@ -143,8 +142,8 @@ void deepSleep(uint64_t timetosleep) {
   
   esp_err_t result;
   do {
-    uint64_t ms = timetosleep * uS_TO_S_FACTOR;
-    result = esp_sleep_enable_timer_wakeup(ms);
+    uint64_t us = timetosleep * uS_TO_S_FACTOR;
+    result = esp_sleep_enable_timer_wakeup(us);
     if (result== ESP_ERR_INVALID_ARG)
     {
       if (timetosleep>60)
@@ -181,7 +180,6 @@ float readGroundTemp() {
   }
   return 0;
 }
-
 
 float readAirTemp() {
   sensors_event_t event;
@@ -379,6 +377,7 @@ void getSample(SensorReport *report) {
 
   ads.setGain(GAIN_ONE);
   ads.begin();
+  delay(100);
   
   // Setup 3V comparator on channel 0
   int m1 = ads.readADC_SingleEnded(0);
@@ -489,8 +488,7 @@ GPSLOCK getGpsLock() {
   return LOCK_FAIL;
 }
 
-void getSampleAndSend() 
-{
+void getSampleAndSend() {
   // get GPS and then gather/send a sample if within the time window
   // best not to send at night as we drain the battery
   SensorReport report;
@@ -571,20 +569,20 @@ void loopWifiMode() {
     else
       flashlight(INFO_NOGPS);
 
-    deepSleep(2000);
+    smartDelay(2);
     return;
   }
   else
   {
     flashlight(INFO_WIFI);
-    deepSleep(2000);
+    smartDelay(2);
     return;
   }
 }
 
 void loopSensorMode() {
   GPSLOCK lock = getGpsLock();
-  Serial.printf("GPS Lock is  %d", lock);
+  Serial.printf("GPS Lock is  %d @ hour %d\n", lock, gps.time.hour());
 
   switch (lock)
   {
@@ -598,13 +596,19 @@ void loopSensorMode() {
 
     case LOCK_WINDOW:
       // not in report window - calc sleep time
-      long timeToSleep=0;
-      if (config.fromHour > gps.time.hour())
-        timeToSleep = (config.fromHour - gps.time.hour()) * 60;
-      else
-        timeToSleep = ((24-gps.time.hour()) + config.toHour) * 60;
+      long timeToSleepSecs=0;
+      uint curtime = gps.time.hour();
+      
+      if (curtime>=config.toHour)   // before midnight
+      {
+        timeToSleepSecs = ((24-gps.time.hour()) + config.fromHour) * 60 * 60;
+      }
+      else  // after minight
+      {
+        timeToSleepSecs = (config.fromHour - gps.time.hour()) * 60 * 60;
+      }
 
-      deepSleep( timeToSleep * 60);
+      deepSleep( timeToSleepSecs );
   }
 }
 
