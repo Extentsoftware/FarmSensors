@@ -40,7 +40,7 @@ static const char * TAG = "Sensor";
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature tmpsensors(&oneWire);
 TinyGPSPlus gps;                            
-DHT_Unified dht(DHTPIN, DHT22);
+DHT_Unified dht(DHTPIN, DHT11);
 Adafruit_ADS1115 ads;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
@@ -167,6 +167,9 @@ void setupTempSensors() {
 
   // DHT-11
   dht.begin();
+  sensor_t sensor;
+  dht.temperature().getSensor(&sensor);
+  delay(sensor.min_delay / 1000);
 }
 
 float readGroundTemp() {
@@ -497,7 +500,6 @@ void getSampleAndSend() {
   setupLoRa();
   delay(10);
   setupTempSensors();
-  delay(10);
   getSample(&report);
   digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
 
