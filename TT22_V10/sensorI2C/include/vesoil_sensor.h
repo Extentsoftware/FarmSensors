@@ -1,15 +1,20 @@
 #ifndef __VESOIL_SENSOR__
 #define __VESOIL_SENSOR__
 
+#define TTGO_V07
+#define TTGO_V10
+
+#define TTGO TTGO_V10
+
 #define FREQUENCY 868E6
 #define BAND      125E3   
 #define SPREAD       12   
 #define CODERATE      6
 #define SYNCWORD 0xa5a5
 #define PREAMBLE      8
-#define TXPOWER      20   // max power
-#define TXVOLTS     2.7
-#define ONE_WIRE_BUS  2   // used for 
+#define TXPOWER      20   // max transmit power
+#define MINBATVOLTS 2.7   // minimum voltage on battery - if lower, device goes to deep sleep to recharge
+#define ONE_WIRE_BUS  2   // used for Dallas temp sensor
 #define BATTERY_PIN  35   // battery level measurement pin, here is the voltage divider connected
 
 #define SDA       21      // I2C
@@ -17,8 +22,7 @@
 #define ADC_ADDR  0x48    // Base address of ADS1115
 
 #define DHTPIN       25   // DHT11/DHT22
-#define BLUELED      14   // GPIO14
-#define BTN1         39   // GPIO39 On board button
+#define BTN1         38   // GPIO38 On board button
 #define BUSPWR        4   // GPIO04
 #define SCK           5   // GPIO5  -- SX1278's SCK
 #define MISO         19   // GPIO19 -- SX1278's MISnO
@@ -47,7 +51,7 @@ struct SensorConfig
   int   txpower = TXPOWER;       // LoRa transmit power
   long  preamble = PREAMBLE;     // bits to send before transmition
   int   syncword = SYNCWORD;     // unique packet identifier
-  float txvolts = TXVOLTS;       // power supply must be delivering this voltage in order to xmit.
+  float txvolts = MINBATVOLTS;   // power supply must be delivering this voltage in order to xmit.
   int   lowvoltsleep = 60*60*8;  // sleep this long (seconds) if low on volts (8hrs)
   long  bandwidth = BAND;        // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   int   spreadFactor = SPREAD;   // signal processing gain. higher values give greater range but take longer (more power) to transmit

@@ -53,7 +53,6 @@ STARTUPMODE getStartupMode();
 void flashlight(char code);
 void startLoRa();
 
-#define BLUELED 14   // GPIO14
 #define SCK     5    // GPIO5  -- SX1278's SCK
 #define MISO    19   // GPIO19 -- SX1278's MISO
 #define MOSI    27   // GPIO27 -- SX1278's MOSI

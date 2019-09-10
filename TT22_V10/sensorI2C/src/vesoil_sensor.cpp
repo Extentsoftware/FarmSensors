@@ -32,6 +32,7 @@ static const char * TAG = "Sensor";
 #include <DallasTemperature.h>  // https://github.com/milesburton/Arduino-Temperature-Control-Library
 #include <DHT_U.h>
 #include <DHT.h>
+#include <axp20x.h>
 
 #include "TinyGPS.h"
 #include <vesoil.h>
@@ -48,6 +49,8 @@ AsyncEventSource events("/events");
 bool wifiMode=false;
 struct SensorConfig config;
 Preferences preferences;
+AXP20X_Class axp;
+bool hasAXP192=false;
 
 void setupLoRa() {
   
@@ -117,7 +120,7 @@ void deepSleep(uint64_t timetosleep) {
 
   digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
 
-  Serial.printf("preparing sleep mode for %" PRId64  " seconds", timetosleep);
+  Serial.printf("preparing sleep mode for %" PRId64  " seconds\n", timetosleep);
   GPSReset();
 
   LoRa.sleep();
@@ -153,7 +156,7 @@ void deepSleep(uint64_t timetosleep) {
     }
   } while (result== ESP_ERR_INVALID_ARG);
   
-  digitalWrite(BLUELED, 0);   // turn the LED off - we're doing stuff
+  flashlight(0);
 
   esp_deep_sleep_start();
 }
@@ -231,12 +234,35 @@ void setupGPS() {
 }
 
 float getBatteryVoltage() {
-  // we've set 10-bit ADC resolution 2^10=1024 and voltage divider makes it half of maximum readable value (which is 3.3V)
-  // set battery measurement pin
-  adcAttachPin(BATTERY_PIN);
-  adcStart(BATTERY_PIN);
-  analogReadResolution(10); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.  
-  return  analogRead(BATTERY_PIN) * 2.0 * (3.3 / 1024.0);
+  if (hasAXP192)
+  {
+    Serial.printf("Battery Percent: %d\n", axp.getBattPercentage());
+    Serial.printf("DCDC1:           %f\n", axp.getDCDC1Voltage()/1000.0);
+    Serial.printf("DCDC2:           %f\n", axp.getDCDC2Voltage()/1000.0);
+    Serial.printf("DCDC3:           %f\n", axp.getDCDC3Voltage()/1000.0);
+    Serial.printf("ChargeCurrent:   %f\n", axp.getSettingChargeCurrent());
+    Serial.printf("IPSOUTVoltage:   %f\n", axp.getSysIPSOUTVoltage()/1000.0);
+    Serial.printf("Temp:            %f\n", axp.getTemp());
+    Serial.printf("TSTemp:          %f\n", axp.getTSTemp());
+    Serial.printf("VbusCurrent:     %f\n", axp.getVbusCurrent());
+    Serial.printf("VbusVoltage:     %f\n", axp.getVbusVoltage()/1000.0);
+    Serial.printf("BattInpower:     %f\n", axp.getBattInpower());
+    Serial.printf("BattDischgCur:   %f\n", axp.getBattDischargeCurrent());
+    Serial.printf("BattChargeCur:   %f\n", axp.getBattChargeCurrent());
+    Serial.printf("LDO2Voltage:     %d\n", axp.getLDO2Voltage());
+    Serial.printf("LDO3Voltage:     %d\n", axp.getLDO3Voltage());
+    return axp.getBattVoltage() /  1000.0;
+  }
+  else
+  {
+    // we've set 10-bit ADC resolution 2^10=1024 and voltage divider makes it half of maximum readable value (which is 3.3V)
+    // set battery measurement pin
+    adcAttachPin(BATTERY_PIN);
+    adcStart(BATTERY_PIN);
+    analogReadResolution(10); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.  
+    return  analogRead(BATTERY_PIN) * 2.0 * (3.3 / 1024.0);
+  }
+ 
 }
 
 void notFound(AsyncWebServerRequest *request) {
@@ -409,15 +435,20 @@ void getSample(SensorReport *report) {
   report->moist2 = m2;
 }
 
+void led_onoff(bool on)
+{
+  //digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
+}
+
 void flashlight(char code)
 {
-  digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
+  led_onoff(false);
   for (char i=0;i<8;i++)
   {
-    digitalWrite(BLUELED, ((code & 1)==1));   // turn the LED off - we're doing stuff
+    led_onoff((code & 1)==1);
     delay(150);
     code = code>>1;
-    digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
+    led_onoff(false);
   }  
 }
 
@@ -480,11 +511,8 @@ GPSLOCK getGpsLock() {
       else
         return LOCK_WINDOW;
     }
-    
 
-    digitalWrite(BLUELED, 1);   // turn the LED off - we're doing stuff
-    delay(10);
-    digitalWrite(BLUELED, 0);   // turn the LED off - we're doing stuff
+    flashlight(1);    
 
     smartDelay(1000);
   }
@@ -509,7 +537,7 @@ void getSampleAndSend() {
   Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f\n",
   stime, report.lat, report.lng ,report.alt , +report.sats , +report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
   // send packet
-  digitalWrite(BLUELED, HIGH);   // turn the LED on (HIGH is the voltage level)
+  flashlight(255);
   LoRa.beginPacket();
   Serial.println("LoRa begin");
   LoRa.write( (const uint8_t *)&report, sizeof(SensorReport));
@@ -521,25 +549,45 @@ void getSampleAndSend() {
 
 void setup() {
 
+  setupSerial();  
+
+/*
   pinMode(BLUELED, OUTPUT);    // onboard Blue LED
   pinMode(BTN1,INPUT);         // Button 1
   pinMode(BUSPWR,OUTPUT);      // power enable for the sensors
   digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
 
   digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
+*/
 
-  // check we have enough juice
+  //STARTUPMODE startup_mode = getStartupMode();
+  STARTUPMODE startup_mode = NORMAL;
+
+  Wire.begin(21, 22);
+  
+  hasAXP192 = !axp.begin(Wire, AXP192_SLAVE_ADDRESS);
+
+  if (hasAXP192) {
+    Serial.println("AXP192 Begin PASS");    
+    axp.setPowerOutPut(AXP192_LDO2, AXP202_ON);
+    axp.setPowerOutPut(AXP192_LDO3, AXP202_ON);
+    axp.setPowerOutPut(AXP192_DCDC2, AXP202_ON);
+    axp.setPowerOutPut(AXP192_EXTEN, AXP202_ON);
+  } else {
+    Serial.println("AXP192 Begin FAIL");
+  }
+
+   // check we have enough juice
   float currentVoltage = getBatteryVoltage();
   if (currentVoltage<config.txvolts)
   {
+    Serial.printf("Battery Voltage too low: %f\n", currentVoltage);
     flashlight(ERR_LOWPOWER);
     deepSleep(config.lowvoltsleep);
-  }
-  setupSerial();  
-  Serial.println("VESTRONG LaPoulton LoRa SENSOR");
- 
-  STARTUPMODE startup_mode = getStartupMode();
-
+  } 
+  else
+    Serial.printf("Battery Voltage OK: %f > %f\n", currentVoltage, config.txvolts);
+    
   getConfig(startup_mode);
 
   setupGPS();

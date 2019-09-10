@@ -39,10 +39,7 @@ unsigned long debounceDelay = 50;    // the debounce time; increase if the outpu
 struct HubConfig config;
 
 void setup() {
-  pinMode(BLUELED, OUTPUT);   // onboard Blue LED
   pinMode(BTN1,INPUT);        // Button 1
-
-  digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
 
   setupBatteryVoltage();
 
@@ -70,10 +67,6 @@ void setup() {
   Serial.println("start lora");
   startLoRa();
 
-  digitalWrite(BLUELED, LOW);   // turn the LED off
-
-  flashlight(INFO_NORMAL);
-  
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
 }
 
@@ -140,23 +133,11 @@ STARTUPMODE getStartupMode() {
   else 
   {
     startup_mode = RESET;   // reset config
-    flashlight(ERR_LOWPOWER);
   }
 
   Serial.printf("button held for %d mode is %d\n", btndown, startup_mode );
 
   return startup_mode;
-}
-
-void flashlight(char code) {
-  digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
-  for (char i=0;i<8;i++)
-  {
-    digitalWrite(BLUELED, ((code & 1)==1));   // turn the LED off - we're doing stuff
-    delay(150);
-    code = code>>1;
-    digitalWrite(BLUELED, LOW);   // turn the LED off - we're doing stuff
-  }  
 }
 
 bool detectDebouncedBtnPush() {
@@ -247,9 +228,7 @@ void readLoraData(int packetSize) {
     pfe = LoRa.packetFrequencyError();
     Serial.printf("%d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
     getBatteryVoltage();
-    digitalWrite(BLUELED, HIGH);   // turn the LED on (HIGH is the voltage level)
     showBlock(packetSize);  
-    digitalWrite(BLUELED, LOW);   // turn the LED off
     delay(100);
   }
 }
