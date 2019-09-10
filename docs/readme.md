@@ -89,7 +89,19 @@ https://github.com/milesburton/Arduino-Temperature-Control-Library
 
 https://farmos.org/development/client/
 
+# TTGO Product Upgrade V07->V10
 
+1. Pin GPIO34 pin is replaced with GPIO35
+2. Replace the charging IC (TP5400) with the power management AXP192
+3. GPS TX, RX pin replacement
+4. Power on removed, replaced with push button
+5. Reduced sleep current
+6. GPS battery replacement
+
+DCDC1 now controls the 3.3v header 2 Pin7 & pin11 
+LDO2 controls LoRa power
+LDO3 controls GPS power
+AXP Charge Led replaces Led on GPIO
 
 
 

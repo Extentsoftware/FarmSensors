@@ -1,11 +1,6 @@
 #ifndef __VESOIL_SENSOR__
 #define __VESOIL_SENSOR__
 
-#define TTGO_V07
-#define TTGO_V10
-
-#define TTGO TTGO_V10
-
 #define FREQUENCY 868E6
 #define BAND      125E3   
 #define SPREAD       12   
@@ -22,7 +17,7 @@
 #define ADC_ADDR  0x48    // Base address of ADS1115
 
 #define DHTPIN       25   // DHT11/DHT22
-#define BTN1         38   // GPIO38 On board button
+#define BTN1         38   // GPIO38 On board button (Was Pin 29 on V07)
 #define BUSPWR        4   // GPIO04
 #define SCK           5   // GPIO5  -- SX1278's SCK
 #define MISO         19   // GPIO19 -- SX1278's MISnO
@@ -30,6 +25,13 @@
 #define SS           18   // GPIO18 -- SX1278's CS
 #define RST          14   // GPIO14 -- SX1278's RESET
 #define DI0          26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
+#define GPSRX        12   
+#define GPSTX        34   
+#define GPSBAUD      9600
+#define PWRSDA       21
+#define PWRSCL       22
+
+
 
 #define ERR_LOWPOWER  0x15  // 00010101
 #define INFO_WIFI     0x33  // 00110011

@@ -118,6 +118,12 @@ void setupSerial() {
 
 void deepSleep(uint64_t timetosleep) {
 
+  axp.setPowerOutPut(AXP192_LDO2, AXP202_OFF);  // LoRa Power
+  axp.setPowerOutPut(AXP192_LDO3, AXP202_OFF);  // GPS Power
+  axp.setPowerOutPut(AXP192_DCDC1, AXP202_OFF);
+  axp.setPowerOutPut(AXP192_DCDC2, AXP202_OFF);
+  axp.setPowerOutPut(AXP192_EXTEN, AXP202_OFF);
+
   digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
 
   Serial.printf("preparing sleep mode for %" PRId64  " seconds\n", timetosleep);
@@ -229,7 +235,7 @@ void GPSReset() {
 }
 
 void setupGPS() {
-  Serial1.begin(9600, SERIAL_8N1, 12, 15);   //17-TX 18-RX
+  Serial1.begin(GPSBAUD, SERIAL_8N1, GPSRX, GPSTX);
   GPSwakeup();
 }
 
@@ -437,7 +443,10 @@ void getSample(SensorReport *report) {
 
 void led_onoff(bool on)
 {
-  //digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
+  if (on)
+    axp.setChgLEDMode(AXP20X_LED_LOW_LEVEL);
+  else
+    axp.setChgLEDMode(AXP20X_LED_OFF);
 }
 
 void flashlight(char code)
@@ -536,45 +545,46 @@ void getSampleAndSend() {
 
   Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f\n",
   stime, report.lat, report.lng ,report.alt , +report.sats , +report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
+  
   // send packet
-  flashlight(255);
+  led_onoff(true);
+
   LoRa.beginPacket();
   Serial.println("LoRa begin");
   LoRa.write( (const uint8_t *)&report, sizeof(SensorReport));
   Serial.println("LoRa Write");
   LoRa.endPacket();
   Serial.println("LoRa End");
-  digitalWrite(BLUELED, LOW);   // turn the LED off
+
+  led_onoff(false);
 }
 
 void setup() {
 
   setupSerial();  
 
-/*
-  pinMode(BLUELED, OUTPUT);    // onboard Blue LED
   pinMode(BTN1,INPUT);         // Button 1
   pinMode(BUSPWR,OUTPUT);      // power enable for the sensors
   digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
 
-  digitalWrite(BLUELED, HIGH);   // turn the LED off - we're doing stuff
-*/
+  STARTUPMODE startup_mode = getStartupMode();
 
-  //STARTUPMODE startup_mode = getStartupMode();
-  STARTUPMODE startup_mode = NORMAL;
-
-  Wire.begin(21, 22);
+  Wire.begin(PWRSDA, PWRSCL);
   
   hasAXP192 = !axp.begin(Wire, AXP192_SLAVE_ADDRESS);
 
   if (hasAXP192) {
     Serial.println("AXP192 Begin PASS");    
-    axp.setPowerOutPut(AXP192_LDO2, AXP202_ON);
+    axp.setDCDC1Voltage(3300);
+    axp.setPowerOutPut(AXP192_LDO2, AXP202_ON); 
     axp.setPowerOutPut(AXP192_LDO3, AXP202_ON);
+    axp.setPowerOutPut(AXP192_DCDC1, AXP202_ON);
     axp.setPowerOutPut(AXP192_DCDC2, AXP202_ON);
     axp.setPowerOutPut(AXP192_EXTEN, AXP202_ON);
+    axp.setChgLEDMode(AXP20X_LED_LOW_LEVEL);
   } else {
     Serial.println("AXP192 Begin FAIL");
+    return;
   }
 
    // check we have enough juice
