@@ -96,7 +96,11 @@ float Power::getBatteryVoltage()
         Serial.printf("BattChargeCur:   %f\n", axp.getBattChargeCurrent());
         Serial.printf("LDO2Voltage:     %d\n", axp.getLDO2Voltage());
         Serial.printf("LDO3Voltage:     %d\n", axp.getLDO3Voltage());
-        return axp.getBattVoltage() / 1000.0;
+
+        if (axp.isBatteryConnect())
+            return axp.getBattVoltage() / 1000.0;
+        else
+            return axp.getSysIPSOUTVoltage() / 1000.0;        
     }
     else
     {
@@ -140,24 +144,23 @@ void Power::power_LoRa(bool on)
 
 void Power::deepSleep(uint64_t timetosleep)
 {
-    power_GPS(false);
-    power_LoRa(false);
     power_sensors(false);
     power_peripherals(false);
 
-    // turnOffRTC
+    // turn Off RTC
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
     esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
 
-    // turnOffWifi()
+    // turnOffWifi
     esp_wifi_stop();
     esp_wifi_deinit();
 
-    // turnOffBluetooth(
+    // turnOffBluetooth
     esp_bluedroid_disable();
     esp_bluedroid_deinit();
+
     esp_bt_controller_disable();
     esp_bt_controller_deinit();
 

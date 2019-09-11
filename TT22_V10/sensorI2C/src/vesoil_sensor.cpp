@@ -1,11 +1,12 @@
 // https://github.com/LilyGO/TTGO-T-Beam
 // Pin map http://tinymicros.com/wiki/TTGO_T-Beam
-//https://github.com/Xinyuan-LilyGO/TTGO-T-Beam
+// https://github.com/Xinyuan-LilyGO/TTGO-T-Beam
 //
 // to upload new html files use this command:
+// pio device list
 // pio run --target upload
 // pio run --target uploadfs
-// pio device monitor -p COM5 -b 115200
+// pio device monitor -p COM14 -b 115200
 // 
 
 static const char * TAG = "Sensor";
@@ -164,7 +165,7 @@ float readAirHum() {
 }
 
 void startGPS() {
-  power.power_GPS(false);
+  power.power_GPS(true);
   Serial1.begin(GPSBAUD, SERIAL_8N1, GPSRX, GPSTX);
   Serial.println("Wake GPS");
   int data = -1;
@@ -251,8 +252,7 @@ String processor(const String& var)
   return String();
 }
 
-void setConfigParam(const String& var, const char *value)
-{
+void setConfigParam(const String& var, const char *value) {
   Serial.printf("param %s %s\n", var.c_str(), value);
 
   if(var == "SSID")
@@ -338,7 +338,6 @@ void setupWifi() {
       startLoRa();
       request->send(SPIFFS, "/index.html", String(), false, processor);
     });
-
 
     server.onNotFound(notFound);
 
