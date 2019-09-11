@@ -3,6 +3,7 @@
 //https://github.com/Xinyuan-LilyGO/TTGO-T-Beam
 //
 // to upload new html files use this command:
+// pio run --target upload
 // pio run --target uploadfs
 // pio device monitor -p COM5 -b 115200
 // 
@@ -17,13 +18,7 @@ static const char * TAG = "Sensor";
 #include <HardwareSerial.h>
 #include <LoRa.h>         // https://github.com/sandeepmistry/arduino-LoRa/blob/master/API.md
 #include <ArduinoJson.h>  // https://arduinojson.org/v6/api/
-#include <esp_wifi.h>
-#include <esp_bt.h>
-#include <esp_bt_main.h>
-#include <esp_bt.h>
-#include <driver/rtc_io.h>
 #include <Preferences.h>
-#include <ArduinoOTA.h>
 #include <FS.h>
 #include <SPIFFS.h>
 #include <WiFi.h>
@@ -33,11 +28,11 @@ static const char * TAG = "Sensor";
 #include <DallasTemperature.h>  // https://github.com/milesburton/Arduino-Temperature-Control-Library
 #include <DHT_U.h>
 #include <DHT.h>
-#include <axp20x.h>
 
 #include "TinyGPS.h"
 #include <vesoil.h>
 #include "vesoil_sensor.h"
+#include "power.h"
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature tmpsensors(&oneWire);
@@ -50,19 +45,17 @@ AsyncEventSource events("/events");
 bool wifiMode=false;
 struct SensorConfig config;
 Preferences preferences;
-AXP20X_Class axp;
-bool hasAXP192=false;
+Power power(BUSPWR, BATTERY_PIN,PWRSDA,PWRSCL);
 
 void stopLoRa()
 {
   LoRa.sleep();
   LoRa.end();
-  axp.setPowerOutPut(AXP192_LDO2, AXP202_OFF);  // LoRa Power
+  power.power_LoRa(false);
 }
 
 void startLoRa() {
-  
-  axp.setPowerOutPut(AXP192_LDO2, AXP202_ON); 
+  power.power_LoRa(true);
   Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu txpower:%d\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth, config.txpower);
 
   SPI.begin(SCK,MISO,MOSI,SS);
@@ -101,92 +94,26 @@ void smartDelay(unsigned long ms) {
   } while (millis() - start < ms);
 }
 
-void print_wakeup_reason() {
-  esp_sleep_wakeup_cause_t wakeup_reason;
-
-  wakeup_reason = esp_sleep_get_wakeup_cause();
-
-  switch (wakeup_reason)
-  {
-    case 2  : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
-    case 3  : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
-    case 4  : Serial.println("Wakeup caused by timer"); break;
-    case 5  : Serial.println("Wakeup caused by touchpad"); break;
-    case 6  : Serial.println("Wakeup caused by ULP program"); break;
-    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
-  }
-}
 
 void setupSerial() { 
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
   Serial.println("VESTRONG LaPoulton Sensor");
-  print_wakeup_reason();
+  power.print_wakeup_reason();
 }
 
-void power_sensors(bool on)
-{
-  if (on)
-  {
-    pinMode(BUSPWR,OUTPUT);      // power enable for the sensors
-    digitalWrite(BUSPWR, HIGH);   // turn off power to the sensor bus
-  }
-  else
-    digitalWrite(BUSPWR, LOW);   // turn off power to the sensor bus
-}
 
-void power_peripherals(bool on)
-{
-    axp.setPowerOutPut(AXP192_DCDC1, on?AXP202_ON:AXP202_OFF);
-    axp.setPowerOutPut(AXP192_DCDC2, on?AXP202_ON:AXP202_OFF);
-    axp.setPowerOutPut(AXP192_LDO2, on?AXP202_ON:AXP202_OFF);
-    axp.setPowerOutPut(AXP192_LDO3, on?AXP202_ON:AXP202_OFF);        
-}
 
-void  Sleep(uint64_t timetosleep) {
+void  deepSleep(uint64_t timetosleep) {
 
-  Serial.printf("preparing sleep mode for %" PRId64  " seconds\n", timetosleep);
+  Serial.printf("Preparing sleep mode for %" PRId64  " seconds\n", timetosleep);
   
   stopGPS();
 
   stopLoRa();
 
-  power_sensors(false);
-  power_peripherals(false);
-
-  // turnOffRTC
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
-
-  // turnOffWifi()
-  esp_wifi_stop();
-  esp_wifi_deinit();
-
-  // turnOffBluetooth(
-  esp_bluedroid_disable();
-  esp_bluedroid_deinit();
-  esp_bt_controller_disable();
-  esp_bt_controller_deinit();
-  
-  esp_err_t result;
-  do {
-    uint64_t us = timetosleep * uS_TO_S_FACTOR;
-    result = esp_sleep_enable_timer_wakeup(us);
-    if (result== ESP_ERR_INVALID_ARG)
-    {
-      if (timetosleep>60)
-        timetosleep = timetosleep-60;
-      else
-        timetosleep =10;
-    }
-  } while (result== ESP_ERR_INVALID_ARG);
-  
-  led_onoff(false);
-
-  esp_deep_sleep_start();
+  power.deepSleep(timetosleep);
 }
 
 void setupTempSensors() {
@@ -236,13 +163,27 @@ float readAirHum() {
   return 0;
 }
 
+void startGPS() {
+  power.power_GPS(false);
+  Serial1.begin(GPSBAUD, SERIAL_8N1, GPSRX, GPSTX);
+  Serial.println("Wake GPS");
+  int data = -1;
+  do {
+    for(int i = 0; i < 20; i++){ //send random to trigger respose
+        Serial1.write(0xFF);
+      }
+    data = Serial1.read();
+  } while(data == -1);
+  Serial.println("GPS is awake");
+}
+
 void stopGPS() {
   const byte CFG_RST[12] = {0xb5, 0x62, 0x06, 0x04, 0x04, 0x00, 0x00, 0x00, 0x01,0x00, 0x0F, 0x66};//Controlled Software reset
   const byte RXM_PMREQ[16] = {0xb5, 0x62, 0x02, 0x41, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x4d, 0x3b};   //power off until wakeup call
   Serial1.write(CFG_RST, sizeof(CFG_RST));
   delay(600); //give some time to restart //TODO wait for ack
   Serial1.write(RXM_PMREQ, sizeof(RXM_PMREQ));
-  axp.setPowerOutPut(AXP192_LDO3, AXP202_OFF);  // GPS Power
+  power.power_GPS(false);
 }
 
 GPSLOCK getGpsLock() {
@@ -261,58 +202,11 @@ GPSLOCK getGpsLock() {
         return LOCK_WINDOW;
     }
 
-    flashlight(1);    
+    power.flashlight(1);    
 
     smartDelay(1000);
   }
   return LOCK_FAIL;
-}
-
-
-void startGPS() {
-  axp.setPowerOutPut(AXP192_LDO3, AXP202_ON);  // GPS Power
-  Serial1.begin(GPSBAUD, SERIAL_8N1, GPSRX, GPSTX);
-  Serial.println("Wake GPS");
-  int data = -1;
-  do {
-    for(int i = 0; i < 20; i++){ //send random to trigger respose
-        Serial1.write(0xFF);
-      }
-    data = Serial1.read();
-  } while(data == -1);
-  Serial.println("GPS is awake");
-}
-
-float getBatteryVoltage() {
-  if (hasAXP192)
-  {
-    Serial.printf("Battery Percent: %d\n", axp.getBattPercentage());
-    Serial.printf("DCDC1:           %f\n", axp.getDCDC1Voltage()/1000.0);
-    Serial.printf("DCDC2:           %f\n", axp.getDCDC2Voltage()/1000.0);
-    Serial.printf("DCDC3:           %f\n", axp.getDCDC3Voltage()/1000.0);
-    Serial.printf("ChargeCurrent:   %f\n", axp.getSettingChargeCurrent());
-    Serial.printf("IPSOUTVoltage:   %f\n", axp.getSysIPSOUTVoltage()/1000.0);
-    Serial.printf("Temp:            %f\n", axp.getTemp());
-    Serial.printf("TSTemp:          %f\n", axp.getTSTemp());
-    Serial.printf("VbusCurrent:     %f\n", axp.getVbusCurrent());
-    Serial.printf("VbusVoltage:     %f\n", axp.getVbusVoltage()/1000.0);
-    Serial.printf("BattInpower:     %f\n", axp.getBattInpower());
-    Serial.printf("BattDischgCur:   %f\n", axp.getBattDischargeCurrent());
-    Serial.printf("BattChargeCur:   %f\n", axp.getBattChargeCurrent());
-    Serial.printf("LDO2Voltage:     %d\n", axp.getLDO2Voltage());
-    Serial.printf("LDO3Voltage:     %d\n", axp.getLDO3Voltage());
-    return axp.getBattVoltage() /  1000.0;
-  }
-  else
-  {
-    // we've set 10-bit ADC resolution 2^10=1024 and voltage divider makes it half of maximum readable value (which is 3.3V)
-    // set battery measurement pin
-    adcAttachPin(BATTERY_PIN);
-    adcStart(BATTERY_PIN);
-    analogReadResolution(10); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.  
-    return  analogRead(BATTERY_PIN) * 2.0 * (3.3 / 1024.0);
-  }
- 
 }
 
 void notFound(AsyncWebServerRequest *request) {
@@ -322,7 +216,7 @@ void notFound(AsyncWebServerRequest *request) {
 String processor(const String& var)
 {
   if(var == "vbatt")
-    return String(getBatteryVoltage());
+    return String(power.getBatteryVoltage());
   if(var == "SSID")
     return config.ssid;
   if(var == "failedGPSsleep")
@@ -421,7 +315,7 @@ void setupWifi() {
         
         char *msg = (char *)malloc(512);
         sprintf(msg, "{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
-                 config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, getBatteryVoltage() );
+                 config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, power.getBatteryVoltage() );
         reply += msg;
         reply += " ] }\n";
         free(msg);
@@ -452,7 +346,7 @@ void setupWifi() {
 }
 
 void getSample(SensorReport *report) {
-  float vBat = getBatteryVoltage();
+  float vBat = power.getBatteryVoltage();
 
   ads.setGain(GAIN_ONE);
   ads.begin();
@@ -485,25 +379,6 @@ void getSample(SensorReport *report) {
   report->moist2 = m2;
 }
 
-void led_onoff(bool on)
-{
-  if (on)
-    axp.setChgLEDMode(AXP20X_LED_LOW_LEVEL);
-  else
-    axp.setChgLEDMode(AXP20X_LED_OFF);
-}
-
-void flashlight(char code)
-{
-  led_onoff(false);
-  for (char i=0;i<8;i++)
-  {
-    led_onoff((code & 1)==1);
-    delay(150);
-    code = code>>1;
-    led_onoff(false);
-  }  
-}
 
 STARTUPMODE getStartupMode() {
   const int interval = 100;
@@ -524,7 +399,7 @@ STARTUPMODE getStartupMode() {
   else 
   {
     startup_mode = RESET;   // reset config
-    flashlight(ERR_LOWPOWER);
+    power.flashlight(ERR_LOWPOWER);
   }
 
   Serial.printf("button held for %d mode is %d\n", btndown, startup_mode );
@@ -554,12 +429,12 @@ void getSampleAndSend() {
   // best not to send at night as we drain the battery
   SensorReport report;
 
-  power_sensors(true);   // turn on power to the sensor bus
+  power.power_sensors(true);   // turn on power to the sensor bus
   startLoRa();
   delay(10);
   setupTempSensors();
   getSample(&report);
-  power_sensors(false);   // turn off power to the sensor bus
+  power.power_sensors(false);   // turn off power to the sensor bus
 
   char *stime = asctime(gmtime(&report.time));
   stime[24]='\0';
@@ -568,7 +443,7 @@ void getSampleAndSend() {
   stime, report.lat, report.lng ,report.alt , +report.sats , +report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
   
   // send packet
-  led_onoff(true);
+  power.led_onoff(true);
 
   LoRa.beginPacket();
   Serial.println("LoRa begin");
@@ -577,7 +452,7 @@ void getSampleAndSend() {
   LoRa.endPacket();
   Serial.println("LoRa End");
 
-  led_onoff(false);
+  power.led_onoff(false);
 
   stopLoRa();
 }
@@ -586,32 +461,20 @@ void setup() {
 
   setupSerial();  
 
-  power_sensors(false);
+  power.begin();
+  power.power_sensors(false);
+  power.power_peripherals(false);
 
   pinMode(BTN1,INPUT);         // Button 1
 
   STARTUPMODE startup_mode = getStartupMode();
 
-  Wire.begin(PWRSDA, PWRSCL);  
-  hasAXP192 = !axp.begin(Wire, AXP192_SLAVE_ADDRESS);
-  if (hasAXP192) {
-    Serial.println("AXP192 Begin PASS");    
-    axp.setDCDC1Voltage(3300);
-    led_onoff(false);
-  } else {
-    Serial.println("AXP192 Begin FAIL");
-    return;
-  }
-
-  power_sensors(false);
-  power_peripherals(false);
-
-   // check we have enough juice
-  float currentVoltage = getBatteryVoltage();
+  // check we have enough juice
+  float currentVoltage = power.getBatteryVoltage();
   if (currentVoltage<config.txvolts)
   {
     Serial.printf("Battery Voltage too low: %f\n", currentVoltage);
-    flashlight(ERR_LOWPOWER);
+    power.flashlight(ERR_LOWPOWER);
     deepSleep(config.lowvoltsleep);
   } 
   else
@@ -623,13 +486,13 @@ void setup() {
 
   if (startup_mode==WIFI)
   {
-    flashlight(INFO_WIFI);
+    power.flashlight(INFO_WIFI);
     Serial.printf("Entering WiFi mode\n");
     wifiMode=true;
     setupWifi();
   }
   else
-    flashlight(INFO_SENSOR);
+    power.flashlight(INFO_SENSOR);
   
   Serial.printf("{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
           config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, currentVoltage );
@@ -646,14 +509,14 @@ void loopWifiMode() {
     if (lock==LOCK_OK)
       getSampleAndSend();
     else
-      flashlight(INFO_NOGPS);
+      power.flashlight(INFO_NOGPS);
 
     smartDelay(2);
     return;
   }
   else
   {
-    flashlight(INFO_WIFI);
+    power.flashlight(INFO_WIFI);
     smartDelay(2);
     return;
   }

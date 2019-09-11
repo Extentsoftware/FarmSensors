@@ -18,7 +18,7 @@
 
 #define DHTPIN       25   // DHT11/DHT22
 #define BTN1         38   // GPIO38 On board button (Was Pin 29 on V07)
-#define BUSPWR        4   // GPIO04
+#define BUSPWR        4   // GPIO04 -- sensor bus power control
 #define SCK           5   // GPIO5  -- SX1278's SCK
 #define MISO         19   // GPIO19 -- SX1278's MISnO
 #define MOSI         27   // GPIO27 -- SX1278's MOSI
@@ -37,8 +37,6 @@
 #define INFO_WIFI     0x33  // 00110011
 #define INFO_SENSOR   0xAA  // 10101010
 #define INFO_NOGPS    0x49  // 01001001
-
-#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 
 struct SensorConfig
 {
@@ -102,14 +100,5 @@ GPSLOCK getGpsLock();
 // WiFi
 void notFound(AsyncWebServerRequest *request);
 void setupWifi();
-
-// power
-void print_wakeup_reason();
-void flashlight(char code);
-void led_onoff(bool on);
-float getBatteryVoltage();
-void deepSleep(uint64_t timetosleep);
-void power_sensors(bool on);
-void power_peripherals(bool on);
 
 #endif
