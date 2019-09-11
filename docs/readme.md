@@ -93,7 +93,7 @@ https://farmos.org/development/client/
 
 1. Pin GPIO34 pin is replaced with GPIO35
 2. Replace the charging IC (TP5400) with the power management AXP192
-3. GPS TX, RX pin replacement
+3. GPS TX (12), RX (34) pin replacement
 4. Power on removed, replaced with push button
 5. Reduced sleep current
 6. GPS battery replacement

@@ -25,8 +25,8 @@
 #define SS           18   // GPIO18 -- SX1278's CS
 #define RST          14   // GPIO14 -- SX1278's RESET
 #define DI0          26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
-#define GPSRX        12   
-#define GPSTX        34   
+#define GPSRX        34   
+#define GPSTX        12   
 #define GPSBAUD      9600
 #define PWRSDA       21
 #define PWRSCL       22
@@ -78,25 +78,38 @@ enum GPSLOCK
 void loopSensorMode();
 void loopWifiMode();
 void setConfigParam(const String& var, const char *value);
-GPSLOCK getGpsLock();
 void getSampleAndSend();
-void print_wakeup_reason();
 void setupSerial();
-void setupLoRa() ;
 void smartDelay(unsigned long ms);
-void deepSleep(uint64_t timetosleep);
+
+// Sensors
 void setupTempSensors();
 float readGroundTemp();
 float readAirTemp();
 float readAirHum();
-void GPSwakeup();
-void GPSReset();
-void setupGPS();
-float getBatteryVoltage();
-void sendSampleLora(SensorReport *report);
-void notFound(AsyncWebServerRequest *request);
-void setupWifi();
 void getSample(SensorReport *report);
 
+// Radio
+void startLoRa();
+void stopLoRa();
+void sendSampleLora(SensorReport *report);
+
+// GPS
+void stopGPS();
+void startGPS();
+GPSLOCK getGpsLock();
+
+// WiFi
+void notFound(AsyncWebServerRequest *request);
+void setupWifi();
+
+// power
+void print_wakeup_reason();
+void flashlight(char code);
+void led_onoff(bool on);
+float getBatteryVoltage();
+void deepSleep(uint64_t timetosleep);
+void power_sensors(bool on);
+void power_peripherals(bool on);
 
 #endif
