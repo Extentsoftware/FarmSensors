@@ -170,7 +170,9 @@ The AXP193 has 4 linear voltage regulators (LDO) and 3 Buck DC-DC converters.
 # Power Consumption
 
 Experiments indicate that
-- the board draws ~7mA in deep sleep.
+- the board draws 5.3mA in deep sleep.
+- GPS and LoRa powered off draws ~42mA.
+- GPS and LoRa powered on draws ~44mA.
 - With GPS searching the board draws ~110mA.
 - The blue LED charge light draws 20mA.
 

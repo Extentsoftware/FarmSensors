@@ -23,6 +23,9 @@
 		{
 			"name": "Hardware",
 			"path": "hardware"
+		},
+		{
+			"path": "deepsleep"
 		}
 	],
 	"settings": {
