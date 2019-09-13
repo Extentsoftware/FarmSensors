@@ -50,17 +50,20 @@ void getConfig(STARTUPMODE startup_mode);
 STARTUPMODE getStartupMode();
 void startLoRa();
 
-#define SCK     5    // GPIO5  -- SX1278's SCK
-#define MISO    19   // GPIO19 -- SX1278's MISO
-#define MOSI    27   // GPIO27 -- SX1278's MOSI
-#define SS      18   // GPIO18 -- SX1278's CS
-#define RST     14   // GPIO14 -- SX1278's RESET
-#define DI0     26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
+#define BATTERY_PIN  35   // battery level measurement pin, here is the voltage divider connected
+#define BTN1         38   // GPIO38 On board button (Was Pin 29 on V07)
+#define BUSPWR        4   // GPIO04 -- sensor bus power control
+#define SCK           5   // GPIO5  -- SX1278's SCK
+#define MISO         19   // GPIO19 -- SX1278's MISnO
+#define MOSI         27   // GPIO27 -- SX1278's MOSI
+#define SS           18   // GPIO18 -- SX1278's CS
+#define RST          14   // GPIO14 -- SX1278's RESET
+#define DI0          26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
+#define PWRSDA       21
+#define PWRSCL       22
+
 #define PSRAM   16    // 8M byte - https://www.electrodragon.com/product/2pcs-ipus-ips6404-iot-ram/
                       // https://drive.google.com/file/d/1-5NtY1bz0l9eYN9U0U4dP3uASwnMmYGP/view        
-
-#define BATTERY_PIN 35    // battery level measurement pin, here is the voltage divider connected
-#define BTN1        39    // GPIO39 On board button
 #define STORESIZE   30000
 
 #endif

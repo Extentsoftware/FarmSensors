@@ -1,6 +1,11 @@
-// https://github.com/me-no-dev/ESPAsyncWebServer#basic-response-with-http-code
-// https://github.com/cyberman54/ESP32-Paxcounter/blob/82fdfb9ca129f71973a1f912a04aa8c7c5232a87/src/main.cpp
-// https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/log.html
+// Pin map http://tinymicros.com/wiki/TTGO_T-Beam
+// https://github.com/Xinyuan-LilyGO/TTGO-T-Beam
+//
+// to upload new html files use this command:
+// pio device list
+// pio run --target upload
+// pio run --target uploadfs
+// pio device monitor -p COM14 -b 115200
 
 // environment variables
 // LOCALAPPDATA = C:\Users\username\AppData\Local
@@ -17,12 +22,13 @@ static const char * TAG = "Hub";
 #include <TBeamPower.h>
 #include "vesoil_hub.h"
 
-float vBat; // battery voltage
 SensorReport* store;
 int currentStoreWriter=0;
 int currentStoreReader=0;
 AsyncWebServer server(80);
 Preferences preferences;
+TBeamPower power( BATTERY_PIN,PWRSDA,PWRSCL, BUSPWR);
+
 float snr = 0;
 float rssi = 0;
 long pfe=0;
@@ -42,7 +48,7 @@ struct HubConfig config;
 void setup() {
   pinMode(BTN1,INPUT);        // Button 1
 
-  setupBatteryVoltage();
+  power.begin();
 
   Serial.begin(115200);
   while (!Serial);
@@ -62,8 +68,7 @@ void setup() {
   Serial.println("system check");
   SystemCheck();
 
-  getBatteryVoltage();
-  Serial.printf("Battery voltage %f\n", vBat);
+  Serial.printf("Battery voltage %f\n", power.get_battery_voltage());
 
   Serial.println("start lora");
   startLoRa();
@@ -72,7 +77,7 @@ void setup() {
 }
 
 void startLoRa() {
-
+  power.power_LoRa(true);
   Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth);
 
   SPI.begin(SCK,MISO,MOSI,SS);
@@ -228,7 +233,7 @@ void readLoraData(int packetSize) {
     rssi = LoRa.packetRssi();
     pfe = LoRa.packetFrequencyError();
     Serial.printf("%d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
-    getBatteryVoltage();
+    
     showBlock(packetSize);  
     delay(100);
   }
@@ -334,7 +339,9 @@ void setupWifi() {
     });
 
     server.on("/query", HTTP_GET, [] (AsyncWebServerRequest *request) {
-      getBatteryVoltage();
+      
+      float vBat = power.get_battery_voltage();
+
       String reply = "{ \"snr\": " + String(snr, DEC) 
           + ", \"version\": " + String( APP_VERSION, DEC) 
           + ", \"battery\": " + String( vBat, DEC) 
@@ -354,17 +361,4 @@ void setupWifi() {
 
 void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
-}
-
-void setupBatteryVoltage()
-{
-  // set battery measurement pin
-  adcAttachPin(BATTERY_PIN);
-  adcStart(BATTERY_PIN);
-  analogReadResolution(10); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.
-}
-
-void getBatteryVoltage() {
-  // we've set 10-bit ADC resolution 2^10=1024 and voltage divider makes it half of maximum readable value (which is 3.3V)
-  vBat = analogRead(BATTERY_PIN) * 2.0 * (3.3 / 1024.0);
 }
