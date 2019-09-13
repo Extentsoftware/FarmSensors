@@ -36,8 +36,6 @@ enum STARTUPMODE
 bool detectDebouncedBtnPush();
 void onReceive(int packetSize);
 void SystemCheck();
-void getBatteryVoltage();
-void setupBatteryVoltage();
 void notFound(AsyncWebServerRequest *request);
 void setupWifi();
 void exitWifi();
@@ -50,7 +48,6 @@ int GetNextRingBufferPos(int pointer);
 void MemoryCheck();
 void getConfig(STARTUPMODE startup_mode);
 STARTUPMODE getStartupMode();
-void flashlight(char code);
 void startLoRa();
 
 #define SCK     5    // GPIO5  -- SX1278's SCK

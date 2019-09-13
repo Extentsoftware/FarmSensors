@@ -14,6 +14,7 @@ static const char * TAG = "Hub";
 #include <LoRa.h>
 #include <AsyncTCP.h>
 #include <Preferences.h>
+#include <TBeamPower.h>
 #include "vesoil_hub.h"
 
 float vBat; // battery voltage
