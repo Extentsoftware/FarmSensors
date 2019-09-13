@@ -64,26 +64,17 @@ The onboard blue LED is used to indicate software state as follows:
 * 1 x DHT22 for air temperature and humidity
 
 # Vesoil Hub
-This code receives sensor measurements from Vesoil sensors and records them in volatile memory.
-
-The device is designed to capture data packets transmitted from Vesoil sensors and record the in a ring buffer.
-
-If you reset the device without holding down the **Mode** button the device enters Sensor mode.
+This code receives sensor measurements from Vesoil sensors and records them in volatile memory. The device is designed to capture data packets transmitted from Vesoil sensors and record the in a ring buffer.
 
 If you hold in the **Mode** button for more that 2 seconds when resetting the device via the reset button the device resets it stored configuration to factory defaults.
 
-When resetting the device via the reset button, if you hold in the **Mode** button for less than 1 seconds during the reboot then the device enters WiFi mode. It will be accessible on http://192.168.4.1
+Once the device has booted, pressing the **Mode** button will WiFi mode. The WiFi mode stands up an access point called VESTRONG_H. It will be accessible on http://192.168.4.1.
 
-The device will sleep for *lowvoltsleep* (600 seonds) if the voltage is below _txvolts_, regardless of WiFi or Sensor mode.
+### GET http://192.168.4.1/query
+Returns a JSON packet describing the head (write) and tail (read) positions in the ring buffer.
 
-### Sensor Mode
-In Sensor mode the device wakes up every hour (configured using _reportEvery_) and attempts to obtain a GPS signal within _gps_timout_ (60) seconds. If no fix can be obtained the device sleeps for _failedGPSsleep_ (60) seconds and reboots.
-
-During sleep mode the device turns off power to virtually all systems on the TTGO T-Beam, drawing approximately 5 microamps.
-
-### WiFi Mode
-
-In Wifi mode the sensor can be reached via http://192.168.4.1. Configuration parameters can be set in FLASH memory. Additionally, pressing the **Mode** button will also send a LoRa sensor sample.
+### GET http://192.168.4.1/get
+Returns all unread data entries in the ring buffer.
 
 ### Settings
 
