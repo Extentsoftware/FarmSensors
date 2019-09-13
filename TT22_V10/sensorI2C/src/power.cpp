@@ -1,7 +1,7 @@
 
 #include "power.h"
 
-#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
+#define S_to_uS_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 
 Power::Power(int pwr_pin, int batt_pin, int adx_sda, int adx_scl)
 {
@@ -167,7 +167,7 @@ void Power::deepSleep(uint64_t timetosleep)
     esp_err_t result;
     do
     {
-        uint64_t us = timetosleep * uS_TO_S_FACTOR;
+        uint64_t us = timetosleep * S_to_uS_FACTOR;
         result = esp_sleep_enable_timer_wakeup(us);
         if (result == ESP_ERR_INVALID_ARG)
         {
