@@ -5,16 +5,8 @@
 			"path": "hub"
 		},
 		{
-			"name": "Vesoil Sensor",
-			"path": "sensor"
-		},
-		{
 			"name": "Vesoil Sensor I2C",
 			"path": "sensorI2C"
-		},
-		{
-			"name": "Common Code",
-			"path": "common"
 		},
 		{
 			"name": "Documentation",
