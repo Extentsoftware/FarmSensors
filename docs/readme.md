@@ -153,7 +153,7 @@ Lilygo release V8 of the TTGO T-Beam board in August 2019. This rework included 
 
 1. User button Pin GPIO39 pin is replaced with GPIO38
 2. Replace the charging IC (TP5400) with the power management AXP192
-3. GPS TX (12), RX (34) pin replacement
+3. GPS TX (12->12), RX (34) pin replacement
 4. Power on switch removed and replaced with push button
 5. Reduced sleep current
 6. GPS battery replacement
