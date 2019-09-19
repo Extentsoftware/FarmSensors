@@ -4,5 +4,6 @@
 **/.vs/*
 **/build
 **/.vscode/*
+**/.pio/*
 vesoil.code-workspace
 TT22_V07/vesoil.code-workspace

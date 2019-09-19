@@ -536,7 +536,7 @@ void setup() {
     deepSleep(config.lowvoltsleep);
   }
   setupSerial();  
-  Serial.println("VESTRONG LaPoulton LoRa SENSOR");
+  Serial.println("VESTRONG LaPoulton LoRa SENSOR v1.0");
  
   STARTUPMODE startup_mode = getStartupMode();
 
