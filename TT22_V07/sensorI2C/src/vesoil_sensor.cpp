@@ -7,7 +7,7 @@
 // 
 
 static const char * TAG = "Sensor";
-#define APP_VERSION 1
+#define VERSION "VESTRONG LaPoulton LoRa Sensor 1.0 (v07 Board)"
 
 #include <Arduino.h>
 #include <SPI.h>
@@ -82,10 +82,17 @@ void setupLoRa() {
 
 void smartDelay(unsigned long ms) {
   unsigned long start = millis();
+  //Serial1.println("$PUBX,00*33");
+  //Serial1.println("$PUBX,03*33");
   do
   {
     while (Serial1.available())
-      gps.encode(Serial1.read());
+    {
+      char c = Serial1.read();
+      Serial.printf("%c", c);
+      gps.encode(c);
+    }
+
   } while (millis() - start < ms);
 }
 
@@ -109,7 +116,7 @@ void setupSerial() {
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
-  Serial.println("VESTRONG LaPoulton LoRa Sensor");
+  Serial.println(VERSION);
   print_wakeup_reason();
 }
 
@@ -227,6 +234,7 @@ void GPSReset() {
 
 void setupGPS() {
   Serial1.begin(9600, SERIAL_8N1, 12, 15);   //17-TX 18-RX
+  GPSReset();
   GPSwakeup();
 }
 
@@ -536,8 +544,7 @@ void setup() {
     deepSleep(config.lowvoltsleep);
   }
   setupSerial();  
-  Serial.println("VESTRONG LaPoulton LoRa SENSOR");
- 
+  
   STARTUPMODE startup_mode = getStartupMode();
 
   getConfig(startup_mode);

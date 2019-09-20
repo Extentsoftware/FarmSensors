@@ -1,9 +1,12 @@
 // https://github.com/me-no-dev/ESPAsyncWebServer#basic-response-with-http-code
 // https://github.com/cyberman54/ESP32-Paxcounter/blob/82fdfb9ca129f71973a1f912a04aa8c7c5232a87/src/main.cpp
 // https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/log.html
-
+// pio run --target upload
+// pio device monitor -p COM5 -b 115200
+//
 // environment variables
 // LOCALAPPDATA = C:\Users\username\AppData\Local
+#define VERSION "VESTRONG LaPoulton LoRa Hub 1.0 (v07 Board)"
 
 static const char * TAG = "Hub";
 #define APP_VERSION 1
@@ -49,7 +52,7 @@ void setup() {
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
-  Serial.println("VESTRONG LaPoulton LoRa HUB");
+  Serial.println(VERSION);
 
   Serial.println("get startup");
   STARTUPMODE startup_mode = getStartupMode();

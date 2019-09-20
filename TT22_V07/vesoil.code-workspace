@@ -17,10 +17,6 @@
 			"path": "common"
 		},
 		{
-			"name": "Documentation",
-			"path": "docs"
-		},
-		{
 			"name": "Hardware",
 			"path": "hardware"
 		}
