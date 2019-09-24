@@ -14,9 +14,9 @@ static const char * TAG = "Hub";
 #include <LoRa.h>
 #include <AsyncTCP.h>
 #include <Preferences.h>
+#include <TBeamPower.h>
 #include "vesoil_hub.h"
 
-float vBat; // battery voltage
 SensorReport* store;
 int currentStoreWriter=0;
 int currentStoreReader=0;
@@ -35,13 +35,12 @@ int lastButtonState = HIGH;   // the previous reading from the input pin
 unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 
-
 struct HubConfig config;
+TBeamPower power(BUSPWR, BATTERY_PIN,PWRSDA,PWRSCL);
+
 
 void setup() {
   pinMode(BTN1,INPUT);        // Button 1
-
-  setupBatteryVoltage();
 
   Serial.begin(115200);
   while (!Serial);
@@ -333,7 +332,6 @@ void setupWifi() {
     });
 
     server.on("/query", HTTP_GET, [] (AsyncWebServerRequest *request) {
-      getBatteryVoltage();
       String reply = "{ \"snr\": " + String(snr, DEC) 
           + ", \"version\": " + String( APP_VERSION, DEC) 
           + ", \"battery\": " + String( vBat, DEC) 
@@ -353,17 +351,4 @@ void setupWifi() {
 
 void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
-}
-
-void setupBatteryVoltage()
-{
-  // set battery measurement pin
-  adcAttachPin(BATTERY_PIN);
-  adcStart(BATTERY_PIN);
-  analogReadResolution(10); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.
-}
-
-void getBatteryVoltage() {
-  // we've set 10-bit ADC resolution 2^10=1024 and voltage divider makes it half of maximum readable value (which is 3.3V)
-  vBat = analogRead(BATTERY_PIN) * 2.0 * (3.3 / 1024.0);
 }

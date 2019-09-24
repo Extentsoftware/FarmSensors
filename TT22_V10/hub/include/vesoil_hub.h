@@ -14,6 +14,9 @@
 #define CODERATE      6
 #define SYNCWORD 0xa5a5
 #define PREAMBLE      8
+#define PWRSDA       21
+#define PWRSCL       22
+#define BUSPWR        4   // GPIO04 -- sensor bus power control
 
 struct HubConfig
 {
@@ -36,8 +39,6 @@ enum STARTUPMODE
 bool detectDebouncedBtnPush();
 void onReceive(int packetSize);
 void SystemCheck();
-void getBatteryVoltage();
-void setupBatteryVoltage();
 void notFound(AsyncWebServerRequest *request);
 void setupWifi();
 void exitWifi();

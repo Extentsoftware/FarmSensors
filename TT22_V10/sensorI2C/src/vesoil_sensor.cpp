@@ -29,11 +29,12 @@ static const char * TAG = "Sensor";
 #include <DallasTemperature.h>  // https://github.com/milesburton/Arduino-Temperature-Control-Library
 #include <DHT_U.h>
 #include <DHT.h>
+#include <TBeamPower.h>
 
 #include "TinyGPS.h"
 #include <vesoil.h>
 #include "vesoil_sensor.h"
-#include "power.h"
+
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature tmpsensors(&oneWire);
@@ -46,7 +47,7 @@ AsyncEventSource events("/events");
 bool wifiMode=false;
 struct SensorConfig config;
 Preferences preferences;
-Power power(BUSPWR, BATTERY_PIN,PWRSDA,PWRSCL);
+TBeamPower power(BUSPWR, BATTERY_PIN,PWRSDA,PWRSCL);
 
 void stopLoRa()
 {
@@ -95,7 +96,6 @@ void smartDelay(unsigned long ms) {
   } while (millis() - start < ms);
 }
 
-
 void setupSerial() { 
   Serial.begin(115200);
   while (!Serial);
@@ -103,8 +103,6 @@ void setupSerial() {
   Serial.println("VESTRONG LaPoulton Sensor");
   power.print_wakeup_reason();
 }
-
-
 
 void  deepSleep(uint64_t timetosleep) {
 
@@ -114,7 +112,7 @@ void  deepSleep(uint64_t timetosleep) {
 
   stopLoRa();
 
-  power.deepSleep(timetosleep);
+  power.deep_sleep(timetosleep);
 }
 
 void setupTempSensors() {
@@ -217,7 +215,7 @@ void notFound(AsyncWebServerRequest *request) {
 String processor(const String& var)
 {
   if(var == "vbatt")
-    return String(power.getBatteryVoltage());
+    return String(power.get_battery_voltage());
   if(var == "SSID")
     return config.ssid;
   if(var == "failedGPSsleep")
@@ -315,7 +313,7 @@ void setupWifi() {
         
         char *msg = (char *)malloc(512);
         sprintf(msg, "{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
-                 config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, power.getBatteryVoltage() );
+                 config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, power.get_battery_voltage() );
         reply += msg;
         reply += " ] }\n";
         free(msg);
@@ -345,7 +343,7 @@ void setupWifi() {
 }
 
 void getSample(SensorReport *report) {
-  float vBat = power.getBatteryVoltage();
+  float vBat = power.get_battery_voltage();
 
   ads.setGain(GAIN_ONE);
   ads.begin();
@@ -469,7 +467,7 @@ void setup() {
   STARTUPMODE startup_mode = getStartupMode();
 
   // check we have enough juice
-  float currentVoltage = power.getBatteryVoltage();
+  float currentVoltage = power.get_battery_voltage();
   if (currentVoltage<config.txvolts)
   {
     Serial.printf("Battery Voltage too low: %f\n", currentVoltage);
