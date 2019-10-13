@@ -37,7 +37,7 @@ unsigned long debounceDelay = 50;    // the debounce time; increase if the outpu
 
 struct HubConfig config;
 TBeamPower power(BUSPWR, BATTERY_PIN,PWRSDA,PWRSCL);
-
+esp_timer_handle_t oneshot_timer;
 
 void setup() {
   pinMode(BTN1,INPUT);        // Button 1
@@ -278,14 +278,31 @@ void toggleWifi() {
 }
 
 void exitWifi() {
-  Serial.printf("Exit WiFi mode\n");
-  WiFi.softAPdisconnect( true );
-  server.reset();
+  if (wifiMode) {
+    Serial.printf("Exit WiFi mode\n");
+    WiFi.softAPdisconnect( true );
+    server.reset();
+    wifiMode = false;
+    ESP_ERROR_CHECK(esp_timer_delete(oneshot_timer));
+  }
 }
 
-esp_timer_handle_t wifiTimer()
+void oneshot_timer_callback(void* arg)
 {
+  exitWifi();
+}
 
+
+void setupWifiTimer() {
+
+    esp_timer_create_args_t oneshot_timer_args;
+
+    oneshot_timer_args.callback = &oneshot_timer_callback;
+    oneshot_timer_args.arg = (void*) oneshot_timer;
+    oneshot_timer_args.name = "one-shot";
+
+    esp_timer_create( &oneshot_timer_args, &oneshot_timer);
+    esp_timer_start_once( oneshot_timer, 5 * 60 * 1000 ); // 5-minute timer
 }
 
 void setupWifi() {
@@ -293,12 +310,10 @@ void setupWifi() {
     Serial.printf("Entering WiFi mode\n");
     Serial.print("IP Address: ");
     Serial.println(WiFi.softAPIP());
+    
+    wifiMode = true;
 
-    esp_timer_handle_t handle;
-     esp_timer_create_args_t* create_args; <-- set address in here
-    esp_err_t result = esp_timer_create(create_args, &handle);
-
-    esp_timer_start_once( handle, 5 * 60 * 1000 ); // 5-minute timer
+    setupWifiTimer();
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         request->send(200, "text/plain", "Hello, from Vestrong");
