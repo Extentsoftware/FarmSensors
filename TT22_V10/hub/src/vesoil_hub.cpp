@@ -60,7 +60,7 @@ void setup() {
   Serial.println("system check");
   SystemCheck();
 
-  getBatteryVoltage();
+  float vBat = power.get_battery_voltage();
   Serial.printf("Battery voltage %f\n", vBat);
 
   Serial.println("start lora");
@@ -170,7 +170,6 @@ bool detectDebouncedBtnPush() {
 }
 
 void loop() {
-
   if (detectDebouncedBtnPush())
     toggleWifi();
 
@@ -226,7 +225,6 @@ void readLoraData(int packetSize) {
     rssi = LoRa.packetRssi();
     pfe = LoRa.packetFrequencyError();
     Serial.printf("%d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
-    getBatteryVoltage();
     showBlock(packetSize);  
     delay(100);
   }
@@ -285,11 +283,22 @@ void exitWifi() {
   server.reset();
 }
 
+esp_timer_handle_t wifiTimer()
+{
+
+}
+
 void setupWifi() {
     WiFi.softAP(config.ssid);
     Serial.printf("Entering WiFi mode\n");
     Serial.print("IP Address: ");
     Serial.println(WiFi.softAPIP());
+
+    esp_timer_handle_t handle;
+     esp_timer_create_args_t* create_args; <-- set address in here
+    esp_err_t result = esp_timer_create(create_args, &handle);
+
+    esp_timer_start_once( handle, 5 * 60 * 1000 ); // 5-minute timer
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         request->send(200, "text/plain", "Hello, from Vestrong");
@@ -332,6 +341,7 @@ void setupWifi() {
     });
 
     server.on("/query", HTTP_GET, [] (AsyncWebServerRequest *request) {
+      float vBat = power.get_battery_voltage();
       String reply = "{ \"snr\": " + String(snr, DEC) 
           + ", \"version\": " + String( APP_VERSION, DEC) 
           + ", \"battery\": " + String( vBat, DEC) 
