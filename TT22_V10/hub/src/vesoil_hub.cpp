@@ -36,7 +36,11 @@ unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 
 struct HubConfig config;
-TBeamPower power(BUSPWR, BATTERY_PIN,PWRSDA,PWRSCL);
+
+#if TTGO_TBEAM2
+TBeamPower power(PWRSDA,PWRSCL,BUSPWR, BATTERY_PIN);
+#endif
+
 esp_timer_handle_t oneshot_timer;
 
 void setup() {
@@ -60,8 +64,10 @@ void setup() {
   Serial.println("system check");
   SystemCheck();
 
+  #ifdef TTGO_TBEAM2
   float vBat = power.get_battery_voltage();
   Serial.printf("Battery voltage %f\n", vBat);
+  #endif
 
   Serial.println("start lora");
   startLoRa();
@@ -119,11 +125,14 @@ STARTUPMODE getStartupMode() {
 
   // get startup by detecting how many seconds the button is held
   int btndown = 0;
-  while (digitalRead(BTN1)==0)
-  {
+  int pin=0;
+  do {
+    pin = digitalRead(BTN1);
+    Serial.printf("pin=%d\n",pin);
     delay(interval);
     btndown += interval;
-  }
+  } while (pin==0);
+  
   
   if (btndown==0)
     startup_mode = NORMAL;   // sensor mode
@@ -356,7 +365,13 @@ void setupWifi() {
     });
 
     server.on("/query", HTTP_GET, [] (AsyncWebServerRequest *request) {
+
+#ifdef TTGO_TBEAM2
       float vBat = power.get_battery_voltage();
+#else
+      float vBat = -1;
+#endif
+
       String reply = "{ \"snr\": " + String(snr, DEC) 
           + ", \"version\": " + String( APP_VERSION, DEC) 
           + ", \"battery\": " + String( vBat, DEC) 

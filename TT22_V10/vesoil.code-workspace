@@ -11,9 +11,6 @@
 		{
 			"name": "Common Code",
 			"path": "common"
-		},
-		{
-			"path": "deepsleep"
 		}
 	],
 	"settings": {
@@ -22,7 +19,10 @@
 			"PLATFORMIO_CALLER": "vscode"
 		},
 		"files.associations": {
-			"functional": "cpp"
+			"functional": "cpp",
+			"*.tcc": "cpp",
+			"numeric": "cpp",
+			"limits": "cpp"
 		}
 	}
 }

@@ -10,7 +10,8 @@
 #define TXPOWER      20   // max transmit power
 #define MINBATVOLTS 2.7   // minimum voltage on battery - if lower, device goes to deep sleep to recharge
 #define ONE_WIRE_BUS  2   // used for Dallas temp sensor
-#define BATTERY_PIN  35   // battery level measurement pin, here is the voltage divider connected
+#define BATTERY_PIN  -1   // Not set on AXP versions
+//#define BATTERY_PIN  35   // battery level measurement pin, here is the voltage divider connected
 
 #define SDA       21      // I2C
 #define SCL       22      // I2C

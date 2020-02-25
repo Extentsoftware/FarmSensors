@@ -18,6 +18,14 @@
 #define PWRSCL       22
 #define BUSPWR        4   // GPIO04 -- sensor bus power control
 
+#ifdef TTGO_LORA32_V1
+
+#define OLED_SDA    4
+#define OLED_SCL    15
+#define OLED_RST    16
+
+#endif
+
 struct HubConfig
 {
   char  ssid[16] = "VESTRONG_H";
@@ -64,7 +72,7 @@ void startLoRa();
                       // https://drive.google.com/file/d/1-5NtY1bz0l9eYN9U0U4dP3uASwnMmYGP/view        
 
 #define BATTERY_PIN 35    // battery level measurement pin, here is the voltage divider connected
-#define BTN1        39    // GPIO39 On board button
+#define BTN1        38    // GPIO38 On board button
 #define STORESIZE   30000
 
 #endif

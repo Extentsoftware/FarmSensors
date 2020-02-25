@@ -47,7 +47,7 @@ AsyncEventSource events("/events");
 bool wifiMode=false;
 struct SensorConfig config;
 Preferences preferences;
-TBeamPower power(BUSPWR, BATTERY_PIN,PWRSDA,PWRSCL);
+TBeamPower power( PWRSDA, PWRSCL, BATTERY_PIN, BUSPWR);
 
 void stopLoRa()
 {
