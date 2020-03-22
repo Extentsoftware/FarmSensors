@@ -22,7 +22,12 @@
 			"functional": "cpp",
 			"*.tcc": "cpp",
 			"numeric": "cpp",
-			"limits": "cpp"
+			"limits": "cpp",
+			"deque": "cpp",
+			"memory": "cpp",
+			"xhash": "cpp",
+			"xlocnum": "cpp",
+			"xmemory": "cpp"
 		}
 	}
 }

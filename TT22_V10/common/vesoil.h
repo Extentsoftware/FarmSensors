@@ -1,5 +1,6 @@
 struct SensorReport
 {
+    unsigned char id[6];
     long time;
     char version;
     float volts;
@@ -13,4 +14,5 @@ struct SensorReport
     float gndtemp;
     int moist1;
     int moist2;
+    float distance;
 };

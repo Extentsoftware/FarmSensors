@@ -14,7 +14,7 @@ If you reset the device without holding down the **Mode** button the device ente
 
 If you hold in the **Mode** button for more that 2 seconds when resetting the device via the reset button the device resets it stored configuration to factory defaults.
 
-When resetting the device via the reset button, if you hold in the **Mode** button for less than 1 seconds during the reboot then the device enters WiFi mode. It will be accessible on http://192.168.4.1
+When resetting the device via the reset button, if you hold in the **Mode** button for less than 2 seconds during the reboot then the device enters WiFi mode. It will be accessible on http://192.168.4.1. The Sensor transmits every few seconds when in Wifi mode to aid diagnostics.
 
 The device will sleep for *lowvoltsleep* (600 seonds) if the voltage is below _txvolts_, regardless of WiFi or Sensor mode.
 
@@ -131,7 +131,7 @@ Sensor reading collected by the hub can be retrieved by a FarmOS mobile device f
 https://github.com/LilyGO/TTGO-T-Beam
 http://tinymicros.com/wiki/TTGO_T-Beam
 
-## V08 board
+## V10 board
 
 https://github.com/Xinyuan-LilyGO/TTGO-T-Beam
 
@@ -147,9 +147,9 @@ https://github.com/milesburton/Arduino-Temperature-Control-Library
 
 https://farmos.org/development/client/
 
-# TTGO Product Upgrade V07->V8
+# TTGO Product Upgrade V07->V10
 
-Lilygo release V8 of the TTGO T-Beam board in August 2019. This rework included several changes mainly targetted at reducing power consumption by using integrating the AXP192 power controller IC. A list of the changes is as follows:
+Lilygo release V10 of the TTGO T-Beam board in August 2019. This rework included several changes mainly targetted at reducing power consumption by using integrating the AXP192 power controller IC. A list of the changes is as follows:
 
 1. User button Pin GPIO39 pin is replaced with GPIO38
 2. Replace the charging IC (TP5400) with the power management AXP192
@@ -175,6 +175,8 @@ Experiments indicate that
 - GPS and LoRa powered on draws ~44mA.
 - With GPS searching the board draws ~110mA.
 - The blue LED charge light draws 20mA.
+
+# Flashing SSIP
 
 
 

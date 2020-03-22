@@ -1,6 +1,6 @@
 // https://github.com/LilyGO/TTGO-T-Beam
-// Pin map http://tinymicros.com/wiki/TTGO_T-Beam
-// https://github.com/Xinyuan-LilyGO/TTGO-T-Beam
+// TTGO-07 Pin map http://tinymicros.com/wiki/TTGO_T-Beam
+// TTGO-10 https://github.com/Xinyuan-LilyGO/TTGO-T-Beam
 //
 // to upload new html files use this command:
 // pio device list
@@ -40,17 +40,16 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature tmpsensors(&oneWire);
 TinyGPSPlus gps;                            
 DHT_Unified dht(DHTPIN, DHT11);
-Adafruit_ADS1115 ads;
+Adafruit_ADS1115 ads(ADC_ADDR);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 AsyncEventSource events("/events");
 bool wifiMode=false;
 struct SensorConfig config;
 Preferences preferences;
-TBeamPower power( PWRSDA, PWRSCL, BATTERY_PIN, BUSPWR);
+TBeamPower power(PWRSDA, PWRSCL, BUSPWR, BATTERY_PIN);
 
-void stopLoRa()
-{
+void stopLoRa() {
   LoRa.sleep();
   LoRa.end();
   power.power_LoRa(false);
@@ -92,7 +91,11 @@ void smartDelay(unsigned long ms) {
   do
   {
     while (Serial1.available())
-      gps.encode(Serial1.read());
+    {
+      int c = Serial1.read();
+      Serial.printf("%c", (char)c);
+      gps.encode(c);
+    }
   } while (millis() - start < ms);
 }
 
@@ -151,7 +154,7 @@ float readAirTemp() {
   }
   return 0;
 }
-
+                                                                                 
 float readAirHum() {
   sensors_event_t event;
   dht.humidity().getEvent(&event);
@@ -342,6 +345,22 @@ void setupWifi() {
     server.begin();
 }
 
+float GetDistance() {
+    // Define inputs and outputs
+  pinMode(TRIGPIN, OUTPUT);
+  pinMode(ECHOPIN, INPUT);
+  digitalWrite(TRIGPIN, LOW);   // Clear the TRIGPIN by setting it LOW:
+  delayMicroseconds(2); 
+  digitalWrite(TRIGPIN, HIGH);  // Trigger the sensor by setting the TRIGPIN high for 10 microseconds:
+  delayMicroseconds(10);
+  digitalWrite(TRIGPIN, LOW);
+  
+  // Read the ECHOPIN. pulseIn() returns the duration (length of the pulse) in microseconds:
+  long duration = pulseIn(ECHOPIN, HIGH);
+  
+  return (float)(duration / 58.0);
+}
+
 void getSample(SensorReport *report) {
   float vBat = power.get_battery_voltage();
 
@@ -374,6 +393,9 @@ void getSample(SensorReport *report) {
   report->airhum = readAirHum();  
   report->moist1 = m1;
   report->moist2 = m2;
+  report->distance = GetDistance();
+
+  esp_efuse_mac_get_default(report->id);
 }
 
 
@@ -436,8 +458,10 @@ void getSampleAndSend() {
   char *stime = asctime(gmtime(&report.time));
   stime[24]='\0';
 
-  Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f\n",
-  stime, report.lat, report.lng ,report.alt , +report.sats , +report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts );
+  Serial.printf("%02X%02X%02X%02X%02X%02X,", report.id[0],report.id[1],report.id[2],report.id[3],report.id[4],report.id[5]);
+
+  Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f d=%f\n",
+  stime, report.lat, report.lng ,report.alt , +report.sats , +report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts, report.distance );
   
   // send packet
   power.led_onoff(true);
@@ -458,6 +482,8 @@ void setup() {
 
   setupSerial();  
 
+  digitalWrite(BUSPWR, LOW); // turn off power to the sensor bus
+
   power.begin();
   power.power_sensors(false);
   power.power_peripherals(false);
@@ -468,7 +494,7 @@ void setup() {
 
   // check we have enough juice
   float currentVoltage = power.get_battery_voltage();
-  if (currentVoltage<config.txvolts)
+  if (currentVoltage!=0 && currentVoltage<config.txvolts)
   {
     Serial.printf("Battery Voltage too low: %f\n", currentVoltage);
     power.flashlight(ERR_LOWPOWER);
@@ -552,6 +578,7 @@ void loopSensorMode() {
 }
 
 void loop() {
+
   // no sampling during wifi mode if btn not held down
   if (wifiMode==true)
     loopWifiMode();

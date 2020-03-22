@@ -1,11 +1,49 @@
 // https://github.com/me-no-dev/ESPAsyncWebServer#basic-response-with-http-code
 // https://github.com/cyberman54/ESP32-Paxcounter/blob/82fdfb9ca129f71973a1f912a04aa8c7c5232a87/src/main.cpp
 // https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/log.html
+// https://github.com/LilyGO/TTGO-T-Beam
+// Pin map http://tinymicros.com/wiki/TTGO_T-Beam
+// https://github.com/Xinyuan-LilyGO/TTGO-T-Beam
+
+
+//UART	RX IO	TX IO	CTS	RTS
+//UART0	GPIO3	GPIO1	N/A	N/A
+//UART1	GPIO9	GPIO10	GPIO6	GPIO11
+//UART2	GPIO16	GPIO17	GPIO8	GPIO7
 
 // environment variables
 // LOCALAPPDATA = C:\Users\username\AppData\Local
 
 static const char * TAG = "Hub";
+
+#define TINY_GSM_MODEM_SIM800
+#define TINY_GSM_RX_BUFFER   1024
+#define SerialMon Serial
+#define SerialAT Serial2
+#define TINY_GSM_DEBUG SerialMon
+#define GSM_AUTOBAUD_MIN 9600
+#define GSM_AUTOBAUD_MAX 115200
+#define TINY_GSM_USE_GPRS true
+#define TINY_GSM_USE_WIFI false
+#define GSM_PIN ""
+#define TINY_GSM_YIELD() { delay(2); }
+#define MQTT_MAX_PACKET_SIZE 512
+
+const char * Msg_WaitingForNetwork = "Waiting For Network";
+const char * Msg_NetConnectFailed = "Failed to connect to Network";
+const char * Msg_NetConnectOk = "Connected to Network";
+const char * Msg_GPRSConnectFailed = "Failed to connect to GPRS";
+const char * Msg_GPRSConnectOk = "Connected to GPRS";
+const char * Msg_MQTTConnectFailed = "Failed to connect to MQTT";
+const char * Msg_MQTTConnectOk = "Connect to MQTT";
+
+// MQTT details
+const char* broker = "86.21.199.245";
+const char apn[]      = "wap.vodafone.co.uk"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
+const char gprsUser[] = "wap"; // GPRS User
+const char gprsPass[] = "wap"; // GPRS Password
+
+
 #define APP_VERSION 1
 #include <WiFi.h>
 #include <SPI.h>
@@ -15,7 +53,16 @@ static const char * TAG = "Hub";
 #include <AsyncTCP.h>
 #include <Preferences.h>
 #include <TBeamPower.h>
+#include <TinyGsmClient.h>
+#include <PubSubClient.h>
+#include <geohash.h>
+
 #include "vesoil_hub.h"
+
+TinyGsm modem(SerialAT);
+TinyGsmClient client(modem);
+PubSubClient mqtt(client);
+GeoHash hasher(8);
 
 SensorReport* store;
 int currentStoreWriter=0;
@@ -37,14 +84,13 @@ unsigned long debounceDelay = 50;    // the debounce time; increase if the outpu
 
 struct HubConfig config;
 
-#if TTGO_TBEAM2
 TBeamPower power(PWRSDA,PWRSCL,BUSPWR, BATTERY_PIN);
-#endif
 
 esp_timer_handle_t oneshot_timer;
 
 void setup() {
-  pinMode(BTN1,INPUT);        // Button 1
+
+  pinMode(BTN1, INPUT);        // Button 1
 
   Serial.begin(115200);
   while (!Serial);
@@ -57,22 +103,31 @@ void setup() {
   Serial.println("get gonfig");
   getConfig(startup_mode);
 
-  Serial.println("memory check");
-  // GPS comms settings  
-  MemoryCheck();  
-
   Serial.println("system check");
   SystemCheck();
 
-  #ifdef TTGO_TBEAM2
+
+#ifdef HASPSRAM
+  Serial.println("memory check");
+  // GPS comms settings  
+  MemoryCheck();  
+#endif
+
+#ifdef TTGO_TBEAM2
   float vBat = power.get_battery_voltage();
   Serial.printf("Battery voltage %f\n", vBat);
-  #endif
+#endif
+
+  doModemStart();
+  doNetworkConnect();
+  doSetupMQTT();
 
   Serial.println("start lora");
   startLoRa();
 
+
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
+
 }
 
 void startLoRa() {
@@ -187,40 +242,6 @@ void loop() {
   delay(100);
 }
 
-void MemoryCheck() {
-  
-  store = (SensorReport *) ps_calloc(STORESIZE,  sizeof(SensorReport));
-  if (store != NULL)
-  {
-    ESP_LOGI("TAG","Memory allocated %u bytes for %d records @ %u",size, STORESIZE, store);
-  }
-  else
-    ESP_LOGI("TAG","Could not allocate memory for %u bytes",size);
-}
-
-int GetNextRingBufferPos(int pointer) {
-  pointer++;
-  if (pointer>=STORESIZE)
-    pointer=0;
-  return pointer;
-}
-
-void AddToStore(SensorReport *report) {
-  memcpy( (void *)(&store[currentStoreWriter]), report, sizeof(SensorReport) );
-  currentStoreWriter = GetNextRingBufferPos(currentStoreWriter);
-  // hit the reader?
-  if (currentStoreWriter == currentStoreReader)
-    currentStoreReader = GetNextRingBufferPos(currentStoreReader);
-}
-
-SensorReport *GetFromStore() {
-  if (currentStoreReader==currentStoreWriter)
-    return NULL;  // no data
-  SensorReport *ptr = &store[currentStoreReader];
-  currentStoreReader = GetNextRingBufferPos(currentStoreReader);
-  return ptr;
-}
-
 void SystemCheck() {
   ESP_LOGI("TAG", "Rev %u Freq %d", ESP.getChipRevision(), ESP.getCpuFreqMHz());
   ESP_LOGI("TAG", "PSRAM avail %u free %u", ESP.getPsramSize(), ESP.getFreePsram());
@@ -239,7 +260,6 @@ void readLoraData(int packetSize) {
   }
 }
 
-
 void showBlock(int packetSize) {
   SensorReport report;
 
@@ -256,8 +276,11 @@ void showBlock(int packetSize) {
             stime, report.lat,report.lng ,report.alt ,report.sats ,report.hdop 
             ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2
             , report.volts, rssi, snr, pfe );
-
-        AddToStore(&report);
+        
+        SendMQTT(report);
+#ifdef HASPSRAM        
+        AddToStore(report);
+#endif
   }
   else
   {
@@ -327,28 +350,19 @@ void setupWifi() {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         request->send(200, "text/plain", "Hello, from Vestrong");
     });
-
+#ifdef HASPSRAM
     // Send a GET request to <IP>/get?message=<message>
     server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
         
         String reply = "{ \"app\": \"hub\", \"samples\": [";
         SensorReport *ptr=NULL;
         ptr = GetFromStore();
-        do {          
+        do {      
+          char payload[132];    
           if (ptr!=NULL)
           {
-            char *stime = asctime(gmtime(&(ptr->time)));
-            stime[24]='\0';
-            char *msg = (char *)malloc(512);
-            sprintf(msg, "{ \"date\": \"%s\", \"lat\": %f, \"lng\": %f, \"alt\":%f, \"sats\":%d, \"hdop\":%d, \"gt\":%f, \"at\":%f, \"ah\":%f, \"m1\":%d, \"m2\":%d, \"volts\":%f }\n", 
-                  stime, 
-                  ptr->lat,ptr->lng ,ptr->alt ,ptr->sats ,ptr->hdop,
-                  ptr->gndtemp,ptr->airtemp,ptr->airhum,
-                  ptr->moist1 ,ptr->moist2,
-                  ptr->volts
-                   );
-            reply += msg;
-            free(msg);
+            GetJsonReport(*ptr, payload);
+            reply += payload;
           }
 
           // get next packet
@@ -363,24 +377,20 @@ void setupWifi() {
 
         request->send(200, "text/plain",  reply);
     });
-
+#endif
     server.on("/query", HTTP_GET, [] (AsyncWebServerRequest *request) {
 
-#ifdef TTGO_TBEAM2
-      float vBat = power.get_battery_voltage();
-#else
-      float vBat = -1;
-#endif
+    float vBat = power.get_battery_voltage();
 
-      String reply = "{ \"snr\": " + String(snr, DEC) 
-          + ", \"version\": " + String( APP_VERSION, DEC) 
-          + ", \"battery\": " + String( vBat, DEC) 
-          + ", \"rssi\": " + String( rssi, DEC) 
-          + ", \"badpacket\": " + String(badpacket, DEC)
-          + ", \"writer\": " + String(currentStoreWriter) 
-          + ", \"reader\": " + String(currentStoreReader) 
-          + ", \"buffer\": " + String(STORESIZE)           
-          + " }\n";
+    String reply = "{ \"snr\": " + String(snr, DEC) 
+        + ", \"version\": " + String( APP_VERSION, DEC) 
+        + ", \"battery\": " + String( vBat, DEC) 
+        + ", \"rssi\": " + String( rssi, DEC) 
+        + ", \"badpacket\": " + String(badpacket, DEC)
+        + ", \"writer\": " + String(currentStoreWriter) 
+        + ", \"reader\": " + String(currentStoreReader) 
+//          + ", \"buffer\": " + String(STORESIZE, DEC)           
+        + " }\n";
       request->send(200, "text/plain",  reply);
     });
 
@@ -392,3 +402,173 @@ void setupWifi() {
 void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
+
+void SetSimpleMsg(const char * msg)
+{
+#ifdef HAS_OLED
+  display.clear();
+  display.setFont(ArialMT_Plain_16);
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.drawString(0, 10, msg);
+  display.display();
+#endif
+  SerialMon.println(msg);
+}
+
+
+// incoming message
+void mqttCallback(char* topic, byte* payload, unsigned int len) {
+  SerialMon.print("Message arrived [");
+  SerialMon.print(topic);
+  SerialMon.print("]: ");
+  SerialMon.write(payload, len);
+  SerialMon.println();
+
+  // Only proceed if incoming message's topic matches
+  power.led_onoff(true);
+  power.led_onoff(false);
+}
+
+void doModemStart()
+{
+  SetSimpleMsg("Modem Starting");
+  delay(1000);
+  TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,GSM_AUTOBAUD_MAX);
+  delay(3000);  
+  modem.restart();  
+  String modemInfo = modem.getModemInfo();
+  delay(1000);  
+  SetSimpleMsg("Modem Started");
+}
+
+bool doNetworkConnect()
+{
+  SetSimpleMsg(Msg_WaitingForNetwork);
+  boolean status =  modem.waitForNetwork();
+  SetSimpleMsg((char*)(status ? Msg_NetConnectOk : Msg_NetConnectFailed));
+
+  if (status)
+  {
+    status = modem.gprsConnect(apn, gprsUser, gprsPass);
+    SetSimpleMsg((char*)(status ? Msg_GPRSConnectOk : Msg_GPRSConnectFailed));
+  }
+  return status;
+}
+
+void doSetupMQTT()
+{
+  // MQTT Broker setup
+  mqtt.setServer(broker, 1883);
+  mqtt.setCallback(mqttCallback);
+}
+
+void SendMQTT(SensorReport report) {
+  uint8_t array[6];
+  esp_efuse_mac_get_default(array);
+  char macStr[18];
+  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x", array[0], array[1], array[2], array[3], array[4], array[5]);
+  bool gprsConnected = modem.isGprsConnected();
+
+  if (!gprsConnected)
+    gprsConnected = doNetworkConnect();
+
+  if (gprsConnected)
+  {
+    boolean mqttConnected = mqtt.connect(macStr);
+    SetSimpleMsg((char*)(mqttConnected ? Msg_MQTTConnectOk : Msg_MQTTConnectFailed));
+
+    if (mqttConnected)
+    {
+      char topic[32];
+      sprintf(topic, "bongo/%02x%02x%02x%02x%02x%02x/sensor", report.id[0], report.id[1], report.id[2], report.id[3], report.id[4], report.id[5]);
+      SerialMon.println( topic );
+
+      char payload[MQTT_MAX_PACKET_SIZE];
+
+      GetSys1JsonReport(report, payload);
+      SerialMon.println( payload );      
+      mqtt.publish(topic, payload);
+
+      GetSys2JsonReport(report, payload);
+      SerialMon.println( payload );      
+      mqtt.publish(topic, payload);
+
+      GetDistanceJsonReport(report, payload);
+      SerialMon.println( payload );      
+      mqtt.publish(topic, payload);
+
+      GetMoistJsonReport(report, payload);
+      SerialMon.println( payload );      
+      mqtt.publish(topic, payload);
+
+      delay(3000);
+
+      SerialMon.println( "Sent" );
+      mqtt.disconnect();
+    }
+  }
+}
+
+void GetDistanceJsonReport(SensorReport ptr, char * buf)
+{
+    const char *geohash = hasher.encode(ptr.lat, ptr.lng);
+    sprintf(buf, "{\"geohash\":\"%s\",\"dist\":%f}\n", geohash, ptr.distance );
+}
+
+void GetMoistJsonReport(SensorReport ptr, char * buf)
+{
+    const char *geohash = hasher.encode(ptr.lat, ptr.lng);
+    sprintf(buf, "{\"geohash\":\"%s\",\"gt\":%.2g,\"at\":%f,\"ah\":%f,\"m1\":%d,\"m2\":%d}\n", 
+          geohash, ptr.gndtemp,ptr.airtemp,ptr.airhum, ptr.moist1 ,ptr.moist2 );
+}
+
+void GetSys1JsonReport(SensorReport ptr, char * buf)
+{
+    sprintf(buf, "{\"lat\":%f,\"lng\":%f,\"alt\":%f,\"sats\":%d,\"hdop\":%d}\n", 
+          ptr.lat, ptr.lng ,ptr.alt ,ptr.sats ,ptr.hdop );
+}
+
+void GetSys2JsonReport(SensorReport ptr, char * buf)
+{
+    const char *geohash = hasher.encode(ptr.lat, ptr.lng);
+    sprintf(buf, "{\"geohash\":\"%s\",\"volts\":%f}\n", 
+          geohash, ptr.volts );
+}
+
+
+#ifdef HASPSRAM
+
+void MemoryCheck() {
+  
+  store = (SensorReport *) ps_calloc(STORESIZE,  sizeof(SensorReport));
+  if (store != NULL)
+  {
+    ESP_LOGI("TAG","Memory allocated %u bytes for %d records @ %u",size, STORESIZE, store);
+  }
+  else
+    ESP_LOGI("TAG","Could not allocate memory for %u bytes",size);
+}
+
+int GetNextRingBufferPos(int pointer) {
+  pointer++;
+  if (pointer>=STORESIZE)
+    pointer=0;
+  return pointer;
+}
+
+void AddToStore(SensorReport report) {
+  memcpy( (void *)(&store[currentStoreWriter]), &report, sizeof(SensorReport) );
+  currentStoreWriter = GetNextRingBufferPos(currentStoreWriter);
+  // hit the reader?
+  if (currentStoreWriter == currentStoreReader)
+    currentStoreReader = GetNextRingBufferPos(currentStoreReader);
+}
+
+SensorReport *GetFromStore() {
+  if (currentStoreReader==currentStoreWriter)
+    return NULL;  // no data
+  SensorReport *ptr = &store[currentStoreReader];
+  currentStoreReader = GetNextRingBufferPos(currentStoreReader);
+  return ptr;
+}
+#endif

@@ -14,17 +14,62 @@
 #define CODERATE      6
 #define SYNCWORD 0xa5a5
 #define PREAMBLE      8
-#define PWRSDA       21
-#define PWRSCL       22
-#define BUSPWR        4   // GPIO04 -- sensor bus power control
+
+#define SCK           5    // GPIO5  -- SX1278's SCK
+#define MISO          19   // GPIO19 -- SX1278's MISO
+#define MOSI          27   // GPIO27 -- SX1278's MOSI
+#define SS            18   // GPIO18 -- SX1278's CS
+#define RST           14   // GPIO14 -- SX1278's RESET
+#define DI0           26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
 
 #ifdef TTGO_LORA32_V1
 
-#define OLED_SDA    4
-#define OLED_SCL    15
-#define OLED_RST    16
+#define OLED_SDA      4
+#define OLED_SCL      15
+#define OLED_RST      16
+
+#define PWRSDA        21
+#define PWRSCL        22
+#define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected
+#define BUSPWR        4       // GPIO04 -- sensor bus power control
+
+#undef  HASPSRAM
+
+#define BTN1          0 
 
 #endif
+
+
+#ifdef TTGO_TBEAM_V07
+
+#define PWRSDA        21    
+#define PWRSCL        22
+#define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected
+#define BUSPWR        4       // GPIO04 -- sensor bus power control
+
+#define HASPSRAM
+#define PSRAMSIZE     64000000
+#define STORESIZE     PSRAMSIZE / sizeof(SensorReport)
+
+#define BTN1          38      // GPIO38 On board button (V07 board is GPIO39)
+
+#endif
+
+#ifdef TTGO_TBEAM_V10
+
+#define PWRSDA        21    
+#define PWRSCL        22
+#define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected
+#define BUSPWR        4       // GPIO04 -- sensor bus power control
+
+#define HASPSRAM
+#define PSRAMSIZE     64000000
+#define STORESIZE     PSRAMSIZE / sizeof(SensorReport)
+
+#define BTN1          38      // GPIO38 On board button (V07 board is GPIO39)
+
+#endif
+
 
 struct HubConfig
 {
@@ -54,25 +99,23 @@ void toggleWifi();
 void showBlock(int packetSize);
 void readLoraData(int packetSize);
 SensorReport *GetFromStore();
-void AddToStore(SensorReport *report);
-int GetNextRingBufferPos(int pointer);
-void MemoryCheck();
 void getConfig(STARTUPMODE startup_mode);
 STARTUPMODE getStartupMode();
 void flashlight(char code);
 void startLoRa();
+void doModemStart();
+bool doNetworkConnect();
+void doSetupMQTT();
+void SendMQTT(SensorReport report);
+void GetDistanceJsonReport(SensorReport ptr, char * buf);
+void GetMoistJsonReport(SensorReport ptr, char * buf);
+void GetSys1JsonReport(SensorReport ptr, char * buf);
+void GetSys2JsonReport(SensorReport ptr, char * buf);
 
-#define SCK     5    // GPIO5  -- SX1278's SCK
-#define MISO    19   // GPIO19 -- SX1278's MISO
-#define MOSI    27   // GPIO27 -- SX1278's MOSI
-#define SS      18   // GPIO18 -- SX1278's CS
-#define RST     14   // GPIO14 -- SX1278's RESET
-#define DI0     26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
-#define PSRAM   16    // 8M byte - https://www.electrodragon.com/product/2pcs-ipus-ips6404-iot-ram/
-                      // https://drive.google.com/file/d/1-5NtY1bz0l9eYN9U0U4dP3uASwnMmYGP/view        
-
-#define BATTERY_PIN 35    // battery level measurement pin, here is the voltage divider connected
-#define BTN1        38    // GPIO38 On board button
-#define STORESIZE   30000
+#ifdef HASPSRAM
+void AddToStore(SensorReport *report);
+int GetNextRingBufferPos(int pointer);
+void MemoryCheck();
+#endif
 
 #endif
