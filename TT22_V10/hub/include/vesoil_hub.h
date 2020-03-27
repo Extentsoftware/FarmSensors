@@ -1,9 +1,6 @@
 #ifndef __VESOIL_HUB__
 #define __VESOIL_HUB__
 
-#include <ESPAsyncWebServer.h>
-#include <vesoil.h>
-
 #define ERR_LOWPOWER  0x15  // 00010101
 #define INFO_WIFI     0x33  // 00110011
 #define INFO_NORMAL   0xAA  // 10101010
@@ -24,14 +21,19 @@
 
 #ifdef TTGO_LORA32_V1
 
+#define HAS_OLED
 #define OLED_SDA      4
 #define OLED_SCL      15
 #define OLED_RST      16
+#define OLED_ADDR     0x3C
 
 #define PWRSDA        21
 #define PWRSCL        22
 #define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected
 #define BUSPWR        4       // GPIO04 -- sensor bus power control
+
+#define AT_RX        13
+#define AT_TX        12
 
 #undef  HASPSRAM
 
@@ -111,6 +113,7 @@ void GetDistanceJsonReport(SensorReport ptr, char * buf);
 void GetMoistJsonReport(SensorReport ptr, char * buf);
 void GetSys1JsonReport(SensorReport ptr, char * buf);
 void GetSys2JsonReport(SensorReport ptr, char * buf);
+void InitOLED();
 
 #ifdef HASPSRAM
 void AddToStore(SensorReport *report);

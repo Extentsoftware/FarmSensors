@@ -118,54 +118,137 @@ void  deepSleep(uint64_t timetosleep) {
   power.deep_sleep(timetosleep);
 }
 
-void setupTempSensors() {
-  // 1-wire 
+void ReadGroundTemp(SensorTemp *report) {
+  report->value = 0;
+  if (!(config.capability & GndTemp))
+    return;
+
   pinMode(ONE_WIRE_BUS,INPUT_PULLUP);
   tmpsensors.begin();
   tmpsensors.setResolution(12);  
   tmpsensors.setCheckForConversion(true);
 
-  // DHT-11
-  dht.begin();
-  sensor_t sensor;
-  dht.temperature().getSensor(&sensor);
-  delay(sensor.min_delay / 1000);
-}
-
-float readGroundTemp() {
   for (int i=0;i<3;i++)
   {
     tmpsensors.requestTemperatures();
     delay(100);
     float temp = tmpsensors.getTempCByIndex(0);
     if (temp!=85 && temp!=-127)
-      return temp;
+      report->value = temp;
   }
-  return 0;
 }
 
-float readAirTemp() {
+void ReadAirTempHumidity(SensorAirTmp *report) {
+  if (!(config.capability & AirTempHum))
+    return;
+
+  // DHT-11
+  dht.begin();
+  sensor_t sensor;
+  dht.temperature().getSensor(&sensor);
+  delay(sensor.min_delay / 1000);
+
   sensors_event_t event;
   dht.temperature().getEvent(&event);
   
   if (!isnan(event.temperature)) 
   {
-    return event.temperature;
+    report->airtemp.value = event.temperature;
   }
-  return 0;
+  if (!isnan(event.relative_humidity)) 
+  {
+    report->airhum.value = event.relative_humidity;
+  }
 }
                                                                                  
-float readAirHum() {
-  sensors_event_t event;
-  dht.humidity().getEvent(&event);
-  if (!isnan(event.temperature)) 
+void ReadMoisture1(SensorMoisture *report)
+{
+  ads.setGain(GAIN_ONE);
+  ads.begin();
+  delay(100);
+
+  if (config.capability & Moist1)
   {
-    return event.relative_humidity;
+    int m1 = ads.readADC_SingleEnded(0);
+    report->value = m1;
   }
-  return 0;
 }
 
+void ReadMoisture2(SensorMoisture *report)
+{
+  ads.setGain(GAIN_ONE);
+  ads.begin();
+  delay(100);
+
+  if (config.capability & Moist2)
+  {
+    int m1 = ads.readADC_SingleEnded(0);
+    report->value = m1;
+  }
+}
+
+void ReadGPSData(SensorGps *report)
+{
+  if (!(config.capability & GPS))
+      return;
+
+  struct tm curtime;
+  curtime.tm_sec = gps.time.second();
+  curtime.tm_min=gps.time.minute();
+  curtime.tm_hour= gps.time.hour();
+  curtime.tm_mday= gps.date.day();
+  curtime.tm_mon= gps.date.month()-1;
+  curtime.tm_year= gps.date.year()-1900;
+  curtime.tm_isdst=false;
+
+  report->time = mktime(&curtime);
+  report->lat = gps.location.lat();
+  report->lng = gps.location.lng();
+  report->alt = gps.altitude.meters();
+  report->sats = gps.satellites.value();
+  report->hdop = gps.hdop.value();
+}
+
+void ReadDistance(SensorDistance *report) {
+  report->value = 0;
+  if (!(config.capability & Distance))
+    return;
+
+    // Define inputs and outputs
+  pinMode(TRIGPIN, OUTPUT);
+  pinMode(ECHOPIN, INPUT);
+  digitalWrite(TRIGPIN, LOW);   // Clear the TRIGPIN by setting it LOW:
+  delayMicroseconds(2); 
+  digitalWrite(TRIGPIN, HIGH);  // Trigger the sensor by setting the TRIGPIN high for 10 microseconds:
+  delayMicroseconds(10);
+  digitalWrite(TRIGPIN, LOW);
+  
+  // Read the ECHOPIN. pulseIn() returns the duration (length of the pulse) in microseconds:
+  long duration = pulseIn(ECHOPIN, HIGH);
+  
+  report->value = (float)(duration / 58.0);
+}
+
+void ReadVolts(SensorVoltage * report) {
+  report->value = power.get_battery_voltage();
+}
+
+void getSample(SensorReport *report) {
+  ReadGPSData(&report->gps);
+  ReadVolts(&report->volts);
+  ReadGroundTemp( &report->gndTemp );
+  ReadDistance( &report->distance );
+  ReadAirTempHumidity( &report->airTempHumidity);
+  esp_efuse_mac_get_default(report->id.id);
+  ReadMoisture1(&report->moist1);
+  ReadMoisture2(&report->moist2);
+}
+
+
 void startGPS() {
+  if (!(config.capability & GPS))
+    return;
+
   power.power_GPS(true);
   Serial1.begin(GPSBAUD, SERIAL_8N1, GPSRX, GPSTX);
   Serial.println("Wake GPS");
@@ -180,6 +263,9 @@ void startGPS() {
 }
 
 void stopGPS() {
+  if (!(config.capability & GPS))
+    return;
+
   const byte CFG_RST[12] = {0xb5, 0x62, 0x06, 0x04, 0x04, 0x00, 0x00, 0x00, 0x01,0x00, 0x0F, 0x66};//Controlled Software reset
   const byte RXM_PMREQ[16] = {0xb5, 0x62, 0x02, 0x41, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x4d, 0x3b};   //power off until wakeup call
   Serial1.write(CFG_RST, sizeof(CFG_RST));
@@ -189,6 +275,9 @@ void stopGPS() {
 }
 
 GPSLOCK getGpsLock() {
+  if (!(config.capability & GPS))
+    return LOCK_DISABLED;
+
   for (int i=0; i<config.gps_timeout; i++)
   {
     
@@ -345,60 +434,6 @@ void setupWifi() {
     server.begin();
 }
 
-float GetDistance() {
-    // Define inputs and outputs
-  pinMode(TRIGPIN, OUTPUT);
-  pinMode(ECHOPIN, INPUT);
-  digitalWrite(TRIGPIN, LOW);   // Clear the TRIGPIN by setting it LOW:
-  delayMicroseconds(2); 
-  digitalWrite(TRIGPIN, HIGH);  // Trigger the sensor by setting the TRIGPIN high for 10 microseconds:
-  delayMicroseconds(10);
-  digitalWrite(TRIGPIN, LOW);
-  
-  // Read the ECHOPIN. pulseIn() returns the duration (length of the pulse) in microseconds:
-  long duration = pulseIn(ECHOPIN, HIGH);
-  
-  return (float)(duration / 58.0);
-}
-
-void getSample(SensorReport *report) {
-  float vBat = power.get_battery_voltage();
-
-  ads.setGain(GAIN_ONE);
-  ads.begin();
-  delay(100);
-  
-  // Setup 3V comparator on channel 0
-  int m1 = ads.readADC_SingleEnded(0);
-  int m2 = ads.readADC_SingleEnded(1);
- 
-  struct tm curtime;
-  curtime.tm_sec = gps.time.second();
-  curtime.tm_min=gps.time.minute();
-  curtime.tm_hour= gps.time.hour();
-  curtime.tm_mday= gps.date.day();
-  curtime.tm_mon= gps.date.month()-1;
-  curtime.tm_year= gps.date.year()-1900;
-  curtime.tm_isdst=false;
-
-  report->volts=vBat;
-  report->time = mktime(&curtime);
-  report->lat = gps.location.lat();
-  report->lng = gps.location.lng();
-  report->alt = gps.altitude.meters();
-  report->sats = gps.satellites.value();
-  report->hdop = gps.hdop.value();
-  report->gndtemp = readGroundTemp();
-  report->airtemp = readAirTemp();
-  report->airhum = readAirHum();  
-  report->moist1 = m1;
-  report->moist2 = m2;
-  report->distance = GetDistance();
-
-  esp_efuse_mac_get_default(report->id);
-}
-
-
 STARTUPMODE getStartupMode() {
   const int interval = 100;
   STARTUPMODE startup_mode = NORMAL;
@@ -441,27 +476,29 @@ void getConfig(STARTUPMODE startup_mode) {
     preferences.putBool("configinit", true);
     memcpy( &config, &default_config, sizeof(SensorConfig));
   }
+  Serial.printf("Capability is %d\n", config.capability);
 }
 
 void getSampleAndSend() {
   // get GPS and then gather/send a sample if within the time window
   // best not to send at night as we drain the battery
   SensorReport report;
+  memset( &report, 0, sizeof(report));
 
   power.power_sensors(true);   // turn on power to the sensor bus
   startLoRa();
-  delay(10);
-  setupTempSensors();
+  delay(10);  
   getSample(&report);
   power.power_sensors(false);   // turn off power to the sensor bus
 
-  char *stime = asctime(gmtime(&report.time));
+  char *stime = asctime(gmtime(&report.gps.time));
   stime[24]='\0';
-
-  Serial.printf("%02X%02X%02X%02X%02X%02X,", report.id[0],report.id[1],report.id[2],report.id[3],report.id[4],report.id[5]);
+  Serial.printf("%02X%02X%02X%02X%02X%02X,", (report.id).id[0],report.id.id[1],report.id.id[2],report.id.id[3],report.id.id[4],report.id.id[5]);
 
   Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f d=%f\n",
-  stime, report.lat, report.lng ,report.alt , +report.sats , +report.hdop ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2, report.volts, report.distance );
+  stime, report.gps.lat, report.gps.lng ,report.gps.alt, report.gps.sats , report.gps.hdop,
+  report.gndTemp.value,report.airTempHumidity.airtemp.value,report.airTempHumidity.airhum.value ,
+  report.moist1.value ,report.moist2.value, report.volts.value, report.distance.value );
   
   // send packet
   power.led_onoff(true);
@@ -525,11 +562,13 @@ void setup() {
 
 void loopWifiMode() {
   GPSLOCK lock = getGpsLock();
+
   Serial.printf("GPS Lock is  %d", lock);
+
   // mode button held down
   if (digitalRead(BTN1)!=0)
   {
-    if (lock==LOCK_OK)
+    if (lock==LOCK_OK || lock==LOCK_DISABLED)
       getSampleAndSend();
     else
       power.flashlight(INFO_NOGPS);
@@ -551,6 +590,7 @@ void loopSensorMode() {
 
   switch (lock)
   {
+    case LOCK_DISABLED:
     case LOCK_OK:
       getSampleAndSend();
       deepSleep((uint64_t)config.reportEvery);

@@ -5,21 +5,14 @@
 // Pin map http://tinymicros.com/wiki/TTGO_T-Beam
 // https://github.com/Xinyuan-LilyGO/TTGO-T-Beam
 
-
-//UART	RX IO	TX IO	CTS	RTS
-//UART0	GPIO3	GPIO1	N/A	N/A
-//UART1	GPIO9	GPIO10	GPIO6	GPIO11
-//UART2	GPIO16	GPIO17	GPIO8	GPIO7
-
 // environment variables
 // LOCALAPPDATA = C:\Users\username\AppData\Local
 
 static const char * TAG = "Hub";
 
+#define SerialMon Serial
 #define TINY_GSM_MODEM_SIM800
 #define TINY_GSM_RX_BUFFER   1024
-#define SerialMon Serial
-#define SerialAT Serial2
 #define TINY_GSM_DEBUG SerialMon
 #define GSM_AUTOBAUD_MIN 9600
 #define GSM_AUTOBAUD_MAX 115200
@@ -29,13 +22,13 @@ static const char * TAG = "Hub";
 #define TINY_GSM_YIELD() { delay(2); }
 #define MQTT_MAX_PACKET_SIZE 512
 
-const char * Msg_WaitingForNetwork = "Waiting For Network";
-const char * Msg_NetConnectFailed = "Failed to connect to Network";
-const char * Msg_NetConnectOk = "Connected to Network";
-const char * Msg_GPRSConnectFailed = "Failed to connect to GPRS";
-const char * Msg_GPRSConnectOk = "Connected to GPRS";
-const char * Msg_MQTTConnectFailed = "Failed to connect to MQTT";
-const char * Msg_MQTTConnectOk = "Connect to MQTT";
+const char * Msg_Network = "Network";
+const char * Msg_GPRS    = "GPRS";
+const char * Msg_MQTT    = "MQTT";
+
+const char * Msg_Failed     = "Failed";
+const char * Msg_Connected  = "Connected";
+const char * Msg_Connecting = "Connecting";
 
 // MQTT details
 const char* broker = "86.21.199.245";
@@ -43,12 +36,13 @@ const char apn[]      = "wap.vodafone.co.uk"; // APN (example: internet.vodafone
 const char gprsUser[] = "wap"; // GPRS User
 const char gprsPass[] = "wap"; // GPRS Password
 
-
 #define APP_VERSION 1
+
+#include <ESPAsyncWebServer.h>
+#include <vesoil.h>
 #include <WiFi.h>
 #include <SPI.h>
 #include <Wire.h>  
-#include <HardwareSerial.h>
 #include <LoRa.h>
 #include <AsyncTCP.h>
 #include <Preferences.h>
@@ -56,8 +50,15 @@ const char gprsPass[] = "wap"; // GPRS Password
 #include <TinyGsmClient.h>
 #include <PubSubClient.h>
 #include <geohash.h>
-
+#include <SoftwareSerial.h>
 #include "vesoil_hub.h"
+
+#ifdef HAS_OLED
+#include <SSD1306.h>
+SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
+#endif
+
+SoftwareSerial SerialAT(AT_RX, AT_TX, false);
 
 TinyGsm modem(SerialAT);
 TinyGsmClient client(modem);
@@ -89,13 +90,15 @@ TBeamPower power(PWRSDA,PWRSCL,BUSPWR, BATTERY_PIN);
 esp_timer_handle_t oneshot_timer;
 
 void setup() {
-
   pinMode(BTN1, INPUT);        // Button 1
-
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
   Serial.println("VESTRONG LaPoulton LoRa HUB");
+
+#ifdef HAS_OLED
+  InitOLED();
+#endif
 
   Serial.println("get startup");
   STARTUPMODE startup_mode = getStartupMode();
@@ -269,13 +272,18 @@ void showBlock(int packetSize) {
       for (int i = 0; i < packetSize; i++, ptr++)
          *ptr = (unsigned char)LoRa.read(); 
 
-      char *stime = asctime(gmtime(&report.time));
+      char *stime = asctime(gmtime(&report.gps.time));
       stime[24]='\0';
 
       Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f rssi=%f snr=%f pfe=%ld\n", 
-            stime, report.lat,report.lng ,report.alt ,report.sats ,report.hdop 
-            ,report.gndtemp,report.airtemp,report.airhum ,report.moist1 ,report.moist2
-            , report.volts, rssi, snr, pfe );
+            stime, report.gps.lat,report.gps.lng,
+            report.gps.alt ,report.gps.sats ,report.gps.hdop,
+            report.gndTemp.value,
+            report.airTempHumidity.airtemp.value,
+            report.airTempHumidity.airhum.value,
+            report.moist1.value,
+            report.moist2.value,
+            report.volts.value, rssi, snr, pfe );
         
         SendMQTT(report);
 #ifdef HASPSRAM        
@@ -403,18 +411,34 @@ void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
 
-void SetSimpleMsg(const char * msg)
+void InitOLED() {
+  pinMode(OLED_RST,OUTPUT);
+  digitalWrite(OLED_RST, LOW);    // set GPIO16 low to reset OLED
+  delay(50); 
+  digitalWrite(OLED_RST, HIGH); // while OLED is running, must set GPIO16 in high、
+  delay(50); 
+
+  display.init();
+  display.flipScreenVertically();  
+}
+
+void SetSimpleMsg(const char * msg, int line=0, bool clear=true, const uint8_t font[]=ArialMT_Plain_16)
 {
 #ifdef HAS_OLED
-  display.clear();
-  display.setFont(ArialMT_Plain_16);
+  if (clear) display.clear();
+  display.setFont(font);
   display.setTextAlignment(TEXT_ALIGN_LEFT);
-  display.drawString(0, 10, msg);
+  display.drawString(0, line * 16, msg);
   display.display();
 #endif
   SerialMon.println(msg);
 }
 
+void SetTwoLineMsg(const char * msg0, const char * msg1)
+{
+    SetSimpleMsg(msg0);
+    SetSimpleMsg(msg1,1, false);
+}
 
 // incoming message
 void mqttCallback(char* topic, byte* payload, unsigned int len) {
@@ -431,26 +455,28 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
 
 void doModemStart()
 {
-  SetSimpleMsg("Modem Starting");
+  SetSimpleMsg("Starting GSM");
   delay(1000);
-  TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,GSM_AUTOBAUD_MAX);
-  delay(3000);  
+
+  TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,9600);
+  delay(2000);  
   modem.restart();  
   String modemInfo = modem.getModemInfo();
   delay(1000);  
-  SetSimpleMsg("Modem Started");
+  SetSimpleMsg("Started GSM");
 }
 
 bool doNetworkConnect()
 {
-  SetSimpleMsg(Msg_WaitingForNetwork);
+  SetTwoLineMsg(Msg_Network, Msg_Connecting);
   boolean status =  modem.waitForNetwork();
-  SetSimpleMsg((char*)(status ? Msg_NetConnectOk : Msg_NetConnectFailed));
+  SetTwoLineMsg(Msg_Network,(char*)(status ? Msg_Connected : Msg_Failed));
 
   if (status)
   {
+    SetTwoLineMsg(Msg_GPRS, Msg_Connecting);
     status = modem.gprsConnect(apn, gprsUser, gprsPass);
-    SetSimpleMsg((char*)(status ? Msg_GPRSConnectOk : Msg_GPRSConnectFailed));
+    SetTwoLineMsg(Msg_GPRS,(char*)(status ? Msg_Connected : Msg_Failed));
   }
   return status;
 }
@@ -462,6 +488,18 @@ void doSetupMQTT()
   mqtt.setCallback(mqttCallback);
 }
 
+void DisplayPacket(SensorReport report) {
+  char buf[64];
+  sprintf(buf, "%02x%02x%02x%02x%02x%02x", report.id.id[0], report.id.id[1], report.id.id[2], report.id.id[3], report.id.id[4], report.id.id[5]);
+  char *stime = asctime(gmtime(&report.gps.time));
+  SetSimpleMsg(stime, 0, true, ArialMT_Plain_10);
+  SetSimpleMsg(buf, 1, false, ArialMT_Plain_10);
+  sprintf(buf,"Dist: %d V: %f", (int)(report.distance.value), report.volts.value);
+  SetSimpleMsg(buf, 2, false, ArialMT_Plain_10);
+  sprintf(buf,"M1: %d M2: %d", report.moist1.value, report.moist2.value);
+  SetSimpleMsg(buf, 3, false, ArialMT_Plain_10);
+}
+
 void SendMQTT(SensorReport report) {
   uint8_t array[6];
   esp_efuse_mac_get_default(array);
@@ -470,69 +508,64 @@ void SendMQTT(SensorReport report) {
   bool gprsConnected = modem.isGprsConnected();
 
   if (!gprsConnected)
-    gprsConnected = doNetworkConnect();
+    if (!doNetworkConnect())
+      return;
 
-  if (gprsConnected)
+  boolean mqttConnected = mqtt.connect(macStr);
+  if (!mqttConnected)
   {
-    boolean mqttConnected = mqtt.connect(macStr);
-    SetSimpleMsg((char*)(mqttConnected ? Msg_MQTTConnectOk : Msg_MQTTConnectFailed));
-
-    if (mqttConnected)
-    {
-      char topic[32];
-      sprintf(topic, "bongo/%02x%02x%02x%02x%02x%02x/sensor", report.id[0], report.id[1], report.id[2], report.id[3], report.id[4], report.id[5]);
-      SerialMon.println( topic );
-
-      char payload[MQTT_MAX_PACKET_SIZE];
-
-      GetSys1JsonReport(report, payload);
-      SerialMon.println( payload );      
-      mqtt.publish(topic, payload);
-
-      GetSys2JsonReport(report, payload);
-      SerialMon.println( payload );      
-      mqtt.publish(topic, payload);
-
-      GetDistanceJsonReport(report, payload);
-      SerialMon.println( payload );      
-      mqtt.publish(topic, payload);
-
-      GetMoistJsonReport(report, payload);
-      SerialMon.println( payload );      
-      mqtt.publish(topic, payload);
-
-      delay(3000);
-
-      SerialMon.println( "Sent" );
-      mqtt.disconnect();
-    }
+    SetTwoLineMsg(Msg_MQTT, Msg_Failed);
+    return;
   }
+
+  DisplayPacket(report);
+
+  char topic[32];
+  sprintf(topic, "bongo/%02x%02x%02x%02x%02x%02x/sensor", report.id.id[0], report.id.id[1], report.id.id[2], report.id.id[3], report.id.id[4], report.id.id[5]);
+
+  char payload[MQTT_MAX_PACKET_SIZE];
+
+  GetSys1JsonReport(report, payload);
+  mqtt.publish(topic, payload);
+
+  GetSys2JsonReport(report, payload);
+  mqtt.publish(topic, payload);
+
+  GetDistanceJsonReport(report, payload);
+  mqtt.publish(topic, payload);
+
+  GetMoistJsonReport(report, payload);
+  mqtt.publish(topic, payload);
+
+  delay(1000);
+
+  mqtt.disconnect();
 }
 
 void GetDistanceJsonReport(SensorReport ptr, char * buf)
 {
-    const char *geohash = hasher.encode(ptr.lat, ptr.lng);
-    sprintf(buf, "{\"geohash\":\"%s\",\"dist\":%f}\n", geohash, ptr.distance );
+    const char *geohash = hasher.encode(ptr.gps.lat, ptr.gps.lng);
+    sprintf(buf, "{\"geohash\":\"%s\",\"dist\":%f}\n", geohash, ptr.distance.value );
 }
 
 void GetMoistJsonReport(SensorReport ptr, char * buf)
 {
-    const char *geohash = hasher.encode(ptr.lat, ptr.lng);
+    const char *geohash = hasher.encode(ptr.gps.lat, ptr.gps.lng);
     sprintf(buf, "{\"geohash\":\"%s\",\"gt\":%.2g,\"at\":%f,\"ah\":%f,\"m1\":%d,\"m2\":%d}\n", 
-          geohash, ptr.gndtemp,ptr.airtemp,ptr.airhum, ptr.moist1 ,ptr.moist2 );
+          geohash, ptr.gndTemp.value,ptr.airTempHumidity.airtemp.value,ptr.airTempHumidity.airhum.value, ptr.moist1.value ,ptr.moist2.value );
 }
 
 void GetSys1JsonReport(SensorReport ptr, char * buf)
 {
     sprintf(buf, "{\"lat\":%f,\"lng\":%f,\"alt\":%f,\"sats\":%d,\"hdop\":%d}\n", 
-          ptr.lat, ptr.lng ,ptr.alt ,ptr.sats ,ptr.hdop );
+          ptr.gps.lat, ptr.gps.lng ,ptr.gps.alt ,ptr.gps.sats ,ptr.gps.hdop );
 }
 
 void GetSys2JsonReport(SensorReport ptr, char * buf)
 {
-    const char *geohash = hasher.encode(ptr.lat, ptr.lng);
+    const char *geohash = hasher.encode(ptr.gps.lat, ptr.gps.lng);
     sprintf(buf, "{\"geohash\":\"%s\",\"volts\":%f}\n", 
-          geohash, ptr.volts );
+          geohash, ptr.volts.value );
 }
 
 

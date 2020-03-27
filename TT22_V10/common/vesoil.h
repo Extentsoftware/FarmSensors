@@ -1,18 +1,58 @@
-struct SensorReport
+struct SensorId
 {
     unsigned char id[6];
+};
+
+struct SensorGps
+{
     long time;
-    char version;
-    float volts;
     float lat;
     float lng; 
     float alt;
     char sats;
     char hdop;
-    float airtemp;
-    float airhum;
-    float gndtemp;
-    int moist1;
-    int moist2;
-    float distance;
+};
+
+struct SensorTemp
+{
+    float value;
+};
+
+struct SensorVoltage
+{
+    float value;
+};
+
+struct SensorMoisture
+{
+    int value;
+};
+
+struct SensorHumidity
+{
+    float value;
+};
+
+struct SensorDistance
+{
+    float value;
+};
+
+struct SensorAirTmp
+{
+    SensorTemp airtemp;
+    SensorHumidity airhum;
+};
+
+struct SensorReport
+{
+    char version=2;
+    SensorVoltage volts;
+    SensorId id;
+    SensorGps gps;
+    SensorAirTmp airTempHumidity;
+    SensorTemp gndTemp;
+    SensorMoisture moist1;
+    SensorMoisture moist2;
+    SensorDistance distance;
 };

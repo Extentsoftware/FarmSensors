@@ -27,7 +27,26 @@
 			"memory": "cpp",
 			"xhash": "cpp",
 			"xlocnum": "cpp",
-			"xmemory": "cpp"
+			"xmemory": "cpp",
+			"ostream": "cpp",
+			"*.tpp": "cpp",
+			"array": "cpp",
+			"list": "cpp",
+			"string": "cpp",
+			"unordered_map": "cpp",
+			"unordered_set": "cpp",
+			"vector": "cpp",
+			"string_view": "cpp",
+			"random": "cpp",
+			"initializer_list": "cpp",
+			"regex": "cpp",
+			"algorithm": "cpp",
+			"iterator": "cpp",
+			"queue": "cpp",
+			"xlocmon": "cpp",
+			"xstring": "cpp",
+			"xtree": "cpp",
+			"xutility": "cpp"
 		}
 	}
 }
