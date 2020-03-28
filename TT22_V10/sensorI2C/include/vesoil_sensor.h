@@ -78,28 +78,19 @@
 #define INFO_SENSOR   0xAA  // 10101010
 #define INFO_NOGPS    0x49  // 01001001
 
-enum Capability
-{
-    GPS        = 1,
-    Distance   = 2,
-    Moist1     = 4,
-    Moist2     = 8,
-    AirTempHum = 16,
-    GndTemp    = 32
-};
 
 #ifndef SENSE_CAPABILITY
 #define SENSE_CAPABILITY 255
 #endif
 
-inline Capability operator|(Capability a, Capability b)
+inline SensorCapability operator|(SensorCapability a, SensorCapability b)
 {
-    return static_cast<Capability>(static_cast<int>(a) | static_cast<int>(b));
+    return static_cast<SensorCapability>(static_cast<int>(a) | static_cast<int>(b));
 }
 
-inline Capability operator&(Capability a, Capability b)
+inline SensorCapability operator&(SensorCapability a, SensorCapability b)
 {
-    return static_cast<Capability>(static_cast<int>(a) & static_cast<int>(b));
+    return static_cast<SensorCapability>(static_cast<int>(a) & static_cast<int>(b));
 }
 
 struct SensorConfig
@@ -121,7 +112,7 @@ struct SensorConfig
   int   spreadFactor = SPREAD;   // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = CODERATE;   // extra info for CRC
   bool  enableCRC = true;        // cyclic redundancy check mode
-  Capability capability = (Capability)SENSE_CAPABILITY;
+  SensorCapability capability = (SensorCapability)SENSE_CAPABILITY;
 } default_config;
 
 enum STARTUPMODE

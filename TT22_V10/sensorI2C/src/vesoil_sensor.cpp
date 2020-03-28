@@ -10,7 +10,6 @@
 // 
 
 static const char * TAG = "Sensor";
-#define APP_VERSION 1
 
 #include <Arduino.h>
 #include <SPI.h>
@@ -103,7 +102,7 @@ void setupSerial() {
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
-  Serial.println("VESTRONG LaPoulton Sensor");
+  Serial.printf("VESTRONG LaPoulton Sensor v%d\n", APP_VERSION);
   power.print_wakeup_reason();
 }
 
@@ -484,7 +483,8 @@ void getSampleAndSend() {
   // best not to send at night as we drain the battery
   SensorReport report;
   memset( &report, 0, sizeof(report));
-
+  report.capability = config.capability;
+  
   power.power_sensors(true);   // turn on power to the sensor bus
   startLoRa();
   delay(10);  

@@ -35,6 +35,7 @@ const char* broker = "86.21.199.245";
 const char apn[]      = "wap.vodafone.co.uk"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
 const char gprsUser[] = "wap"; // GPRS User
 const char gprsPass[] = "wap"; // GPRS Password
+char gpsjson[32];
 
 #define APP_VERSION 1
 
@@ -285,7 +286,7 @@ void showBlock(int packetSize) {
             report.moist2.value,
             report.volts.value, rssi, snr, pfe );
         
-        SendMQTT(report);
+        SendMQTT(&report);
 #ifdef HASPSRAM        
         AddToStore(report);
 #endif
@@ -488,19 +489,100 @@ void doSetupMQTT()
   mqtt.setCallback(mqttCallback);
 }
 
-void DisplayPacket(SensorReport report) {
+void DisplayPacket(SensorReport *report) {
   char buf[64];
-  sprintf(buf, "%02x%02x%02x%02x%02x%02x", report.id.id[0], report.id.id[1], report.id.id[2], report.id.id[3], report.id.id[4], report.id.id[5]);
-  char *stime = asctime(gmtime(&report.gps.time));
+  sprintf(buf, "%02x%02x%02x%02x%02x%02x", report->id.id[0], report->id.id[1], report->id.id[2], report->id.id[3], report->id.id[4], report->id.id[5]);
+  char *stime = asctime(gmtime(&report->gps.time));
   SetSimpleMsg(stime, 0, true, ArialMT_Plain_10);
   SetSimpleMsg(buf, 1, false, ArialMT_Plain_10);
-  sprintf(buf,"Dist: %d V: %f", (int)(report.distance.value), report.volts.value);
+  sprintf(buf,"Dist: %d V: %f", (int)(report->distance.value), report->volts.value);
   SetSimpleMsg(buf, 2, false, ArialMT_Plain_10);
-  sprintf(buf,"M1: %d M2: %d", report.moist1.value, report.moist2.value);
+  sprintf(buf,"M1: %d M2: %d", report->moist1.value, report->moist2.value);
   SetSimpleMsg(buf, 3, false, ArialMT_Plain_10);
 }
 
-void SendMQTT(SensorReport report) {
+char *GetGeohash(SensorReport *ptr)
+{
+  gpsjson[0]='\0';
+  if (ptr->capability & GPS)
+  {
+    const char *geohash = hasher.encode(ptr->gps.lat, ptr->gps.lng);
+    sprintf(gpsjson, "\"geohash\":\"%s\",", geohash );
+  }
+  return gpsjson;
+}
+
+void SendDistanceJsonReport(SensorReport *ptr, char * topic)
+{
+  char payload[MQTT_MAX_PACKET_SIZE];
+  if (ptr->capability & Distance)
+  {
+    sprintf(payload, "{%s\"dist\":%f}\n", GetGeohash(ptr), ptr->distance.value );
+    mqtt.publish(topic, payload);
+  }
+}
+
+void SendMoist1JsonReport(SensorReport *ptr, char * topic)
+{
+  char payload[MQTT_MAX_PACKET_SIZE];
+  if (ptr->capability & Moist1)
+  {
+    sprintf(payload, "{%s\"m1\":%d}\n", GetGeohash(ptr), ptr->moist1.value );
+    mqtt.publish(topic, payload);
+  }
+}
+
+void SendMoist2JsonReport(SensorReport *ptr, char * topic)
+{
+  char payload[MQTT_MAX_PACKET_SIZE];
+  if (ptr->capability & Moist2)
+  {
+    sprintf(payload, "{%s\"m2\":%d}\n", GetGeohash(ptr), ptr->moist2.value );
+    mqtt.publish(topic, payload);
+  }
+}
+
+void SendAirHumJsonReport(SensorReport *ptr, char * topic)
+{
+  char payload[MQTT_MAX_PACKET_SIZE];
+  if (ptr->capability & AirTempHum)
+  {
+    sprintf(payload, "{%s\"at\":%f,\"ah\":%f}\n", GetGeohash(ptr), ptr->airTempHumidity.airtemp.value, ptr->airTempHumidity.airhum.value );
+    mqtt.publish(topic, payload);
+  }
+}
+
+
+void SendGndTmpJsonReport(SensorReport *ptr, char * topic)
+{
+  char payload[MQTT_MAX_PACKET_SIZE];
+  if (ptr->capability & GndTemp)
+  {
+    sprintf(payload, "{%s\"gt\":%f}\n", GetGeohash(ptr), ptr->gndTemp.value );
+    mqtt.publish(topic, payload);
+  }
+}
+
+
+void SendSysJsonReport(SensorReport *ptr, char * topic)
+{
+  char payload[MQTT_MAX_PACKET_SIZE];
+  sprintf(payload, "{%s\"volts\":%f,\"version\":%d}\n", GetGeohash(ptr), ptr->volts.value, ptr->version );
+  mqtt.publish(topic, payload);
+}
+
+void SendGpsReport(SensorReport *ptr, char * topic)
+{
+  char payload[MQTT_MAX_PACKET_SIZE];
+  if (ptr->capability & GPS)
+  {
+    sprintf(payload, "{%s\"lat\":%f,\"lng\":%f,\"alt\":%f,\"sats\":%d,\"hdop\":%d}\n", GetGeohash(ptr), 
+          ptr->gps.lat, ptr->gps.lng ,ptr->gps.alt ,ptr->gps.sats ,ptr->gps.hdop );
+    mqtt.publish(topic, payload);
+  }
+}
+
+void SendMQTT(SensorReport *report) {
   uint8_t array[6];
   esp_efuse_mac_get_default(array);
   char macStr[18];
@@ -521,53 +603,20 @@ void SendMQTT(SensorReport report) {
   DisplayPacket(report);
 
   char topic[32];
-  sprintf(topic, "bongo/%02x%02x%02x%02x%02x%02x/sensor", report.id.id[0], report.id.id[1], report.id.id[2], report.id.id[3], report.id.id[4], report.id.id[5]);
+  sprintf(topic, "bongo/%02x%02x%02x%02x%02x%02x/sensor", report->id.id[0], report->id.id[1], report->id.id[2], report->id.id[3], report->id.id[4], report->id.id[5]);
 
-  char payload[MQTT_MAX_PACKET_SIZE];
-
-  GetSys1JsonReport(report, payload);
-  mqtt.publish(topic, payload);
-
-  GetSys2JsonReport(report, payload);
-  mqtt.publish(topic, payload);
-
-  GetDistanceJsonReport(report, payload);
-  mqtt.publish(topic, payload);
-
-  GetMoistJsonReport(report, payload);
-  mqtt.publish(topic, payload);
+  SendSysJsonReport(report, topic);
+  SendDistanceJsonReport(report, topic);
+  SendMoist1JsonReport(report, topic);
+  SendMoist2JsonReport(report, topic);
+  SendAirHumJsonReport(report, topic);
+  SendGndTmpJsonReport(report, topic);
+  SendGpsReport(report, topic);
 
   delay(1000);
 
   mqtt.disconnect();
 }
-
-void GetDistanceJsonReport(SensorReport ptr, char * buf)
-{
-    const char *geohash = hasher.encode(ptr.gps.lat, ptr.gps.lng);
-    sprintf(buf, "{\"geohash\":\"%s\",\"dist\":%f}\n", geohash, ptr.distance.value );
-}
-
-void GetMoistJsonReport(SensorReport ptr, char * buf)
-{
-    const char *geohash = hasher.encode(ptr.gps.lat, ptr.gps.lng);
-    sprintf(buf, "{\"geohash\":\"%s\",\"gt\":%.2g,\"at\":%f,\"ah\":%f,\"m1\":%d,\"m2\":%d}\n", 
-          geohash, ptr.gndTemp.value,ptr.airTempHumidity.airtemp.value,ptr.airTempHumidity.airhum.value, ptr.moist1.value ,ptr.moist2.value );
-}
-
-void GetSys1JsonReport(SensorReport ptr, char * buf)
-{
-    sprintf(buf, "{\"lat\":%f,\"lng\":%f,\"alt\":%f,\"sats\":%d,\"hdop\":%d}\n", 
-          ptr.gps.lat, ptr.gps.lng ,ptr.gps.alt ,ptr.gps.sats ,ptr.gps.hdop );
-}
-
-void GetSys2JsonReport(SensorReport ptr, char * buf)
-{
-    const char *geohash = hasher.encode(ptr.gps.lat, ptr.gps.lng);
-    sprintf(buf, "{\"geohash\":\"%s\",\"volts\":%f}\n", 
-          geohash, ptr.volts.value );
-}
-
 
 #ifdef HASPSRAM
 

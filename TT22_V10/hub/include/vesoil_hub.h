@@ -108,11 +108,7 @@ void startLoRa();
 void doModemStart();
 bool doNetworkConnect();
 void doSetupMQTT();
-void SendMQTT(SensorReport report);
-void GetDistanceJsonReport(SensorReport ptr, char * buf);
-void GetMoistJsonReport(SensorReport ptr, char * buf);
-void GetSys1JsonReport(SensorReport ptr, char * buf);
-void GetSys2JsonReport(SensorReport ptr, char * buf);
+void SendMQTT(SensorReport *report);
 void InitOLED();
 
 #ifdef HASPSRAM
