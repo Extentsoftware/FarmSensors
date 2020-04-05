@@ -34,12 +34,11 @@ static const char * TAG = "Sensor";
 #include <vesoil.h>
 #include "vesoil_sensor.h"
 
-
 OneWire oneWire(ONE_WIRE_BUS);
+Adafruit_ADS1115 ads(ADC_ADDR);
 DallasTemperature tmpsensors(&oneWire);
 TinyGPSPlus gps;                            
 DHT_Unified dht(DHTPIN, DHT11);
-Adafruit_ADS1115 ads(ADC_ADDR);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 AsyncEventSource events("/events");
@@ -127,6 +126,9 @@ void ReadGroundTemp(SensorTemp *report) {
   tmpsensors.setResolution(12);  
   tmpsensors.setCheckForConversion(true);
 
+
+  Serial.printf("%d gnd temp sensor devices connected\n", tmpsensors.getDeviceCount());
+
   for (int i=0;i<3;i++)
   {
     tmpsensors.requestTemperatures();
@@ -144,6 +146,7 @@ void ReadAirTempHumidity(SensorAirTmp *report) {
   // DHT-11
   dht.begin();
   sensor_t sensor;
+
   dht.temperature().getSensor(&sensor);
   delay(sensor.min_delay / 1000);
 
@@ -154,10 +157,16 @@ void ReadAirTempHumidity(SensorAirTmp *report) {
   {
     report->airtemp.value = event.temperature;
   }
+  else
+    report->airtemp.value = 0;
+
+  dht.humidity().getEvent(&event);
   if (!isnan(event.relative_humidity)) 
   {
     report->airhum.value = event.relative_humidity;
   }
+  else
+    report->airhum.value = 0;
 }
                                                                                  
 void ReadMoisture1(SensorMoisture *report)
@@ -181,7 +190,7 @@ void ReadMoisture2(SensorMoisture *report)
 
   if (config.capability & Moist2)
   {
-    int m1 = ads.readADC_SingleEnded(0);
+    int m1 = ads.readADC_SingleEnded(1);
     report->value = m1;
   }
 }
@@ -235,12 +244,13 @@ void ReadVolts(SensorVoltage * report) {
 void getSample(SensorReport *report) {
   ReadGPSData(&report->gps);
   ReadVolts(&report->volts);
+
   ReadGroundTemp( &report->gndTemp );
   ReadDistance( &report->distance );
   ReadAirTempHumidity( &report->airTempHumidity);
-  esp_efuse_mac_get_default(report->id.id);
   ReadMoisture1(&report->moist1);
   ReadMoisture2(&report->moist2);
+  esp_efuse_mac_get_default(report->id.id);
 }
 
 
@@ -484,7 +494,7 @@ void getSampleAndSend() {
   SensorReport report;
   memset( &report, 0, sizeof(report));
   report.capability = config.capability;
-  
+
   power.power_sensors(true);   // turn on power to the sensor bus
   startLoRa();
   delay(10);  
@@ -523,7 +533,8 @@ void setup() {
 
   power.begin();
   power.power_sensors(false);
-  power.power_peripherals(false);
+  power.power_peripherals(true);
+  power.print_status();
 
   pinMode(BTN1,INPUT);         // Button 1
 
@@ -531,7 +542,7 @@ void setup() {
 
   // check we have enough juice
   float currentVoltage = power.get_battery_voltage();
-  if (currentVoltage!=0 && currentVoltage<config.txvolts)
+  if (currentVoltage!= -1  && currentVoltage!=0 && currentVoltage<config.txvolts)
   {
     Serial.printf("Battery Voltage too low: %f\n", currentVoltage);
     power.flashlight(ERR_LOWPOWER);

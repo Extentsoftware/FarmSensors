@@ -9,10 +9,7 @@
 #define PREAMBLE      8
 #define TXPOWER      20   // max transmit power
 #define MINBATVOLTS 2.7   // minimum voltage on battery - if lower, device goes to deep sleep to recharge
-#define ONE_WIRE_BUS  2   // used for Dallas temp sensor
 
-#define ADC_ADDR     0x48    // Base address of ADS1115
-#define DHTPIN       25   // DHT11/DHT22
 #define SCK           5   // GPIO5  -- SX1278's SCK
 #define MISO         19   // GPIO19 -- SX1278's MISnO
 #define MOSI         27   // GPIO27 -- SX1278's MOSI
@@ -22,8 +19,11 @@
 #define GPSBAUD      9600
 
 
-#define TRIGPIN      0 // 13 // ultrasound
-#define ECHOPIN      2  // ultrasound
+#define ADC_ADDR     0x48 // Base address of ADS1115
+#define DHTPIN       15   // DHT11/DHT22
+#define TRIGPIN      0    // 13 // ultrasound
+#define ECHOPIN      2    // ultrasound
+#define ONE_WIRE_BUS 25   // used for Dallas temp sensor
 
 
 #ifdef TTGO_LORA32_V1
