@@ -122,12 +122,12 @@ void ReadGroundTemp(SensorTemp *report) {
     return;
 
   pinMode(ONE_WIRE_BUS,INPUT_PULLUP);
+  oneWire.reset();
   tmpsensors.begin();
   tmpsensors.setResolution(12);  
   tmpsensors.setCheckForConversion(true);
-
-
-  Serial.printf("%d gnd temp sensor devices connected\n", tmpsensors.getDeviceCount());
+  
+  Serial.printf("%d 1-Wire devices, %d DS18L\n", tmpsensors.getDeviceCount(),tmpsensors.getDS18Count());
 
   for (int i=0;i<3;i++)
   {
