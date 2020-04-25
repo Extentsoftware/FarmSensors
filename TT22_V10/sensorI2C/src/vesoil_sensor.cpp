@@ -110,9 +110,8 @@ void  deepSleep(uint64_t timetosleep) {
   Serial.printf("Preparing sleep mode for %" PRId64  " seconds\n", timetosleep);
   
   stopGPS();
-
   stopLoRa();
-
+  power.led_onoff(false);
   power.deep_sleep(timetosleep);
 }
 
@@ -242,6 +241,7 @@ void ReadVolts(SensorVoltage * report) {
 }
 
 void getSample(SensorReport *report) {
+  power.power_sensors(true);   // turn on power to the sensor bus
   ReadGPSData(&report->gps);
   ReadVolts(&report->volts);
 
@@ -251,6 +251,7 @@ void getSample(SensorReport *report) {
   ReadMoisture1(&report->moist1);
   ReadMoisture2(&report->moist2);
   esp_efuse_mac_get_default(report->id.id);
+  power.power_sensors(false);   // turn off power to the sensor bus
 }
 
 
@@ -261,12 +262,14 @@ void startGPS() {
   power.power_GPS(true);
   Serial1.begin(GPSBAUD, SERIAL_8N1, GPSRX, GPSTX);
   Serial.println("Wake GPS");
+
   int data = -1;
   do {
     for(int i = 0; i < 20; i++){ //send random to trigger respose
         Serial1.write(0xFF);
       }
-    data = Serial1.read();
+      data = Serial1.read();
+      Serial.printf("%d ", data);
   } while(data == -1);
   Serial.println("GPS is awake");
 }
@@ -449,8 +452,10 @@ STARTUPMODE getStartupMode() {
 
   // get startup by detecting how many seconds the button is held
   int btndown = 0;
+  Serial.println(digitalRead(BTN1));
   while (digitalRead(BTN1)==0)
   {
+    Serial.println(digitalRead(BTN1));
     delay(interval);
     btndown += interval;
   }
@@ -495,11 +500,7 @@ void getSampleAndSend() {
   memset( &report, 0, sizeof(report));
   report.capability = config.capability;
 
-  power.power_sensors(true);   // turn on power to the sensor bus
-  startLoRa();
-  delay(10);  
   getSample(&report);
-  power.power_sensors(false);   // turn off power to the sensor bus
 
   char *stime = asctime(gmtime(&report.gps.time));
   stime[24]='\0';
@@ -511,17 +512,16 @@ void getSampleAndSend() {
   report.moist1.value ,report.moist2.value, report.volts.value, report.distance.value );
   
   // send packet
+  startLoRa();
+  delay(10);  
   power.led_onoff(true);
-
   LoRa.beginPacket();
   Serial.println("LoRa begin");
   LoRa.write( (const uint8_t *)&report, sizeof(SensorReport));
   Serial.println("LoRa Write");
   LoRa.endPacket();
   Serial.println("LoRa End");
-
   power.led_onoff(false);
-
   stopLoRa();
 }
 
@@ -531,18 +531,26 @@ void setup() {
 
   digitalWrite(BUSPWR, LOW); // turn off power to the sensor bus
 
+  Serial.println("Start 1");
   power.begin();
+  Serial.println("Start 2");
   power.power_sensors(false);
+  Serial.println("Start 3");
   power.power_peripherals(true);
+  Serial.println("Start 4");
   power.print_status();
+  Serial.println("Start 5");
+  power.flashlight(ERR_LOWPOWER);
+  Serial.println("Start 6");
 
   pinMode(BTN1,INPUT);         // Button 1
 
   STARTUPMODE startup_mode = getStartupMode();
 
+  Serial.println("Start 7");
   // check we have enough juice
   float currentVoltage = power.get_battery_voltage();
-  if (currentVoltage!= -1  && currentVoltage!=0 && currentVoltage<config.txvolts)
+  if (currentVoltage>2 && currentVoltage<config.txvolts)
   {
     Serial.printf("Battery Voltage too low: %f\n", currentVoltage);
     power.flashlight(ERR_LOWPOWER);
