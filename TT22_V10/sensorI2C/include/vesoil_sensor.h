@@ -8,7 +8,7 @@
 #define SYNCWORD 0xa5a5
 #define PREAMBLE      8
 #define TXPOWER      20   // max transmit power
-#define MINBATVOLTS 2.7   // minimum voltage on battery - if lower, device goes to deep sleep to recharge
+#define MINBATVOLTS   3   // minimum voltage on battery - if lower, device goes to deep sleep to recharge
 
 #define SCK           5   // GPIO5  -- SX1278's SCK
 #define MISO         19   // GPIO19 -- SX1278's MISnO
@@ -20,13 +20,12 @@
 
 
 #define ADC_ADDR     0x48 // Base address of ADS1115
-#define DHTPIN       15   // DHT11/DHT22
-#define TRIGPIN      0    // 13 // ultrasound
-#define ECHOPIN      2    // ultrasound
-#define ONE_WIRE_BUS 25   // used for Dallas temp sensor
 
 
 #ifdef TTGO_LORA32_V1
+#define TRIGPIN      13    // 13 // ultrasound
+#define ECHOPIN      2    // ultrasound
+#define ONE_WIRE_BUS 25   // used for Dallas temp sensor
 
 #define OLED_SDA      4
 #define OLED_SCL      15
@@ -41,21 +40,28 @@
 #endif
 
 #ifdef TTGO_TBEAM_V07
+#define TRIGPIN      13    // 13 // ultrasound
+#define ECHOPIN      2    // ultrasound
+#define ONE_WIRE_BUS 25   // used for Dallas temp sensor
 
 #define GPSRX         12
 #define GPSTX         15   
-#define PWRSDA        21    
-#define PWRSCL        22
-#define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected
-#define BUSPWR        4       // GPIO04 -- sensor bus power control
+#define PWRSDA        TBP_NO_PIN    
+#define PWRSCL        TBP_NO_PIN
+#define BATTERY_PIN   35            // battery level measurement pin, here is the voltage divider connected
+#define BUSPWR        TBP_NO_PIN    // GPIO04 -- sensor bus power control
 #define HASPSRAM
 #define PSRAMSIZE     64000000
 #define STORESIZE     PSRAMSIZE / sizeof(SensorReport)
-#define BTN1          39      // V07 board is GPIO39
+#define BTN1          39           // V07 board is GPIO39
+#define DHTPIN        32           // DHT11/DHT22
 
 #endif
 
 #ifdef TTGO_TBEAM_V10
+#define TRIGPIN       14   // 13 // ultrasound
+#define ECHOPIN       13   // ultrasound
+#define ONE_WIRE_BUS  25   // used for Dallas temp sensor
 
 #define GPSRX         34   
 #define GPSTX         12   
@@ -69,6 +75,7 @@
 #define STORESIZE     PSRAMSIZE / sizeof(SensorReport)
 
 #define BTN1          38      // GPIO38 On board button (V07 board is GPIO39)
+#define DHTPIN        15      // DHT11/DHT22
 
 #endif
 
@@ -99,7 +106,7 @@ struct SensorConfig
   char  password[16] = "";
   int   gps_timeout = 4 * 60;    // wait n seconds to get GPS fix
   int   failedGPSsleep = 5 * 60; // sleep this long if failed to get GPS
-  int   reportEvery =      60;   // get sample every n seconds
+  int   reportEvery =  60 * 60;  // get sample every n seconds
   int   fromHour = 6;            // between these hours
   int   toHour = 22;             // between these hours
   long  frequency = FREQUENCY;   // LoRa transmit frequency
