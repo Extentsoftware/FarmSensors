@@ -98,7 +98,7 @@ void notFound(AsyncWebServerRequest *request);
 void setupWifi();
 void exitWifi();
 void toggleWifi();
-void showBlock(int packetSize);
+void processLoraBlock(int packetSize);
 void readLoraData(int packetSize);
 SensorReport *GetFromStore();
 void getConfig(STARTUPMODE startup_mode);

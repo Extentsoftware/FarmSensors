@@ -22,6 +22,8 @@ static const char * TAG = "Hub";
 #define TINY_GSM_YIELD() { delay(2); }
 #define MQTT_MAX_PACKET_SIZE 512
 
+
+const char * Msg_Quality = "Quality";
 const char * Msg_Network = "Network";
 const char * Msg_GPRS    = "GPRS";
 const char * Msg_MQTT    = "MQTT";
@@ -123,7 +125,7 @@ void setup() {
 #endif
 
   doModemStart();
-  doNetworkConnect();
+  while (!doNetworkConnect());
   doSetupMQTT();
 
   Serial.println("start lora");
@@ -176,7 +178,6 @@ void getConfig(STARTUPMODE startup_mode) {
     memcpy( &config, &default_config, sizeof(HubConfig));
   }
 }
-
 
 STARTUPMODE getStartupMode() {
   const int interval = 100;
@@ -259,12 +260,12 @@ void readLoraData(int packetSize) {
     rssi = LoRa.packetRssi();
     pfe = LoRa.packetFrequencyError();
     Serial.printf("%d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
-    showBlock(packetSize);  
+    processLoraBlock(packetSize);  
     delay(100);
   }
 }
 
-void showBlock(int packetSize) {
+void processLoraBlock(int packetSize) {
   SensorReport report;
 
   if (packetSize == sizeof(SensorReport))
@@ -332,7 +333,6 @@ void oneshot_timer_callback(void* arg)
 {
   exitWifi();
 }
-
 
 void setupWifiTimer() {
 
@@ -441,7 +441,6 @@ void SetTwoLineMsg(const char * msg0, const char * msg1)
     SetSimpleMsg(msg1,1, false);
 }
 
-// incoming message
 void mqttCallback(char* topic, byte* payload, unsigned int len) {
   SerialMon.print("Message arrived [");
   SerialMon.print(topic);
@@ -456,28 +455,36 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
 
 void doModemStart()
 {
-  SetSimpleMsg("Starting GSM");
+  SetSimpleMsg("Starting Modem");
   delay(1000);
 
   TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,9600);
-  delay(2000);  
+  // delay(2000);  
   modem.restart();  
   String modemInfo = modem.getModemInfo();
   delay(1000);  
-  SetSimpleMsg("Started GSM");
+  SetSimpleMsg("Started Modem");
 }
 
 bool doNetworkConnect()
 {
-  SetTwoLineMsg(Msg_Network, Msg_Connecting);
+  int quality = modem.getSignalQuality();
+  char buf[64];
+  sprintf(buf, "%d", quality);
+  SetTwoLineMsg(Msg_Quality,buf);
+  delay(2000);  
+
   boolean status =  modem.waitForNetwork();
+
   SetTwoLineMsg(Msg_Network,(char*)(status ? Msg_Connected : Msg_Failed));
+  delay(1000);  
 
   if (status)
   {
     SetTwoLineMsg(Msg_GPRS, Msg_Connecting);
     status = modem.gprsConnect(apn, gprsUser, gprsPass);
     SetTwoLineMsg(Msg_GPRS,(char*)(status ? Msg_Connected : Msg_Failed));
+    delay(1000);  
   }
   return status;
 }
@@ -552,7 +559,6 @@ void SendAirHumJsonReport(SensorReport *ptr, char * topic)
   }
 }
 
-
 void SendGndTmpJsonReport(SensorReport *ptr, char * topic)
 {
   char payload[MQTT_MAX_PACKET_SIZE];
@@ -562,7 +568,6 @@ void SendGndTmpJsonReport(SensorReport *ptr, char * topic)
     mqtt.publish(topic, payload);
   }
 }
-
 
 void SendSysJsonReport(SensorReport *ptr, char * topic)
 {
