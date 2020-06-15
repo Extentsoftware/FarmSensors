@@ -17,7 +17,8 @@
 			"PLATFORMIO_CALLER": "vscode"
 		},
 		"files.associations": {
-			"functional": "cpp"
+			"functional": "cpp",
+			"*.tpp": "cpp"
 		}
 	}
 }
