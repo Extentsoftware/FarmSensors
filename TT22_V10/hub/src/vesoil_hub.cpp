@@ -4,6 +4,7 @@
 // https://github.com/LilyGO/TTGO-T-Beam
 // Pin map http://tinymicros.com/wiki/TTGO_T-Beam
 // https://github.com/Xinyuan-LilyGO/TTGO-T-Beam
+// https://github.com/LilyGO/TTGO-LORA32
 
 // environment variables
 // LOCALAPPDATA = C:\Users\username\AppData\Local
@@ -19,7 +20,6 @@ static const char * TAG = "Hub";
 #define TINY_GSM_USE_GPRS true
 #define TINY_GSM_USE_WIFI false
 #define GSM_PIN ""
-#define TINY_GSM_YIELD() { delay(2); }
 #define MQTT_MAX_PACKET_SIZE 512
 
 
@@ -31,12 +31,9 @@ const char * Msg_MQTT    = "MQTT";
 const char * Msg_Failed     = "Failed";
 const char * Msg_Connected  = "Connected";
 const char * Msg_Connecting = "Connecting";
+const char * Msg_FailedToConnect = "Failed Connection";
 
-// MQTT details
-const char* broker = "86.21.199.245";
-const char apn[]      = "wap.vodafone.co.uk"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
-const char gprsUser[] = "wap"; // GPRS User
-const char gprsPass[] = "wap"; // GPRS Password
+
 char gpsjson[32];
 
 #define APP_VERSION 1
@@ -134,6 +131,42 @@ void setup() {
 
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
 
+}
+
+void InitOLED() {
+  pinMode(OLED_RST,OUTPUT);
+  digitalWrite(OLED_RST, LOW);    // set GPIO16 low to reset OLED
+  delay(50); 
+  digitalWrite(OLED_RST, HIGH); // while OLED is running, must set GPIO16 in high、
+  delay(50); 
+
+  display.init();
+  display.flipScreenVertically();  
+}
+
+void SetSimpleMsg(String msg, int line=0, bool clear=true, const uint8_t font[]=ArialMT_Plain_16)
+{
+#ifdef HAS_OLED
+  if (clear) display.clear();
+  display.setFont(font);
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.drawString(0, line * 16, msg);
+  display.display();
+#endif
+  SerialMon.println(msg);
+}
+
+void SetTwoLineMsg(const char * msg0, const char * msg1)
+{
+    SetSimpleMsg(msg0);
+    SetSimpleMsg(msg1,1, false);
+}
+
+void SetThreeLineMsg(String msg0, String msg1, String msg2)
+{
+    SetSimpleMsg(msg0);
+    SetSimpleMsg(msg1,1, false);
+    SetSimpleMsg(msg2,2, false);
 }
 
 void startLoRa() {
@@ -348,9 +381,9 @@ void setupWifiTimer() {
 
 void setupWifi() {
     WiFi.softAP(config.ssid);
-    Serial.printf("Entering WiFi mode\n");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.softAPIP());
+    String address = WiFi.softAPIP().toString();
+
+    SetThreeLineMsg("WiFi mode", "IP Address", address);
     
     wifiMode = true;
 
@@ -412,35 +445,6 @@ void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
 
-void InitOLED() {
-  pinMode(OLED_RST,OUTPUT);
-  digitalWrite(OLED_RST, LOW);    // set GPIO16 low to reset OLED
-  delay(50); 
-  digitalWrite(OLED_RST, HIGH); // while OLED is running, must set GPIO16 in high、
-  delay(50); 
-
-  display.init();
-  display.flipScreenVertically();  
-}
-
-void SetSimpleMsg(const char * msg, int line=0, bool clear=true, const uint8_t font[]=ArialMT_Plain_16)
-{
-#ifdef HAS_OLED
-  if (clear) display.clear();
-  display.setFont(font);
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  display.drawString(0, line * 16, msg);
-  display.display();
-#endif
-  SerialMon.println(msg);
-}
-
-void SetTwoLineMsg(const char * msg0, const char * msg1)
-{
-    SetSimpleMsg(msg0);
-    SetSimpleMsg(msg1,1, false);
-}
-
 void mqttCallback(char* topic, byte* payload, unsigned int len) {
   SerialMon.print("Message arrived [");
   SerialMon.print(topic);
@@ -466,25 +470,45 @@ void doModemStart()
   SetSimpleMsg("Started Modem");
 }
 
+bool waitForNetwork(uint32_t timeout_ms = 120000L) 
+{
+    for (uint32_t start = millis(); millis() - start < timeout_ms;) 
+    {
+      if (modem.isNetworkConnected()) 
+      { 
+        return true; 
+      }
+
+      delay(1000);
+      RegStatus s = modem.getRegistrationStatus();    
+      int quality = modem.getSignalQuality();
+      char buf1[32];
+      char buf2[32];
+      sprintf(buf1, "%s %d",Msg_Quality, quality);
+      sprintf(buf2, "%s %d",Msg_Network, s);
+      SetThreeLineMsg("Wait for network", buf1, buf2);
+    }
+    return false;
+}
+
 bool doNetworkConnect()
 {
-  int quality = modem.getSignalQuality();
-  char buf[64];
-  sprintf(buf, "%d", quality);
-  SetTwoLineMsg(Msg_Quality,buf);
-  delay(2000);  
 
-  boolean status =  modem.waitForNetwork();
+  boolean status = waitForNetwork();
 
   SetTwoLineMsg(Msg_Network,(char*)(status ? Msg_Connected : Msg_Failed));
-  delay(1000);  
+  delay(2000);  
 
   if (status)
   {
     SetTwoLineMsg(Msg_GPRS, Msg_Connecting);
-    status = modem.gprsConnect(apn, gprsUser, gprsPass);
+    status = modem.gprsConnect(config.apn, config.gprsUser, config.gprsPass);
     SetTwoLineMsg(Msg_GPRS,(char*)(status ? Msg_Connected : Msg_Failed));
     delay(1000);  
+  }
+  else
+  {
+    // modem.restart();
   }
   return status;
 }
@@ -492,7 +516,7 @@ bool doNetworkConnect()
 void doSetupMQTT()
 {
   // MQTT Broker setup
-  mqtt.setServer(broker, 1883);
+  mqtt.setServer(config.broker, 1883);
   mqtt.setCallback(mqttCallback);
 }
 
@@ -594,14 +618,18 @@ void SendMQTT(SensorReport *report) {
   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x", array[0], array[1], array[2], array[3], array[4], array[5]);
   bool gprsConnected = modem.isGprsConnected();
 
+  char *stime = asctime(gmtime(&report->gps.time));
+
   if (!gprsConnected)
     if (!doNetworkConnect())
       return;
 
+  SetThreeLineMsg(Msg_MQTT, Msg_Connecting, stime);
+
   boolean mqttConnected = mqtt.connect(macStr);
   if (!mqttConnected)
   {
-    SetTwoLineMsg(Msg_MQTT, Msg_Failed);
+    SetThreeLineMsg(Msg_MQTT, Msg_FailedToConnect, stime);
     return;
   }
 
