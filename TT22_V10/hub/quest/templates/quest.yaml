@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: quest
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+  name: {{ template "fullname" . }}
+spec:
+  clusterIP: 10.0.19.103
+  externalTrafficPolicy: Cluster
+  ports:
+    - name: tcp-8125-8125-9grzj
+      nodePort: 30804
+      port: 8125
+      protocol: TCP
+      targetPort: 8125
+    - name: tcp-80-80-5ghmh
+      nodePort: 30131
+      port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    k8s-app: quest
+  sessionAffinity: None
+  type: LoadBalancer
