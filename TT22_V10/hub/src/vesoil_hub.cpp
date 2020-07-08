@@ -143,6 +143,10 @@ void setup() {
   Serial.println("start lora");
   startLoRa();
 
+  networkStage = "Lora";
+  networkStatus = "Ready";
+
+  DisplayPage(currentPage);
 
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
 
@@ -173,10 +177,12 @@ void DisplayPage(int page)
     {
         // status
         case 0:
-          display.drawString(0, 0, "Network Status");
+          display.drawString(0, 0, "System Status");
           display.drawString(0, 16, networkStage);
           display.drawString(0, 32, networkStatus);
+#ifdef HAS_GSM
           display.drawString(0, 48, String("Q: ") + String(modem.getSignalQuality(), DEC));
+#endif
           break;
         case 1:
           display.drawString(0, 0, "Wifi Status");
