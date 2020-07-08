@@ -12,6 +12,8 @@
 static const char * TAG = "Hub";
 
 #define SerialMon Serial
+
+#ifdef HAS_GSM
 #define TINY_GSM_MODEM_SIM800
 #define TINY_GSM_RX_BUFFER   1024
 #define TINY_GSM_DEBUG SerialMon
@@ -22,7 +24,6 @@ static const char * TAG = "Hub";
 #define GSM_PIN ""
 #define MQTT_MAX_PACKET_SIZE 512
 
-
 const char * Msg_Quality = "Quality";
 const char * Msg_Network = "Network";
 const char * Msg_GPRS    = "GPRS";
@@ -32,9 +33,9 @@ const char * Msg_Failed     = "Failed";
 const char * Msg_Connected  = "Connected";
 const char * Msg_Connecting = "Connecting";
 const char * Msg_FailedToConnect = "Failed Connection";
-
-
 char gpsjson[32];
+#endif
+
 
 #define APP_VERSION 1
 
@@ -47,10 +48,14 @@ char gpsjson[32];
 #include <AsyncTCP.h>
 #include <Preferences.h>
 #include <TBeamPower.h>
+
+#ifdef HAS_GSM
 #include <TinyGsmClient.h>
 #include <PubSubClient.h>
 #include <geohash.h>
 #include <SoftwareSerial.h>
+#endif
+
 #include "vesoil_hub.h"
 
 #ifdef HAS_OLED
@@ -58,30 +63,38 @@ char gpsjson[32];
 SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
 #endif
 
+#ifdef HAS_GSM
 SoftwareSerial SerialAT(AT_RX, AT_TX, false);
-
 TinyGsm modem(SerialAT);
 TinyGsmClient client(modem);
 PubSubClient mqtt(client);
 GeoHash hasher(8);
+#endif
+
 
 SensorReport* store;
 int currentStoreWriter=0;
 int currentStoreReader=0;
 AsyncWebServer server(80);
 Preferences preferences;
-float snr = 0;
-float rssi = 0;
-long pfe=0;
+float snr = 0;                        // signal noise ratio
+float rssi = 0;                       // Received Signal Strength Indicator
+long  pfe=0;                          // frequency error
 
 int badpacket=0;
 bool wifiMode=false;
-int buttonState = HIGH;       // the current reading from the input pin
-int lastButtonState = HIGH;   // the previous reading from the input pin
-// the following variables are unsigned longs because the time, measured in
-// milliseconds, will quickly become a bigger number than can be stored in an int.
-unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
-unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
+int buttonState = HIGH;               // the current reading from the input pin
+int lastButtonState = HIGH;           // the previous reading from the input pin
+                                      // the following variables are unsigned longs because the time, measured in
+                                      // milliseconds, will quickly become a bigger number than can be stored in an int.
+unsigned long lastDebounceTime = 0;   // the last time the output pin was toggled
+unsigned long debounceDelay = 50;     // the debounce time; increase if the output flickers
+String address;                       // current ipaddress
+String networkStage;
+String networkStatus;
+int currentPage=0;
+SensorReport report;                  // Last report from a sensor
+bool haveReport=false;
 
 struct HubConfig config;
 
@@ -121,9 +134,11 @@ void setup() {
   Serial.printf("Battery voltage %f\n", vBat);
 #endif
 
+#ifdef HAS_GSM
   doModemStart();
   while (!doNetworkConnect());
   doSetupMQTT();
+#endif
 
   Serial.println("start lora");
   startLoRa();
@@ -131,6 +146,95 @@ void setup() {
 
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
 
+}
+
+void ShowNextPage()
+{
+    currentPage++;
+
+    if (!haveReport && currentPage>1)
+      currentPage=0;
+
+    if (currentPage==9)
+      currentPage=0;
+
+    DisplayPage(currentPage);
+}
+
+void DisplayPage(int page)
+{
+    char sensor[32];
+
+    display.clear();
+    display.setFont(ArialMT_Plain_10);
+    display.setTextAlignment(TEXT_ALIGN_LEFT);
+
+    switch(currentPage)
+    {
+        // status
+        case 0:
+          display.drawString(0, 0, "Network Status");
+          display.drawString(0, 16, networkStage);
+          display.drawString(0, 32, networkStatus);
+          display.drawString(0, 48, String("Q: ") + String(modem.getSignalQuality(), DEC));
+          break;
+        case 1:
+          display.drawString(0, 0, "Wifi Status");
+          if (wifiMode)
+          {
+            display.drawString(0, 16, "On");
+            display.drawString(0, 32, address);
+          }
+          else
+          {
+            display.drawString(0, 16, "Off");
+          }
+          break;
+        case 2:
+          display.drawString(0, 0, "Sensor Id");
+          sprintf(sensor, "%02x%02x%02x%02x%02x%02x/sensor", report.id.id[0], report.id.id[1], report.id.id[2], report.id.id[3], report.id.id[4], report.id.id[5]);          
+          display.drawString(0, 16, sensor );
+          display.drawString(0, 32, String("Batt ") + String(report.volts.value, 2) );
+          break;
+        case 3:
+          display.drawString(0, 0, "GPS #1");
+          display.drawString(0, 16, asctime(gmtime(&report.gps.time)));
+          display.drawString(0, 32, String("sats ") + String((int)report.gps.sats, DEC));
+          display.drawString(0, 48, String("hdop ") + String((int)report.gps.hdop,DEC));
+          break;
+        case 4:
+          display.drawString(0, 0, "GPS #2");
+          display.drawString(0, 16, String("Lat ") + String(report.gps.lat, 6));
+          display.drawString(0, 32, String("Lng ") + String(report.gps.lng, 6));
+          display.drawString(0, 48, String("alt ") + String(report.gps.alt));
+          break;
+        case 5:
+          display.drawString(0, 0, "Distance");
+          display.drawString(0, 16, String(report.distance.value, 1) + String(" mm") );
+          break;
+        case 6:
+          display.drawString(0, 0, "Temp");
+          display.drawString(0, 16, String("Air Tmp. ") + String(report.airTempHumidity.airtemp.value, 1) );
+          display.drawString(0, 32, String("Air Hum. ") + String(report.airTempHumidity.airhum.value, 1) );
+          display.drawString(64, 16, String("Gnd ") + String(report.gndTemp.value, 1) );
+          break;
+        case 7:
+          display.drawString(0, 0, "Moisture");
+          display.drawString(0, 16, String("M1. ") + String(report.moist1.value, DEC) );
+          display.drawString(0, 32, String("M2. ") + String(report.moist2.value, DEC) );
+          break;
+        case 8:
+          display.drawString(0, 0, "Signal");
+          display.drawString(0, 16, String("rssi ") + String(rssi, 2));
+          display.drawString(0, 32, String("pfe  ") + String(pfe, DEC));
+
+          display.drawString(64, 16, String("snr  ") + String(snr, 2));
+          display.drawString(64, 32, String("bad: ") + String(badpacket,DEC));
+          break;
+        default:
+          break;
+    }
+    display.display();
 }
 
 void InitOLED() {
@@ -142,57 +246,6 @@ void InitOLED() {
 
   display.init();
   display.flipScreenVertically();  
-}
-
-void SetSimpleMsg(String msg, int line=0, bool clear=true, const uint8_t font[]=ArialMT_Plain_16)
-{
-#ifdef HAS_OLED
-  if (clear) display.clear();
-  display.setFont(font);
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  display.drawString(0, line * 16, msg);
-  display.display();
-#endif
-  SerialMon.println(msg);
-}
-
-void SetTwoLineMsg(const char * msg0, const char * msg1)
-{
-    SetSimpleMsg(msg0);
-    SetSimpleMsg(msg1,1, false);
-}
-
-void SetThreeLineMsg(String msg0, String msg1, String msg2)
-{
-    SetSimpleMsg(msg0);
-    SetSimpleMsg(msg1,1, false);
-    SetSimpleMsg(msg2,2, false);
-}
-
-void startLoRa() {
-
-  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth);
-
-  SPI.begin(SCK,MISO,MOSI,SS);
-  LoRa.setPins(SS,RST,DI0);
-
-  int result = LoRa.begin(config.frequency);  
-  if (!result) 
-    Serial.printf("Starting LoRa failed: err %d\n", result);
-  else
-    Serial.println("Started LoRa OK");
-    
-  LoRa.setPreambleLength(config.preamble);
-  LoRa.setSyncWord(config.syncword);    
-  LoRa.setSignalBandwidth(config.bandwidth);
-  LoRa.setSpreadingFactor(config.spreadFactor);
-  LoRa.setCodingRate4(config.codingRate);
-  if (config.enableCRC)
-      LoRa.enableCrc();
-    else 
-      LoRa.disableCrc();
-
-  LoRa.receive();
 }
 
 void getConfig(STARTUPMODE startup_mode) {
@@ -273,7 +326,8 @@ bool detectDebouncedBtnPush() {
 
 void loop() {
   if (detectDebouncedBtnPush())
-    toggleWifi();
+    ShowNextPage();
+    //toggleWifi();
 
   int packetSize = LoRa.parsePacket();
   readLoraData(packetSize);
@@ -287,6 +341,32 @@ void SystemCheck() {
   ESP_LOGI("TAG", "HEAP  size  %u free  %u", ESP.getHeapSize(), ESP.getFreeHeap());
 }
 
+void startLoRa() {
+
+  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth);
+
+  SPI.begin(SCK,MISO,MOSI,SS);
+  LoRa.setPins(SS,RST,DI0);
+
+  int result = LoRa.begin(config.frequency);  
+  if (!result) 
+    Serial.printf("Starting LoRa failed: err %d\n", result);
+  else
+    Serial.println("Started LoRa OK");
+    
+  LoRa.setPreambleLength(config.preamble);
+  LoRa.setSyncWord(config.syncword);    
+  LoRa.setSignalBandwidth(config.bandwidth);
+  LoRa.setSpreadingFactor(config.spreadFactor);
+  LoRa.setCodingRate4(config.codingRate);
+  if (config.enableCRC)
+      LoRa.enableCrc();
+    else 
+      LoRa.disableCrc();
+
+  LoRa.receive();
+}
+
 void readLoraData(int packetSize) {  
   if (packetSize>0) { 
     snr = LoRa.packetSnr();
@@ -294,12 +374,12 @@ void readLoraData(int packetSize) {
     pfe = LoRa.packetFrequencyError();
     Serial.printf("%d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
     processLoraBlock(packetSize);  
+    DisplayPage(currentPage);
     delay(100);
   }
 }
 
-void processLoraBlock(int packetSize) {
-  SensorReport report;
+void processLoraBlock(int packetSize) { 
 
   if (packetSize == sizeof(SensorReport))
   {
@@ -319,8 +399,13 @@ void processLoraBlock(int packetSize) {
             report.moist1.value,
             report.moist2.value,
             report.volts.value, rssi, snr, pfe );
-        
+
+      haveReport = true;
+
+#ifdef HAS_GSM
         SendMQTT(&report);
+#endif
+
 #ifdef HASPSRAM        
         AddToStore(report);
 #endif
@@ -381,10 +466,8 @@ void setupWifiTimer() {
 
 void setupWifi() {
     WiFi.softAP(config.ssid);
-    String address = WiFi.softAPIP().toString();
+    address = WiFi.softAPIP().toString();
 
-    SetThreeLineMsg("WiFi mode", "IP Address", address);
-    
     wifiMode = true;
 
     setupWifiTimer();
@@ -445,6 +528,8 @@ void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
 
+#ifdef HAS_GSM
+
 void mqttCallback(char* topic, byte* payload, unsigned int len) {
   SerialMon.print("Message arrived [");
   SerialMon.print(topic);
@@ -458,8 +543,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
 }
 
 void doModemStart()
-{
-  SetSimpleMsg("Starting Modem");
+{  
+  networkStage = "Modem";
+  networkStatus = "Starting";
+  DisplayPage(currentPage);
   delay(1000);
 
   TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,9600);
@@ -467,7 +554,7 @@ void doModemStart()
   modem.restart();  
   String modemInfo = modem.getModemInfo();
   delay(1000);  
-  SetSimpleMsg("Started Modem");
+  networkStatus = "Started";
 }
 
 bool waitForNetwork(uint32_t timeout_ms = 120000L) 
@@ -483,10 +570,10 @@ bool waitForNetwork(uint32_t timeout_ms = 120000L)
       RegStatus s = modem.getRegistrationStatus();    
       int quality = modem.getSignalQuality();
       char buf1[32];
-      char buf2[32];
       sprintf(buf1, "%s %d",Msg_Quality, quality);
-      sprintf(buf2, "%s %d",Msg_Network, s);
-      SetThreeLineMsg("Wait for network", buf1, buf2);
+      networkStage = "Wait for network";
+      networkStatus = buf1;
+      DisplayPage(currentPage);
     }
     return false;
 }
@@ -496,14 +583,23 @@ bool doNetworkConnect()
 
   boolean status = waitForNetwork();
 
-  SetTwoLineMsg(Msg_Network,(char*)(status ? Msg_Connected : Msg_Failed));
+  networkStage = Msg_Network;
+  networkStatus = (char*)(status ? Msg_Connected : Msg_Failed);
+  DisplayPage(currentPage);
+
   delay(2000);  
 
   if (status)
   {
-    SetTwoLineMsg(Msg_GPRS, Msg_Connecting);
+    networkStage = Msg_GPRS;
+    networkStatus = Msg_Connecting;
+    DisplayPage(currentPage);
+    
     status = modem.gprsConnect(config.apn, config.gprsUser, config.gprsPass);
-    SetTwoLineMsg(Msg_GPRS,(char*)(status ? Msg_Connected : Msg_Failed));
+
+    networkStatus = (char*)(status ? Msg_Connected : Msg_Failed);
+    DisplayPage(currentPage);
+
     delay(1000);  
   }
   else
@@ -518,18 +614,6 @@ void doSetupMQTT()
   // MQTT Broker setup
   mqtt.setServer(config.broker, 1883);
   mqtt.setCallback(mqttCallback);
-}
-
-void DisplayPacket(SensorReport *report) {
-  char buf[64];
-  sprintf(buf, "%02x%02x%02x%02x%02x%02x", report->id.id[0], report->id.id[1], report->id.id[2], report->id.id[3], report->id.id[4], report->id.id[5]);
-  char *stime = asctime(gmtime(&report->gps.time));
-  SetSimpleMsg(stime, 0, true, ArialMT_Plain_10);
-  SetSimpleMsg(buf, 1, false, ArialMT_Plain_10);
-  sprintf(buf,"Dist: %d V: %f", (int)(report->distance.value), report->volts.value);
-  SetSimpleMsg(buf, 2, false, ArialMT_Plain_10);
-  sprintf(buf,"M1: %d M2: %d", report->moist1.value, report->moist2.value);
-  SetSimpleMsg(buf, 3, false, ArialMT_Plain_10);
 }
 
 char *GetGeohash(SensorReport *ptr)
@@ -611,29 +695,31 @@ void SendGpsReport(SensorReport *ptr, char * topic)
   }
 }
 
-void SendMQTT(SensorReport *report) {
+bool SendMQTT(SensorReport *report) {
   uint8_t array[6];
   esp_efuse_mac_get_default(array);
   char macStr[18];
   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x", array[0], array[1], array[2], array[3], array[4], array[5]);
   bool gprsConnected = modem.isGprsConnected();
 
-  char *stime = asctime(gmtime(&report->gps.time));
-
   if (!gprsConnected)
     if (!doNetworkConnect())
-      return;
+      return false;
 
-  SetThreeLineMsg(Msg_MQTT, Msg_Connecting, stime);
+  networkStage = Msg_MQTT;
+  networkStatus = Msg_Connecting;
+  DisplayPage(currentPage);
 
   boolean mqttConnected = mqtt.connect(macStr);
   if (!mqttConnected)
   {
-    SetThreeLineMsg(Msg_MQTT, Msg_FailedToConnect, stime);
-    return;
+    networkStatus = Msg_FailedToConnect;
+    DisplayPage(currentPage);
+    return false;
   }
+  else
+      networkStatus = Msg_Connected;
 
-  DisplayPacket(report);
 
   char topic[32];
   sprintf(topic, "bongo/%02x%02x%02x%02x%02x%02x/sensor", report->id.id[0], report->id.id[1], report->id.id[2], report->id.id[3], report->id.id[4], report->id.id[5]);
@@ -649,7 +735,11 @@ void SendMQTT(SensorReport *report) {
   delay(1000);
 
   mqtt.disconnect();
+
+  return true;
 }
+
+#endif
 
 #ifdef HASPSRAM
 

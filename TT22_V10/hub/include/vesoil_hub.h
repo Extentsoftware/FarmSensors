@@ -112,8 +112,10 @@ void startLoRa();
 void doModemStart();
 bool doNetworkConnect();
 void doSetupMQTT();
-void SendMQTT(SensorReport *report);
+bool SendMQTT(SensorReport *report);
 void InitOLED();
+void DisplayPage(int page);
+void ShowNextPage();
 
 #ifdef HASPSRAM
 void AddToStore(SensorReport *report);
