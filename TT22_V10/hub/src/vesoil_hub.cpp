@@ -24,7 +24,7 @@ static const char * TAG = "Hub";
 #define GSM_PIN ""
 #define MQTT_MAX_PACKET_SIZE 512
 
-const char * Msg_Quality = "Quality";
+const char * Msg_Quality = "Db ";
 const char * Msg_Network = "Network";
 const char * Msg_GPRS    = "GPRS";
 const char * Msg_MQTT    = "MQTT";
@@ -80,6 +80,9 @@ Preferences preferences;
 float snr = 0;                        // signal noise ratio
 float rssi = 0;                       // Received Signal Strength Indicator
 long  pfe=0;                          // frequency error
+char macStr[18];                      // my mac address
+char incomingMessage[128];            // incoming mqtt
+int  incomingCount=0;
 
 int badpacket=0;
 bool wifiMode=false;
@@ -89,6 +92,7 @@ int lastButtonState = HIGH;           // the previous reading from the input pin
                                       // milliseconds, will quickly become a bigger number than can be stored in an int.
 unsigned long lastDebounceTime = 0;   // the last time the output pin was toggled
 unsigned long debounceDelay = 50;     // the debounce time; increase if the output flickers
+unsigned long btnLongDelay = 1000;    // the debounce time; increase if the output flickers
 String address;                       // current ipaddress
 String networkStage;
 String networkStatus;
@@ -103,6 +107,9 @@ TBeamPower power(PWRSDA,PWRSCL,BUSPWR, BATTERY_PIN);
 esp_timer_handle_t oneshot_timer;
 
 void setup() {
+  
+  incomingMessage[0]='\0';
+
   pinMode(BTN1, INPUT);        // Button 1
   Serial.begin(115200);
   while (!Serial);
@@ -122,6 +129,7 @@ void setup() {
   Serial.println("system check");
   SystemCheck();
 
+  GetMyMacAddress();
 
 #ifdef HASPSRAM
   Serial.println("memory check");
@@ -140,7 +148,8 @@ void setup() {
   doSetupMQTT();
 #endif
 
-  Serial.println("start lora");
+  setupWifi();
+  
   startLoRa();
 
   networkStage = "Lora";
@@ -168,6 +177,8 @@ void ShowNextPage()
 void DisplayPage(int page)
 {
     char sensor[32];
+    float d;
+    int percentFull;
 
     display.clear();
     display.setFont(ArialMT_Plain_10);
@@ -179,9 +190,11 @@ void DisplayPage(int page)
         case 0:
           display.drawString(0, 0, "System Status");
           display.drawString(0, 16, networkStage);
-          display.drawString(0, 32, networkStatus);
+          display.drawString(48, 16, networkStatus);
+          display.drawString(0, 32, incomingMessage);
+          
 #ifdef HAS_GSM
-          display.drawString(0, 48, String("Q: ") + String(modem.getSignalQuality(), DEC));
+          display.drawString(0, 48, String("dB: ") + String(modem.getSignalQuality(), DEC));
 #endif
           break;
         case 1:
@@ -216,7 +229,14 @@ void DisplayPage(int page)
           break;
         case 5:
           display.drawString(0, 0, "Distance");
-          display.drawString(0, 16, String(report.distance.value, 1) + String(" mm") );
+          d = (report.distance.value < config.FullHeight)? config.FullHeight : report.distance.value;
+          d = (d > config.EmptyHeight)? config.EmptyHeight : d;
+          d = d - config.FullHeight;
+          percentFull = (int)(100 * (config.EmptyHeight - d) / (config.EmptyHeight - config.FullHeight));
+          percentFull = percentFull>100?100:percentFull;
+          percentFull = percentFull<0?0:percentFull;
+          display.drawString(0, 16, String(report.distance.value, 1) + String(" cm") );
+          display.drawProgressBar(0,32,120, 12, percentFull);
           break;
         case 6:
           display.drawString(0, 0, "Temp");
@@ -300,7 +320,7 @@ STARTUPMODE getStartupMode() {
   return startup_mode;
 }
 
-bool detectDebouncedBtnPush() {
+int detectDebouncedBtnPush() {
   int reading = digitalRead(BTN1);
 
   // check to see if you just pressed the button
@@ -323,17 +343,33 @@ bool detectDebouncedBtnPush() {
 
       // only toggle the LED if the new button state is HIGH
       if (buttonState == LOW) {
-        return true;
+        return (reading>btnLongDelay)?2:1;
       }
     }
   }
-  return false;
+  return 0;
 }
 
 void loop() {
-  if (detectDebouncedBtnPush())
+  
+  mqtt.loop();
+
+  int btnState = detectDebouncedBtnPush();
+  if (btnState==1)
+  {
     ShowNextPage();
-    //toggleWifi();
+  }
+
+  if (btnState==2) 
+  {
+    switch(currentPage)
+    {
+      case 1:
+        toggleWifi();
+        DisplayPage(currentPage);
+        break;
+    }
+  }
 
   int packetSize = LoRa.parsePacket();
   readLoraData(packetSize);
@@ -536,18 +572,6 @@ void notFound(AsyncWebServerRequest *request) {
 
 #ifdef HAS_GSM
 
-void mqttCallback(char* topic, byte* payload, unsigned int len) {
-  SerialMon.print("Message arrived [");
-  SerialMon.print(topic);
-  SerialMon.print("]: ");
-  SerialMon.write(payload, len);
-  SerialMon.println();
-
-  // Only proceed if incoming message's topic matches
-  power.led_onoff(true);
-  power.led_onoff(false);
-}
-
 void doModemStart()
 {  
   networkStage = "Modem";
@@ -573,12 +597,8 @@ bool waitForNetwork(uint32_t timeout_ms = 120000L)
       }
 
       delay(1000);
-      RegStatus s = modem.getRegistrationStatus();    
-      int quality = modem.getSignalQuality();
-      char buf1[32];
-      sprintf(buf1, "%s %d",Msg_Quality, quality);
-      networkStage = "Wait for network";
-      networkStatus = buf1;
+      networkStage = "Network";
+      networkStatus = String(Msg_Quality) + String(modem.getSignalQuality(), DEC) + " (" + String(modem.getRegistrationStatus(), DEC) + ")";
       DisplayPage(currentPage);
     }
     return false;
@@ -615,13 +635,6 @@ bool doNetworkConnect()
   return status;
 }
 
-void doSetupMQTT()
-{
-  // MQTT Broker setup
-  mqtt.setServer(config.broker, 1883);
-  mqtt.setCallback(mqttCallback);
-}
-
 char *GetGeohash(SensorReport *ptr)
 {
   gpsjson[0]='\0';
@@ -639,7 +652,7 @@ void SendDistanceJsonReport(SensorReport *ptr, char * topic)
   if (ptr->capability & Distance)
   {
     sprintf(payload, "{%s\"dist\":%f}\n", GetGeohash(ptr), ptr->distance.value );
-    mqtt.publish(topic, payload);
+    mqtt.publish(topic, payload, true);
   }
 }
 
@@ -649,7 +662,7 @@ void SendMoist1JsonReport(SensorReport *ptr, char * topic)
   if (ptr->capability & Moist1)
   {
     sprintf(payload, "{%s\"m1\":%d}\n", GetGeohash(ptr), ptr->moist1.value );
-    mqtt.publish(topic, payload);
+    mqtt.publish(topic, payload, true);
   }
 }
 
@@ -659,7 +672,7 @@ void SendMoist2JsonReport(SensorReport *ptr, char * topic)
   if (ptr->capability & Moist2)
   {
     sprintf(payload, "{%s\"m2\":%d}\n", GetGeohash(ptr), ptr->moist2.value );
-    mqtt.publish(topic, payload);
+    mqtt.publish(topic, payload, true);
   }
 }
 
@@ -669,7 +682,7 @@ void SendAirHumJsonReport(SensorReport *ptr, char * topic)
   if (ptr->capability & AirTempHum)
   {
     sprintf(payload, "{%s\"at\":%f,\"ah\":%f}\n", GetGeohash(ptr), ptr->airTempHumidity.airtemp.value, ptr->airTempHumidity.airhum.value );
-    mqtt.publish(topic, payload);
+    mqtt.publish(topic, payload, true);
   }
 }
 
@@ -679,7 +692,7 @@ void SendGndTmpJsonReport(SensorReport *ptr, char * topic)
   if (ptr->capability & GndTemp)
   {
     sprintf(payload, "{%s\"gt\":%f}\n", GetGeohash(ptr), ptr->gndTemp.value );
-    mqtt.publish(topic, payload);
+    mqtt.publish(topic, payload, true );
   }
 }
 
@@ -687,7 +700,7 @@ void SendSysJsonReport(SensorReport *ptr, char * topic)
 {
   char payload[MQTT_MAX_PACKET_SIZE];
   sprintf(payload, "{%s\"volts\":%f,\"version\":%d}\n", GetGeohash(ptr), ptr->volts.value, ptr->version );
-  mqtt.publish(topic, payload);
+  mqtt.publish(topic, payload, true);
 }
 
 void SendGpsReport(SensorReport *ptr, char * topic)
@@ -697,37 +710,61 @@ void SendGpsReport(SensorReport *ptr, char * topic)
   {
     sprintf(payload, "{%s\"lat\":%f,\"lng\":%f,\"alt\":%f,\"sats\":%d,\"hdop\":%d}\n", GetGeohash(ptr), 
           ptr->gps.lat, ptr->gps.lng ,ptr->gps.alt ,ptr->gps.sats ,ptr->gps.hdop );
-    mqtt.publish(topic, payload);
+    mqtt.publish(topic, payload, true);
   }
 }
 
-bool SendMQTT(SensorReport *report) {
+void GetMyMacAddress()
+{
   uint8_t array[6];
   esp_efuse_mac_get_default(array);
-  char macStr[18];
-  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x", array[0], array[1], array[2], array[3], array[4], array[5]);
+  snprintf(macStr, sizeof(macStr), "%02x%02x%02x%02x%02x%02x", array[0], array[1], array[2], array[3], array[4], array[5]);
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int len) {
+  //snprintf(incomingMessage, sizeof(incomingMessage), "%s",(char *) payload);
+  incomingCount++;
+  snprintf(incomingMessage, sizeof(incomingMessage), "#%d %s",incomingCount, (char *) payload);
+  DisplayPage(currentPage);
+}
+
+void doSetupMQTT()
+{
+  // MQTT Broker setup
+  mqtt.setServer(config.broker, 1883);
+  mqtt.setCallback(mqttCallback);
+}
+
+bool SendMQTT(SensorReport *report) {
+  char topic[32];
   bool gprsConnected = modem.isGprsConnected();
 
   if (!gprsConnected)
     if (!doNetworkConnect())
       return false;
 
-  networkStage = Msg_MQTT;
-  networkStatus = Msg_Connecting;
+  if (!mqtt.connected())
+  {
+    networkStage = Msg_MQTT;
+    networkStatus = Msg_Connecting;
+    DisplayPage(currentPage);
+    boolean mqttConnected = mqtt.connect(macStr);
+    if (!mqttConnected)
+    {
+      networkStatus = Msg_FailedToConnect;
+      return false;
+    }
+    else
+    {
+      networkStatus = Msg_Connected;
+      sprintf(topic, "bongo/%s/hub", macStr);
+      mqtt.subscribe(topic);  
+      mqtt.publish(topic, "Connected", true);
+    }
+  }
+
   DisplayPage(currentPage);
 
-  boolean mqttConnected = mqtt.connect(macStr);
-  if (!mqttConnected)
-  {
-    networkStatus = Msg_FailedToConnect;
-    DisplayPage(currentPage);
-    return false;
-  }
-  else
-      networkStatus = Msg_Connected;
-
-
-  char topic[32];
   sprintf(topic, "bongo/%02x%02x%02x%02x%02x%02x/sensor", report->id.id[0], report->id.id[1], report->id.id[2], report->id.id[3], report->id.id[4], report->id.id[5]);
 
   SendSysJsonReport(report, topic);
@@ -738,9 +775,10 @@ bool SendMQTT(SensorReport *report) {
   SendGndTmpJsonReport(report, topic);
   SendGpsReport(report, topic);
 
-  delay(1000);
-
-  mqtt.disconnect();
+  // delay(1000);
+  //sprintf(topic, "bongo/%s/hub", macStr);
+  //mqtt.unsubscribe(topic);  
+  //mqtt.disconnect();
 
   return true;
 }

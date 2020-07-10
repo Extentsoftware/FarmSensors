@@ -85,8 +85,10 @@ struct HubConfig
   bool  enableCRC = true;       //
   char broker[42] = "bongomqtt.uksouth.cloudapp.azure.com";
   char apn[32]    = "wap.vodafone.co.uk"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
-  char gprsUser[16] = "wap"; // GPRS User
-  char gprsPass[16] = "wap"; // GPRS Password
+  char gprsUser[16] = "wap";    // GPRS User
+  char gprsPass[16] = "wap";    // GPRS Password
+  float EmptyHeight =  220;     // ultrasound reads 2.2m when the tank is empty
+  float FullHeight  = 20;       // ultrasound reads 20cm when the tank is full
 } default_config;
 
 enum STARTUPMODE
@@ -95,7 +97,8 @@ enum STARTUPMODE
     RESET=2
 };
 
-bool detectDebouncedBtnPush();
+void GetMyMacAddress();
+int detectDebouncedBtnPush();
 void onReceive(int packetSize);
 void SystemCheck();
 void notFound(AsyncWebServerRequest *request);
