@@ -38,6 +38,7 @@
 #undef  HASPSRAM
 
 #define BTN1          0 
+#define BTN2          36 
 
 #endif
 

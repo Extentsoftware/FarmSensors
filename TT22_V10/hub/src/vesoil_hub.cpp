@@ -598,7 +598,9 @@ bool waitForNetwork(uint32_t timeout_ms = 120000L)
 
       delay(1000);
       networkStage = "Network";
-      networkStatus = String(Msg_Quality) + String(modem.getSignalQuality(), DEC) + " (" + String(modem.getRegistrationStatus(), DEC) + ")";
+      SimStatus simStatus = modem.getSimStatus();
+      RegStatus regStatus = modem.getRegistrationStatus();
+      networkStatus = String("Sim: ") + String(simStatus, DEC) + String(" Reg: ") + String(regStatus, DEC);
       DisplayPage(currentPage);
     }
     return false;
