@@ -352,7 +352,9 @@ int detectDebouncedBtnPush() {
 
 void loop() {
   
+#ifdef HAS_GSM
   mqtt.loop();
+#endif
 
   int btnState = detectDebouncedBtnPush();
   if (btnState==1)
@@ -570,6 +572,15 @@ void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
 
+
+void GetMyMacAddress()
+{
+  uint8_t array[6];
+  esp_efuse_mac_get_default(array);
+  snprintf(macStr, sizeof(macStr), "%02x%02x%02x%02x%02x%02x", array[0], array[1], array[2], array[3], array[4], array[5]);
+}
+
+
 #ifdef HAS_GSM
 
 void doModemStart()
@@ -714,13 +725,6 @@ void SendGpsReport(SensorReport *ptr, char * topic)
           ptr->gps.lat, ptr->gps.lng ,ptr->gps.alt ,ptr->gps.sats ,ptr->gps.hdop );
     mqtt.publish(topic, payload, true);
   }
-}
-
-void GetMyMacAddress()
-{
-  uint8_t array[6];
-  esp_efuse_mac_get_default(array);
-  snprintf(macStr, sizeof(macStr), "%02x%02x%02x%02x%02x%02x", array[0], array[1], array[2], array[3], array[4], array[5]);
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int len) {
