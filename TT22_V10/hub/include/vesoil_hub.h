@@ -85,9 +85,15 @@ struct HubConfig
   int   codingRate = CODERATE;  // extra info for CRC
   bool  enableCRC = true;       //
   char broker[42] = "bongomqtt.uksouth.cloudapp.azure.com";
-  char apn[32]    = "wap.vodafone.co.uk"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
-  char gprsUser[16] = "wap";    // GPRS User
-  char gprsPass[16] = "wap";    // GPRS Password
+
+  char apn[32]    = "TM"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
+  char gprsUser[16] = "";    // GPRS User
+  char gprsPass[16] = "";    // GPRS Password
+  
+  //char apn[32]    = "wap.vodafone.co.uk"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
+  //char gprsUser[16] = "wap";    // GPRS User
+  //char gprsPass[16] = "wap";    // GPRS Password
+  
   float EmptyHeight =  220;     // ultrasound reads 2.2m when the tank is empty
   float FullHeight  = 20;       // ultrasound reads 20cm when the tank is full
 } default_config;

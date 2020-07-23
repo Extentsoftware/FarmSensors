@@ -47,6 +47,8 @@ char gpsjson[32];
 #include <LoRa.h>
 #include <AsyncTCP.h>
 #include <Preferences.h>
+#include <FS.h>
+#include <SPIFFS.h>
 #include <TBeamPower.h>
 
 #ifdef HAS_GSM
@@ -87,10 +89,7 @@ int  incomingCount=0;
 int badpacket=0;
 bool wifiMode=false;
 int buttonState = HIGH;               // the current reading from the input pin
-int lastButtonState = HIGH;           // the previous reading from the input pin
-                                      // the following variables are unsigned longs because the time, measured in
-                                      // milliseconds, will quickly become a bigger number than can be stored in an int.
-unsigned long lastDebounceTime = 0;   // the last time the output pin was toggled
+unsigned long lastButtonTime = 0;     // the last time the output pin was toggled
 unsigned long debounceDelay = 50;     // the debounce time; increase if the output flickers
 unsigned long btnLongDelay = 1000;    // the debounce time; increase if the output flickers
 String address;                       // current ipaddress
@@ -272,6 +271,7 @@ void InitOLED() {
 
   display.init();
   display.flipScreenVertically();  
+  display.drawString(0, 0, "Starting..");
 }
 
 void getConfig(STARTUPMODE startup_mode) {
@@ -306,46 +306,43 @@ STARTUPMODE getStartupMode() {
   } while (pin==0);
   
   
-  if (btndown==0)
-    startup_mode = NORMAL;   // sensor mode
-  else if (btndown<2000)
+  if (btndown<2000)
     startup_mode = NORMAL;   // NORMAL
   else 
-  {
     startup_mode = RESET;   // reset config
-  }
 
   Serial.printf("button held for %d mode is %d\n", btndown, startup_mode );
+
+  buttonState = digitalRead(BTN1);
 
   return startup_mode;
 }
 
 int detectDebouncedBtnPush() {
-  int reading = digitalRead(BTN1);
+  int currentState = digitalRead(BTN1);
 
   // check to see if you just pressed the button
   // (i.e. the input went from LOW to HIGH), and you've waited long enough
   // since the last press to ignore any noise:
 
-  // If the switch changed, due to noise or pressing:
-  if (reading != lastButtonState) {
-    // reset the debouncing timer
-    lastDebounceTime = millis();
-    lastButtonState = reading;
-  }
+  // ignore if nothing has changed
+  if (currentState == buttonState)
+    return 0;
 
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    // whatever the reading is at, it's been there for longer than the debounce
-    // delay, so take it as the actual current state:
-    // if the button state has changed:
-    if (reading != buttonState) {
-      buttonState = reading;
+  // ignore if time delay too quick
+  unsigned long delay = (millis() - lastButtonTime);
+  if (delay < debounceDelay)
+    return 0;
 
-      // only toggle the LED if the new button state is HIGH
-      if (buttonState == LOW) {
-        return (reading>btnLongDelay)?2:1;
-      }
-    }
+  // whatever the reading is at, it's been there for longer than the debounce
+  // delay, so take it as the actual current state:
+  // if the button state has changed:
+  buttonState = currentState;
+  lastButtonTime = millis();
+
+  // only toggle the LED if the new button state is HIGH
+  if (buttonState == HIGH) {
+    return (delay>btnLongDelay)?2:1;
   }
   return 0;
 }
@@ -362,6 +359,7 @@ void loop() {
     ShowNextPage();
   }
 
+
   if (btnState==2) 
   {
     switch(currentPage)
@@ -375,7 +373,6 @@ void loop() {
 
   int packetSize = LoRa.parsePacket();
   readLoraData(packetSize);
-  delay(100);
 }
 
 void SystemCheck() {
@@ -508,17 +505,46 @@ void setupWifiTimer() {
     esp_timer_start_once( oneshot_timer, 5 * 60 * 1000 ); // 5-minute timer
 }
 
+String processor(const String& var)
+{
+  if(var == "vbatt")
+    return String(power.get_battery_voltage());
+  if(var == "SSID")
+    return config.ssid;
+  if(var == "frequency")
+    return String(config.frequency);
+  if(var == "spreadFactor")
+    return String(config.spreadFactor);
+  if(var == "enableCRC")
+    return String(config.enableCRC?"checked":"");
+  if(var == "codingRate")
+    return String(config.codingRate);
+  if(var == "bandwidth")
+    return String(config.bandwidth);
+    
+  return String();
+}
+
 void setupWifi() {
+    if (!SPIFFS.begin())
+    {
+      Serial.println("Failed to initialise SPIFFS");
+    }
+
     WiFi.softAP(config.ssid);
     address = WiFi.softAPIP().toString();
 
     wifiMode = true;
 
-    setupWifiTimer();
+    // setupWifiTimer();
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send(200, "text/plain", "Hello, from Vestrong");
+        Serial.printf("Web request %s\n", request->url().c_str());
+        request->send(SPIFFS, "/index.html", String(), false, processor);
     });
+
+    server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
+
 #ifdef HASPSRAM
     // Send a GET request to <IP>/get?message=<message>
     server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
@@ -571,7 +597,6 @@ void setupWifi() {
 void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
-
 
 void GetMyMacAddress()
 {
@@ -634,7 +659,7 @@ bool doNetworkConnect()
     networkStatus = Msg_Connecting;
     DisplayPage(currentPage);
     
-    status = modem.gprsConnect(config.apn, config.gprsUser, config.gprsPass);
+    status = modem.gprsConnect(config.apn, config.gprsUser, config.gprsPass);    
 
     networkStatus = (char*)(status ? Msg_Connected : Msg_Failed);
     DisplayPage(currentPage);
