@@ -113,7 +113,7 @@ struct SensorConfig
   int   txpower = TXPOWER;       // LoRa transmit power
   long  preamble = PREAMBLE;     // bits to send before transmition
   int   syncword = SYNCWORD;     // unique packet identifier
-  float txvolts = MINBATVOLTS;   // power supply must be delivering this voltage in order to xmit.
+  float minvolts = MINBATVOLTS;   // power supply must be delivering this voltage in order to xmit.
   int   lowvoltsleep = 60*60*8;  // sleep this long (seconds) if low on volts (8hrs)
   long  bandwidth = BAND;        // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   int   spreadFactor = SPREAD;   // signal processing gain. higher values give greater range but take longer (more power) to transmit

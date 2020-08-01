@@ -2,6 +2,9 @@
 // TTGO-07 Pin map http://tinymicros.com/wiki/TTGO_T-Beam
 // TTGO-10 https://github.com/Xinyuan-LilyGO/TTGO-T-Beam
 //
+// AXP192 info
+// https://github.com/ContextQuickie/TTGO-T-Beam/wiki/AXP192-Information
+//
 // to upload new html files use this command:
 // pio device list
 // pio run --target upload
@@ -343,7 +346,7 @@ String processor(const String& var)
   if(var == "txpower")
     return String(config.txpower);
   if(var == "txvolts")
-    return String(config.txvolts);
+    return String(config.minvolts);
   if(var == "enableCRC")
     return String(config.enableCRC?"checked":"");
   if(var == "codingRate")
@@ -380,7 +383,7 @@ void setConfigParam(const String& var, const char *value) {
   if(var == "txpower")
     config.txpower = atoi(value);
   if(var == "txvolts")
-    config.txvolts = atof(value);
+    config.minvolts = atof(value);
   if(var == "enableCRC")
     config.enableCRC = strcmp(value, "on")==0;
   if(var == "codingRate")
@@ -417,7 +420,7 @@ void setupWifi() {
         
         char *msg = (char *)malloc(512);
         sprintf(msg, "{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
-                 config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, power.get_battery_voltage() );
+                 config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.minvolts, power.get_battery_voltage() );
         reply += msg;
         reply += " ] }\n";
         free(msg);
@@ -550,14 +553,14 @@ void setup() {
   Serial.println("Start 7");
   // check we have enough juice
   float currentVoltage = power.get_battery_voltage();
-  if (currentVoltage>2 && currentVoltage<config.txvolts)
+  if (currentVoltage>2 && currentVoltage<config.minvolts)
   {
     Serial.printf("Battery Voltage too low: %f\n", currentVoltage);
     power.flashlight(ERR_LOWPOWER);
     deepSleep(config.lowvoltsleep);
   } 
   else
-    Serial.printf("Battery Voltage OK: %f > %f\n", currentVoltage, config.txvolts);
+    Serial.printf("Battery Voltage OK: %f > %f\n", currentVoltage, config.minvolts);
     
   getConfig(startup_mode);
 
@@ -574,7 +577,7 @@ void setup() {
     power.flashlight(INFO_SENSOR);
   
   Serial.printf("{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
-          config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.txvolts, currentVoltage );
+          config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.minvolts, currentVoltage );
 
   Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
 }

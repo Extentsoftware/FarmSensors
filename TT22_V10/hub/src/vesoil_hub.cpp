@@ -22,7 +22,6 @@ static const char * TAG = "Hub";
 #define TINY_GSM_USE_GPRS true
 #define TINY_GSM_USE_WIFI false
 #define GSM_PIN ""
-#define MQTT_MAX_PACKET_SIZE 512
 
 const char * Msg_Quality = "Db ";
 const char * Msg_Network = "Network";
@@ -752,6 +751,27 @@ void SendGpsReport(SensorReport *ptr, char * topic)
   }
 }
 
+void SendCompleteReport(SensorReport *ptr, char * topic)
+{
+  char payload[MQTT_MAX_PACKET_SIZE];
+  if (ptr->capability & GPS)
+  {
+    sprintf(payload, "{%s\"lat\":%f,\"lng\":%f,\"alt\":%f,\"sats\":%d,\"hdop\":%d\",volts\":%f,\"version\":%d,\"gt\":%f,\"at\":%f,\"ah\":%f,\"m1\":%d,\"m2\":%d,\"dist\":%f}\n", GetGeohash(ptr), 
+          ptr->gps.lat, ptr->gps.lng ,ptr->gps.alt ,ptr->gps.sats ,ptr->gps.hdop
+          , ptr->volts.value, ptr->version 
+          , ptr->gndTemp.value
+          , ptr->airTempHumidity.airtemp.value, ptr->airTempHumidity.airhum.value
+          , ptr->moist1.value
+          , ptr->moist2.value
+          , ptr->distance.value
+          );
+    if (!mqtt.publish(topic, payload, true))
+    {
+      Serial.printf("MQTT Fail %d\n", strlen(payload));
+    }
+  }
+}
+
 void mqttCallback(char* topic, byte* payload, unsigned int len) {
   //snprintf(incomingMessage, sizeof(incomingMessage), "%s",(char *) payload);
   incomingCount++;
@@ -798,6 +818,7 @@ bool SendMQTT(SensorReport *report) {
 
   sprintf(topic, "bongo/%02x%02x%02x%02x%02x%02x/sensor", report->id.id[0], report->id.id[1], report->id.id[2], report->id.id[3], report->id.id[4], report->id.id[5]);
 
+#if false
   SendSysJsonReport(report, topic);
   SendDistanceJsonReport(report, topic);
   SendMoist1JsonReport(report, topic);
@@ -805,6 +826,9 @@ bool SendMQTT(SensorReport *report) {
   SendAirHumJsonReport(report, topic);
   SendGndTmpJsonReport(report, topic);
   SendGpsReport(report, topic);
+#else
+  SendCompleteReport(report, topic);
+#endif
 
   // delay(1000);
   //sprintf(topic, "bongo/%s/hub", macStr);
