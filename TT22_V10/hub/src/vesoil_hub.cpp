@@ -269,8 +269,11 @@ void InitOLED() {
   delay(50); 
 
   display.init();
+  display.displayOn();
   display.flipScreenVertically();  
+  display.clear();
   display.drawString(0, 0, "Starting..");
+  
 }
 
 void getConfig(STARTUPMODE startup_mode) {
@@ -510,6 +513,14 @@ String processor(const String& var)
     return String(power.get_battery_voltage());
   if(var == "SSID")
     return config.ssid;
+  if(var == "password")
+    return config.password;
+  if(var == "apn")
+    return config.apn;
+  if(var == "gprspass")
+    return config.gprsPass;
+  if(var == "gprsuser")
+    return config.gprsUser;
   if(var == "frequency")
     return String(config.frequency);
   if(var == "spreadFactor")
@@ -525,12 +536,17 @@ String processor(const String& var)
 }
 
 void setupWifi() {
+
     if (!SPIFFS.begin())
     {
       Serial.println("Failed to initialise SPIFFS");
     }
 
-    WiFi.softAP(config.ssid);
+    if (strlen(config.password)==0)
+      WiFi.softAP(config.ssid);
+    else
+      WiFi.softAP(config.ssid, config.password);
+
     address = WiFi.softAPIP().toString();
 
     wifiMode = true;
@@ -683,92 +699,28 @@ char *GetGeohash(SensorReport *ptr)
   return gpsjson;
 }
 
-void SendDistanceJsonReport(SensorReport *ptr, char * topic)
-{
-  char payload[MQTT_MAX_PACKET_SIZE];
-  if (ptr->capability & Distance)
-  {
-    sprintf(payload, "{%s\"dist\":%f}\n", GetGeohash(ptr), ptr->distance.value );
-    mqtt.publish(topic, payload, true);
-  }
-}
-
-void SendMoist1JsonReport(SensorReport *ptr, char * topic)
-{
-  char payload[MQTT_MAX_PACKET_SIZE];
-  if (ptr->capability & Moist1)
-  {
-    sprintf(payload, "{%s\"m1\":%d}\n", GetGeohash(ptr), ptr->moist1.value );
-    mqtt.publish(topic, payload, true);
-  }
-}
-
-void SendMoist2JsonReport(SensorReport *ptr, char * topic)
-{
-  char payload[MQTT_MAX_PACKET_SIZE];
-  if (ptr->capability & Moist2)
-  {
-    sprintf(payload, "{%s\"m2\":%d}\n", GetGeohash(ptr), ptr->moist2.value );
-    mqtt.publish(topic, payload, true);
-  }
-}
-
-void SendAirHumJsonReport(SensorReport *ptr, char * topic)
-{
-  char payload[MQTT_MAX_PACKET_SIZE];
-  if (ptr->capability & AirTempHum)
-  {
-    sprintf(payload, "{%s\"at\":%f,\"ah\":%f}\n", GetGeohash(ptr), ptr->airTempHumidity.airtemp.value, ptr->airTempHumidity.airhum.value );
-    mqtt.publish(topic, payload, true);
-  }
-}
-
-void SendGndTmpJsonReport(SensorReport *ptr, char * topic)
-{
-  char payload[MQTT_MAX_PACKET_SIZE];
-  if (ptr->capability & GndTemp)
-  {
-    sprintf(payload, "{%s\"gt\":%f}\n", GetGeohash(ptr), ptr->gndTemp.value );
-    mqtt.publish(topic, payload, true );
-  }
-}
-
-void SendSysJsonReport(SensorReport *ptr, char * topic)
-{
-  char payload[MQTT_MAX_PACKET_SIZE];
-  sprintf(payload, "{%s\"volts\":%f,\"version\":%d}\n", GetGeohash(ptr), ptr->volts.value, ptr->version );
-  mqtt.publish(topic, payload, true);
-}
-
-void SendGpsReport(SensorReport *ptr, char * topic)
-{
-  char payload[MQTT_MAX_PACKET_SIZE];
-  if (ptr->capability & GPS)
-  {
-    sprintf(payload, "{%s\"lat\":%f,\"lng\":%f,\"alt\":%f,\"sats\":%d,\"hdop\":%d}\n", GetGeohash(ptr), 
-          ptr->gps.lat, ptr->gps.lng ,ptr->gps.alt ,ptr->gps.sats ,ptr->gps.hdop );
-    mqtt.publish(topic, payload, true);
-  }
-}
-
 void SendCompleteReport(SensorReport *ptr, char * topic)
 {
   char payload[MQTT_MAX_PACKET_SIZE];
-  if (ptr->capability & GPS)
+
+  sprintf(payload, "{%s\"lat\":%f,\"lng\":%f,\"alt\":%f,\"sats\":%d,\"hdop\":%d,\"volts\":%f,\"version\":%d,\"gt\":%f,\"at\":%f,\"ah\":%f,\"m1\":%d,\"m2\":%d,\"dist\":%f,\"snr\":%f,\"rssi\":%f,\"pfe\":%ld}"
+    , ptr->capability & GPS ? GetGeohash(ptr): ""
+    , ptr->gps.lat, ptr->gps.lng ,ptr->gps.alt ,ptr->gps.sats ,ptr->gps.hdop
+    , ptr->volts.value
+    , ptr->version 
+    , ptr->gndTemp.value
+    , ptr->airTempHumidity.airtemp.value
+    , ptr->airTempHumidity.airhum.value
+    , ptr->moist1.value
+    , ptr->moist2.value
+    , ptr->distance.value
+    , snr
+    , rssi
+    , pfe
+    );
+  if (!mqtt.publish(topic, payload, true))
   {
-    sprintf(payload, "{%s\"lat\":%f,\"lng\":%f,\"alt\":%f,\"sats\":%d,\"hdop\":%d\",volts\":%f,\"version\":%d,\"gt\":%f,\"at\":%f,\"ah\":%f,\"m1\":%d,\"m2\":%d,\"dist\":%f}\n", GetGeohash(ptr), 
-          ptr->gps.lat, ptr->gps.lng ,ptr->gps.alt ,ptr->gps.sats ,ptr->gps.hdop
-          , ptr->volts.value, ptr->version 
-          , ptr->gndTemp.value
-          , ptr->airTempHumidity.airtemp.value, ptr->airTempHumidity.airhum.value
-          , ptr->moist1.value
-          , ptr->moist2.value
-          , ptr->distance.value
-          );
-    if (!mqtt.publish(topic, payload, true))
-    {
-      Serial.printf("MQTT Fail %d\n", strlen(payload));
-    }
+    Serial.printf("MQTT Fail %d\n", strlen(payload));
   }
 }
 
@@ -810,7 +762,7 @@ bool SendMQTT(SensorReport *report) {
       networkStatus = Msg_Connected;
       sprintf(topic, "bongo/%s/hub", macStr);
       mqtt.subscribe(topic);  
-      mqtt.publish(topic, "Connected", true);
+      mqtt.publish(topic, "{\"state\":\"connected\"}", true);
     }
   }
 
@@ -818,22 +770,7 @@ bool SendMQTT(SensorReport *report) {
 
   sprintf(topic, "bongo/%02x%02x%02x%02x%02x%02x/sensor", report->id.id[0], report->id.id[1], report->id.id[2], report->id.id[3], report->id.id[4], report->id.id[5]);
 
-#if false
-  SendSysJsonReport(report, topic);
-  SendDistanceJsonReport(report, topic);
-  SendMoist1JsonReport(report, topic);
-  SendMoist2JsonReport(report, topic);
-  SendAirHumJsonReport(report, topic);
-  SendGndTmpJsonReport(report, topic);
-  SendGpsReport(report, topic);
-#else
   SendCompleteReport(report, topic);
-#endif
-
-  // delay(1000);
-  //sprintf(topic, "bongo/%s/hub", macStr);
-  //mqtt.unsubscribe(topic);  
-  //mqtt.disconnect();
 
   return true;
 }

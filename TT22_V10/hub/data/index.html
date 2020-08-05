@@ -46,66 +46,40 @@
 					</div>
 					<div class="item">
 						<label>
-							<span>GPS timeout</span>
-							<input type="number" class='number' data-validate-minmax="10,60" data-validate-pattern="numeric" required='required' name="gps_timeout" value="%gps_timeout%" />
+							<span>APN</span>
+							<input data-validate-length-range="8" data-validate-words="1" name="apn" placeholder=""  type="text" value="%apn%" />
 						</label>
 						<div class='tooltip help'>
 							<span>?</span>
 							<div class='content'>
 								<b></b>
-								<p>wait n seconds to get GPS fix</em></p>
+								<p>Name must be at least 1 word</p>
 							</div>
 						</div>
 					</div>
 					<div class="item">
 						<label>
-							<span>Failed GPS Sleep</span>
-							<input type="number" class='number' data-validate-minmax="10,100" data-validate-pattern="numeric" required='required' name="failedGPSsleep" value="%failedGPSsleep%" />
+							<span>GPRS User</span>
+							<input data-validate-length-range="8" data-validate-words="1" name="gprsUser" placeholder=""  type="text" value="%gprsuser%" />
 						</label>
 						<div class='tooltip help'>
 							<span>?</span>
 							<div class='content'>
 								<b></b>
-								<p>sleep this long if failed to get GPS</em></p>
+								<p>Name must be at least 1 word</p>
 							</div>
 						</div>
 					</div>
 					<div class="item">
 						<label>
-							<span>Report Every</span>
-							<input type="number" class='number' data-validate-minmax="1,86400" data-validate-pattern="numeric" required='required' name="reportEvery" value="%reportEvery%" />
+							<span>GPRS Password</span>
+							<input data-validate-length-range="8" data-validate-words="1" name="gprspass" placeholder=""  type="text" value="%gprspass%" />
 						</label>
 						<div class='tooltip help'>
 							<span>?</span>
 							<div class='content'>
 								<b></b>
-								<p>get sample every n seconds</em></p>
-							</div>
-						</div>
-					</div>
-					<div class="item">
-						<label>
-							<span>From Hour</span>
-							<input type="number" class='number' data-validate-minmax="0,23" data-validate-pattern="numeric" required='required' name="fromHour" value="%fromHour%" />
-						</label>
-						<div class='tooltip help'>
-							<span>?</span>
-							<div class='content'>
-								<b></b>
-								<p>between these hours</em></p>
-							</div>
-						</div>
-					</div>
-					<div class="item">
-						<label>
-							<span>To Hour</span>
-							<input type="number" class='number' data-validate-minmax="0,23" data-validate-pattern="numeric" required='required' name="toHour" value="%toHour%" />
-						</label>
-						<div class='tooltip help'>
-							<span>?</span>
-							<div class='content'>
-								<b></b>
-								<p>between these hours</em></p>
+								<p>Name must be at least 1 word</p>
 							</div>
 						</div>
 					</div>
@@ -132,32 +106,6 @@
 							<div class='content'>
 								<b></b>
 								<p>LoRa transmit power</em></p>
-							</div>
-						</div>
-					</div>
-					<div class="item">
-						<label>
-							<span>Xmit Volts</span>
-							<input type="number" class='number' data-validate-minmax="10,100" data-validate-pattern="numeric" required='required' name="txvolts" value="%txvolts%" />
-						</label>
-						<div class='tooltip help'>
-							<span>?</span>
-							<div class='content'>
-								<b></b>
-								<p>power supply must be delivering this voltage in order to xmit.</em></p>
-							</div>
-						</div>
-					</div>
-					<div class="item">
-						<label>
-							<span>Low Volt Sleep</span>
-							<input type="number" class='number' data-validate-minmax="0,5" data-validate-pattern="numeric" required='required' name="lowvoltsleep" value="%lowvoltsleep%" />
-						</label>
-						<div class='tooltip help'>
-							<span>?</span>
-							<div class='content'>
-								<b></b>
-								<p>sleep this long if low on volts</em></p>
 							</div>
 						</div>
 					</div>

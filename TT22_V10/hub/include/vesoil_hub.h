@@ -77,6 +77,7 @@
 struct HubConfig
 {
   char  ssid[16] = "VESTRONG_H";
+  char  password[16] = "";
   long  frequency = FREQUENCY;  // LoRa transmit frequency
   long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   long  preamble = PREAMBLE;
@@ -84,11 +85,11 @@ struct HubConfig
   int   spreadFactor = SPREAD;  // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = CODERATE;  // extra info for CRC
   bool  enableCRC = true;       //
-  char broker[42] = "bongomqtt.uksouth.cloudapp.azure.com";
+  char  broker[42] = "bongomqtt.uksouth.cloudapp.azure.com";
 
-  char apn[32]    = "TM"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
-  char gprsUser[16] = "";    // GPRS User
-  char gprsPass[16] = "";    // GPRS Password
+  char  apn[32]    = "TM"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
+  char  gprsUser[16] = "";    // GPRS User
+  char  gprsPass[16] = "";    // GPRS Password
   
   //char apn[32]    = "wap.vodafone.co.uk"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
   //char gprsUser[16] = "wap";    // GPRS User
