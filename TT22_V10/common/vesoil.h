@@ -57,7 +57,7 @@ struct SensorAirTmp
 struct SensorReport
 {
     char version=2;
-    SensorCapability capability;
+    byte capability;
     SensorVoltage volts;
     SensorId id;
     SensorGps gps;

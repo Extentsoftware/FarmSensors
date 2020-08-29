@@ -9,7 +9,7 @@
 #define BAND      125E3   
 #define SPREAD       12   
 #define CODERATE      6
-#define SYNCWORD 0xa5a5
+#define SYNCWORD      0 
 #define PREAMBLE      8
 
 #define SCK           5    // GPIO5  -- SX1278's SCK
@@ -81,7 +81,7 @@ struct HubConfig
   long  frequency = FREQUENCY;  // LoRa transmit frequency
   long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   long  preamble = PREAMBLE;
-  int   syncword = SYNCWORD;
+  unsigned char   syncword = SYNCWORD;
   int   spreadFactor = SPREAD;  // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = CODERATE;  // extra info for CRC
   bool  enableCRC = true;       //

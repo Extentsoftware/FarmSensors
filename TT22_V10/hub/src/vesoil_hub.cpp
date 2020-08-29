@@ -86,6 +86,8 @@ char incomingMessage[128];            // incoming mqtt
 int  incomingCount=0;
 
 int badpacket=0;
+int goodpacket=0;
+
 bool wifiMode=false;
 int buttonState = HIGH;               // the current reading from the input pin
 unsigned long lastButtonTime = 0;     // the last time the output pin was toggled
@@ -163,7 +165,7 @@ void ShowNextPage()
 {
     currentPage++;
 
-    if (!haveReport && currentPage>1)
+    if (!haveReport && currentPage>2)
       currentPage=0;
 
     if (currentPage==9)
@@ -192,7 +194,7 @@ void DisplayPage(int page)
           display.drawString(0, 32, incomingMessage);
           
 #ifdef HAS_GSM
-          display.drawString(0, 48, String("dB: ") + String(modem.getSignalQuality(), DEC));
+          display.drawString(0, 48, String("Gsm dB: ") + String(modem.getSignalQuality(), DEC));
 #endif
           break;
         case 1:
@@ -208,24 +210,34 @@ void DisplayPage(int page)
           }
           break;
         case 2:
+          display.drawString(0, 0, "Signal");
+          display.drawString(0, 16, String("rssi ") + String(rssi, 2));
+          display.drawString(64, 16, String("snr  ") + String(snr, 2));
+
+          display.drawString(0, 32, String("pfe  ") + String(pfe, DEC));
+
+          display.drawString(0,  48, String("bad: ") + String(badpacket,DEC));
+          display.drawString(64, 48, String("Ok:  ") + String(goodpacket,DEC));
+          break;
+        case 3:
           display.drawString(0, 0, "Sensor Id");
           sprintf(sensor, "%02x%02x%02x%02x%02x%02x/sensor", report.id.id[0], report.id.id[1], report.id.id[2], report.id.id[3], report.id.id[4], report.id.id[5]);          
           display.drawString(0, 16, sensor );
           display.drawString(0, 32, String("Batt ") + String(report.volts.value, 2) );
           break;
-        case 3:
+        case 4:
           display.drawString(0, 0, "GPS #1");
           display.drawString(0, 16, asctime(gmtime(&report.gps.time)));
           display.drawString(0, 32, String("sats ") + String((int)report.gps.sats, DEC));
           display.drawString(0, 48, String("hdop ") + String((int)report.gps.hdop,DEC));
           break;
-        case 4:
+        case 5:
           display.drawString(0, 0, "GPS #2");
           display.drawString(0, 16, String("Lat ") + String(report.gps.lat, 6));
           display.drawString(0, 32, String("Lng ") + String(report.gps.lng, 6));
           display.drawString(0, 48, String("alt ") + String(report.gps.alt));
           break;
-        case 5:
+        case 6:
           display.drawString(0, 0, "Distance");
           d = (report.distance.value < config.FullHeight)? config.FullHeight : report.distance.value;
           d = (d > config.EmptyHeight)? config.EmptyHeight : d;
@@ -236,24 +248,16 @@ void DisplayPage(int page)
           display.drawString(0, 16, String(report.distance.value, 1) + String(" cm") );
           display.drawProgressBar(0,32,120, 12, percentFull);
           break;
-        case 6:
+        case 7:
           display.drawString(0, 0, "Temp");
           display.drawString(0, 16, String("Air Tmp. ") + String(report.airTempHumidity.airtemp.value, 1) );
           display.drawString(0, 32, String("Air Hum. ") + String(report.airTempHumidity.airhum.value, 1) );
           display.drawString(64, 16, String("Gnd ") + String(report.gndTemp.value, 1) );
           break;
-        case 7:
+        case 8:
           display.drawString(0, 0, "Moisture");
           display.drawString(0, 16, String("M1. ") + String(report.moist1.value, DEC) );
           display.drawString(0, 32, String("M2. ") + String(report.moist2.value, DEC) );
-          break;
-        case 8:
-          display.drawString(0, 0, "Signal");
-          display.drawString(0, 16, String("rssi ") + String(rssi, 2));
-          display.drawString(0, 32, String("pfe  ") + String(pfe, DEC));
-
-          display.drawString(64, 16, String("snr  ") + String(snr, 2));
-          display.drawString(64, 32, String("bad: ") + String(badpacket,DEC));
           break;
         default:
           break;
@@ -270,7 +274,7 @@ void InitOLED() {
 
   display.init();
   display.displayOn();
-  display.flipScreenVertically();  
+  //display.flipScreenVertically();  
   display.clear();
   display.drawString(0, 0, "Starting..");
   
@@ -396,16 +400,21 @@ void startLoRa() {
     Serial.printf("Starting LoRa failed: err %d\n", result);
   else
     Serial.println("Started LoRa OK");
+
     
   LoRa.setPreambleLength(config.preamble);
-  LoRa.setSyncWord(config.syncword);    
-  LoRa.setSignalBandwidth(config.bandwidth);
   LoRa.setSpreadingFactor(config.spreadFactor);
   LoRa.setCodingRate4(config.codingRate);
   if (config.enableCRC)
       LoRa.enableCrc();
     else 
       LoRa.disableCrc();
+
+  // setting the sync work breaks the transmission.
+  if (config.syncword>0)
+    LoRa.setSyncWord(config.syncword);  
+
+  LoRa.setSignalBandwidth(config.bandwidth);
 
   LoRa.receive();
 }
@@ -417,15 +426,16 @@ void readLoraData(int packetSize) {
     pfe = LoRa.packetFrequencyError();
     Serial.printf("%d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
     processLoraBlock(packetSize);  
-    DisplayPage(currentPage);
     delay(100);
   }
+  DisplayPage(currentPage);
 }
 
 void processLoraBlock(int packetSize) { 
 
   if (packetSize == sizeof(SensorReport))
   {
+      goodpacket++; 
       unsigned char *ptr = (unsigned char *)&report;
       for (int i = 0; i < packetSize; i++, ptr++)
          *ptr = (unsigned char)LoRa.read(); 
@@ -433,7 +443,8 @@ void processLoraBlock(int packetSize) {
       char *stime = asctime(gmtime(&report.gps.time));
       stime[24]='\0';
 
-      Serial.printf("%s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f rssi=%f snr=%f pfe=%ld\n", 
+      Serial.printf("%02x%02x%02x%02x%02x%02x %s %f/%f alt=%f sats=%d hdop=%d gt=%f at=%f ah=%f m1=%d m2=%d v=%f rssi=%f snr=%f pfe=%ld\n", 
+            report.id.id[0], report.id.id[1], report.id.id[2], report.id.id[3], report.id.id[4], report.id.id[5],
             stime, report.gps.lat,report.gps.lng,
             report.gps.alt ,report.gps.sats ,report.gps.hdop,
             report.gndTemp.value,
