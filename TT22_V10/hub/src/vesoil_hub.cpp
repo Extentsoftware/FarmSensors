@@ -403,8 +403,10 @@ void startLoRa() {
 
     
   LoRa.setPreambleLength(config.preamble);
-  LoRa.setSpreadingFactor(config.spreadFactor);
+  //LoRa.setSpreadingFactor(config.spreadFactor);
+  LoRa.setSpreadingFactor(10);
   LoRa.setCodingRate4(config.codingRate);
+
   if (config.enableCRC)
       LoRa.enableCrc();
     else 
@@ -424,9 +426,18 @@ void readLoraData(int packetSize) {
     snr = LoRa.packetSnr();
     rssi = LoRa.packetRssi();
     pfe = LoRa.packetFrequencyError();
-    Serial.printf("%d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
-    processLoraBlock(packetSize);  
-    delay(100);
+
+    if (packetSize==24)
+    {
+      String s = LoRa.readString();
+      Serial.print(s); 
+      Serial.printf("  %d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
+    }
+    else
+    {
+      Serial.printf("%d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
+      processLoraBlock(packetSize);  
+    }
   }
   DisplayPage(currentPage);
 }

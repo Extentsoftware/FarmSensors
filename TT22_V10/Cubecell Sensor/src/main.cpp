@@ -72,6 +72,7 @@ void Send() {
     report.moist2.value = 2000;
     Serial.printf("TX begin %d bytes ....", sizeof(report));
     Radio.Send( (uint8_t *)&report, sizeof(report) );    
+   
 }
 
 void loop() {
@@ -79,7 +80,7 @@ void loop() {
 	{
 		case TX:
             
-            Serial.printf("band %u spread %d coderate %d", _bandwidth, _spreadingFactor, _codingRate);
+            Serial.printf("B %u S %d C %d", _bandwidth, _spreadingFactor, _codingRate);
             Radio.SetTxConfig( MODEM_LORA, TX_OUTPUT_POWER, 0, _bandwidth,
                                         _spreadingFactor, _codingRate,
                                         LORA_PREAMBLE_LENGTH, LORA_FIX_LENGTH_PAYLOAD_ON,
@@ -88,28 +89,35 @@ void loop() {
             // setting the sync work breaks the transmission.
             //Radio.SetSyncWord(SYNCWORD);
 
-			delay(1000);
+			delay(250);
             turnOnRGB(COLOR_SEND,0);
 			txNumber++;
-            Send();
+
+            //Send();
+
+            uint8_t buffer[24];
+            memset( buffer, 0, sizeof(buffer));
+            sprintf( (char *)buffer, "B %u S %d C %d", _bandwidth, _spreadingFactor, _codingRate);
+            Radio.Send( buffer, sizeof(buffer) );
+
             turnOnRGB(COLOR_SENT,0);
 		    state=LOWPOWER;
 
-            // ++ _codingRate;
-            // if (_codingRate>LORA_CR_4_6)
-            // {
-            //     _codingRate = LORA_CR_4_5;
-            //     //++ _spreadingFactor;
-            //     //if (_spreadingFactor>LORA_SF12)
-            //     //{
-            //     //     _spreadingFactor = LORA_SF5;
-                    //   ++ _bandwidth;
+            ++ _codingRate;
+            if (_codingRate>LORA_CR_4_8)
+            {
+                _codingRate = LORA_CR_4_5;
+                 ++ _spreadingFactor;
+                 if (_spreadingFactor>LORA_SF12)
+                 {
+                      _spreadingFactor = LORA_SF10;
+                       ++ _bandwidth;
                     //   if (_bandwidth>4)
                     //   {
                     //       _bandwidth = 0;
                     //   }
-                 //}
-            // }
+                 }
+            }
 
 		    break;
 		case RX:
@@ -144,7 +152,7 @@ void loop() {
 
 void OnTxDone( void )
 {
-	Serial.print("TX done......\n");
+	Serial.print(" .. TX done\n");
 	turnOffRGB();
 	state=TX;
 }
