@@ -1,3 +1,9 @@
+// https://github.com/HelTecAutomation/ASR650x-Arduino 
+// https://heltec-automation-docs.readthedocs.io/en/latest/cubecell/capsule-sensor/htcc-ac01/sensor_pinout_diagram.html
+
+
+
+
 #include <Arduino.h>
 #include "vesoil.h"
 #include "CubeCell_NeoPixel.h"
@@ -24,21 +30,27 @@ uint8_t  _codingRate                                = LORA_CR_4_5;     // [1: 4/
 char txpacket[BUFFER_SIZE];
 char rxpacket[BUFFER_SIZE];
 
+#define timetillsleep 5000
+#define timetillwakeup 5000
+static TimerEvent_t wakeUp;
+
 static RadioEvents_t RadioEvents;
 void OnTxDone( void );
 void OnTxTimeout( void );
 void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr );
+void onWakeUp();
+void onSleep();
 
 typedef enum
 {
     LOWPOWER,
     RX,
-    TX
-}States_t;
+    TX,
+    TXWAIT
+} States_t;
 
 int16_t txNumber;
 States_t state;
-bool sleepMode = false;
 int16_t Rssi,rxSize;
 //CubeCell_NeoPixel pixels(1, RGB, NEO_GRB + NEO_KHZ800);
 
@@ -55,7 +67,16 @@ void setup() {
 
     Radio.Init( &RadioEvents );
     Radio.SetChannel( RF_FREQUENCY );
+    Radio.SetTxConfig( MODEM_LORA, TX_OUTPUT_POWER, 0, _bandwidth,
+                                _spreadingFactor, _codingRate,
+                                LORA_PREAMBLE_LENGTH, LORA_FIX_LENGTH_PAYLOAD_ON,
+                                LORA_CRC, LORA_FREQ_HOP, LORA_HOP_PERIOD, LORA_IQ_INVERSION_ON, 16000 );
+
+    // setting the sync work breaks the transmission.
+    // Radio.SetSyncWord(SYNCWORD);
     state=TX;
+
+    TimerInit( &wakeUp, onWakeUp );
     
     pinMode(Vext,OUTPUT);
     digitalWrite(Vext,LOW); //SET POWER
@@ -70,101 +91,67 @@ void Send() {
     report.gndTemp.value = 20.5;
     report.moist1.value = 1000;
     report.moist2.value = 2000;
-    Serial.printf("TX begin %d bytes ....", sizeof(report));
+    //Serial.printf("TX begin %d bytes ....", sizeof(report));
     Radio.Send( (uint8_t *)&report, sizeof(report) );    
-   
+}
+
+void SendTestPacket() {
+    txNumber++;
+
+    uint8_t buffer[24];
+    memset( buffer, 0, sizeof(buffer));
+
+    int voltage = getBatteryVoltage();
+    sprintf( (char *)buffer, "B %u S %d C %d V %d", _bandwidth, _spreadingFactor, _codingRate, voltage);
+    Radio.Send( buffer, sizeof(buffer) );
 }
 
 void loop() {
+
     switch(state)
 	{
 		case TX:
-            
-            Serial.printf("B %u S %d C %d", _bandwidth, _spreadingFactor, _codingRate);
-            Radio.SetTxConfig( MODEM_LORA, TX_OUTPUT_POWER, 0, _bandwidth,
-                                        _spreadingFactor, _codingRate,
-                                        LORA_PREAMBLE_LENGTH, LORA_FIX_LENGTH_PAYLOAD_ON,
-                                        LORA_CRC, LORA_FREQ_HOP, LORA_HOP_PERIOD, LORA_IQ_INVERSION_ON, 16000 );
-
-            // setting the sync work breaks the transmission.
-            //Radio.SetSyncWord(SYNCWORD);
-
-			delay(250);
-            turnOnRGB(COLOR_SEND,0);
-			txNumber++;
-
-            //Send();
-
-            uint8_t buffer[24];
-            memset( buffer, 0, sizeof(buffer));
-            sprintf( (char *)buffer, "B %u S %d C %d", _bandwidth, _spreadingFactor, _codingRate);
-            Radio.Send( buffer, sizeof(buffer) );
-
-            turnOnRGB(COLOR_SENT,0);
-		    state=LOWPOWER;
-
-            ++ _codingRate;
-            if (_codingRate>LORA_CR_4_8)
-            {
-                _codingRate = LORA_CR_4_5;
-                 ++ _spreadingFactor;
-                 if (_spreadingFactor>LORA_SF12)
-                 {
-                      _spreadingFactor = LORA_SF10;
-                       ++ _bandwidth;
-                    //   if (_bandwidth>4)
-                    //   {
-                    //       _bandwidth = 0;
-                    //   }
-                 }
-            }
-
+            SendTestPacket();
+		    state=TXWAIT;
 		    break;
-		case RX:
-			Serial.println("into RX mode");
-		    Radio.Rx( 0 );
-		    state=LOWPOWER;
-		    break;
+		case TXWAIT:
+            break;
 		case LOWPOWER:
 			lowPowerHandler();
 		    break;
         default:
             break;
 	}
-    Radio.IrqProcess( );
-  // put your main code here, to run repeatedly:
-
-    // for (int i=0; i<255; i+=100)
-    // for (int j=0; j<255; j+=100)
-    // for (int k=0; k<255; k+=100)
-    // {
-    //     pixels.setPixelColor(0, pixels.Color(i, j, k));
-
-    //     pixels.show();   // Send the updated pixel colors to the hardware.
-    //     uint16_t voltage;
-    //     voltage=analogRead(ADC);//return the voltage in mV, max value can be read is 2400mV 
-    //     Serial.print(millis());
-    //     Serial.print("  ");
-    //     Serial.println(voltage);
-    //     delay(200);
-    // }
+    //Radio.IrqProcess( );
 }
 
 void OnTxDone( void )
 {
-	Serial.print(" .. TX done\n");
-	turnOffRGB();
-	state=TX;
+	onSleep();
 }
 
 void OnTxTimeout( void )
 {
     Radio.Sleep( );
-    Serial.print("TX Timeout......\n");
     state=TX;
 }
 
 void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)
 {
 	state=TX;
+}
+
+void onSleep()
+{
+    Radio.Sleep();
+    turnOnRGB(0x500000,0);
+    turnOffRGB();
+    state = LOWPOWER;
+    TimerSetValue( &wakeUp, timetillwakeup );
+    TimerStart( &wakeUp );
+}
+
+void onWakeUp()
+{
+    state = TX;
 }

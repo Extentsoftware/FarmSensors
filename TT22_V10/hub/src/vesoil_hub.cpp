@@ -190,7 +190,7 @@ void DisplayPage(int page)
         case 0:
           display.drawString(0, 0, "System Status");
           display.drawString(0, 16, networkStage);
-          display.drawString(48, 16, networkStatus);
+          display.drawString(32, 16, networkStatus);
           display.drawString(0, 32, incomingMessage);
           
 #ifdef HAS_GSM
@@ -403,8 +403,7 @@ void startLoRa() {
 
     
   LoRa.setPreambleLength(config.preamble);
-  //LoRa.setSpreadingFactor(config.spreadFactor);
-  LoRa.setSpreadingFactor(10);
+  LoRa.setSpreadingFactor(config.spreadFactor);
   LoRa.setCodingRate4(config.codingRate);
 
   if (config.enableCRC)
@@ -429,7 +428,9 @@ void readLoraData(int packetSize) {
 
     if (packetSize==24)
     {
+      goodpacket++; 
       String s = LoRa.readString();
+      strcpy( incomingMessage, s.c_str() );
       Serial.print(s); 
       Serial.printf("  %d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
     }
