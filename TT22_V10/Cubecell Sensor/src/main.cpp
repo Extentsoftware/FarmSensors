@@ -1,13 +1,15 @@
 // https://github.com/HelTecAutomation/ASR650x-Arduino 
 // https://heltec-automation-docs.readthedocs.io/en/latest/cubecell/capsule-sensor/htcc-ac01/sensor_pinout_diagram.html
 
-
-
-
 #include <Arduino.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "vesoil.h"
 #include "CubeCell_NeoPixel.h"
 #include "LoRaWan_APP.h"
+#include "D18B20.h"
+
 
 #define RF_FREQUENCY                                868E6           // Hz
 #define TX_OUTPUT_POWER                             20              // dBm
@@ -49,18 +51,13 @@ typedef enum
     TXWAIT
 } States_t;
 
-int16_t txNumber;
 States_t state;
-int16_t Rssi,rxSize;
-//CubeCell_NeoPixel pixels(1, RGB, NEO_GRB + NEO_KHZ800);
+
+D18B20 ds( GPIO0 );
 
 void setup() {
     boardInitMcu( );
     Serial.begin(115200);
-
-    txNumber=0;
-    Rssi=0;
-
     RadioEvents.TxDone = OnTxDone;
     RadioEvents.TxTimeout = OnTxTimeout;
     RadioEvents.RxDone = OnRxDone;
@@ -77,9 +74,9 @@ void setup() {
     state=TX;
 
     TimerInit( &wakeUp, onWakeUp );
-    
-    pinMode(Vext,OUTPUT);
-    digitalWrite(Vext,LOW); //SET POWER
+    pinMode(Vext, OUTPUT);
+
+    ds.init();
 
 }
 
@@ -96,14 +93,18 @@ void Send() {
 }
 
 void SendTestPacket() {
-    txNumber++;
-
-    uint8_t buffer[24];
+    char buffer[24];
     memset( buffer, 0, sizeof(buffer));
+    
+    digitalWrite(Vext,LOW); //SET POWER
+    delay(100);
+    float value = ds.getSample();
+    uint16_t volts = getBatteryVoltage();
+    digitalWrite(Vext,HIGH); //SET POWER
 
-    int voltage = getBatteryVoltage();
-    sprintf( (char *)buffer, "B %u S %d C %d V %d", _bandwidth, _spreadingFactor, _codingRate, voltage);
-    Radio.Send( buffer, sizeof(buffer) );
+    sprintf( buffer, "Tmp %s V=%d", String(value,1).c_str(), volts);
+
+    Radio.Send( (uint8_t *)buffer, sizeof(buffer) );
 }
 
 void loop() {
@@ -122,7 +123,6 @@ void loop() {
         default:
             break;
 	}
-    //Radio.IrqProcess( );
 }
 
 void OnTxDone( void )
