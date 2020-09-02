@@ -32,7 +32,6 @@ uint8_t  _codingRate                                = LORA_CR_4_5;     // [1: 4/
 char txpacket[BUFFER_SIZE];
 char rxpacket[BUFFER_SIZE];
 
-#define timetillsleep 5000
 #define timetillwakeup 5000
 static TimerEvent_t wakeUp;
 
@@ -46,18 +45,23 @@ void onSleep();
 typedef enum
 {
     LOWPOWER,
+    LOWPOWERTX,
     RX,
-    TX,
-    TXWAIT
+    TX
 } States_t;
 
 States_t state;
 
 D18B20 ds( GPIO0 );
 
+char buffer[24];
+
 void setup() {
     boardInitMcu( );
     Serial.begin(115200);
+    
+    TimerInit( &wakeUp, onWakeUp );
+
     RadioEvents.TxDone = OnTxDone;
     RadioEvents.TxTimeout = OnTxTimeout;
     RadioEvents.RxDone = OnRxDone;
@@ -67,14 +71,14 @@ void setup() {
     Radio.SetTxConfig( MODEM_LORA, TX_OUTPUT_POWER, 0, _bandwidth,
                                 _spreadingFactor, _codingRate,
                                 LORA_PREAMBLE_LENGTH, LORA_FIX_LENGTH_PAYLOAD_ON,
-                                LORA_CRC, LORA_FREQ_HOP, LORA_HOP_PERIOD, LORA_IQ_INVERSION_ON, 16000 );
+                                LORA_CRC, LORA_FREQ_HOP, LORA_HOP_PERIOD, LORA_IQ_INVERSION_ON, 36000 );
 
     // setting the sync work breaks the transmission.
     // Radio.SetSyncWord(SYNCWORD);
     state=TX;
 
-    TimerInit( &wakeUp, onWakeUp );
     pinMode(Vext, OUTPUT);
+    digitalWrite(Vext,HIGH); //SET POWER
 
     ds.init();
 
@@ -93,16 +97,14 @@ void Send() {
 }
 
 void SendTestPacket() {
-    char buffer[24];
     memset( buffer, 0, sizeof(buffer));
     
     digitalWrite(Vext,LOW); //SET POWER
-    delay(100);
     float value = ds.getSample();
     uint16_t volts = getBatteryVoltage();
     digitalWrite(Vext,HIGH); //SET POWER
 
-    sprintf( buffer, "Tmp %s V=%d", String(value,1).c_str(), volts);
+    sprintf( buffer, "Tmp %s V=%d", String(value,2).c_str(), volts);
 
     Radio.Send( (uint8_t *)buffer, sizeof(buffer) );
 }
@@ -113,10 +115,12 @@ void loop() {
 	{
 		case TX:
             SendTestPacket();
-		    state=TXWAIT;
+		    state = LOWPOWERTX;
 		    break;
-		case TXWAIT:
-            break;
+		case LOWPOWERTX:
+            Radio.IrqProcess( );
+			lowPowerHandler();
+		    break;
 		case LOWPOWER:
 			lowPowerHandler();
 		    break;
@@ -127,13 +131,12 @@ void loop() {
 
 void OnTxDone( void )
 {
-	onSleep();
+    onSleep();
 }
 
 void OnTxTimeout( void )
 {
-    Radio.Sleep( );
-    state=TX;
+    onSleep();
 }
 
 void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)
@@ -144,8 +147,6 @@ void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)
 void onSleep()
 {
     Radio.Sleep();
-    turnOnRGB(0x500000,0);
-    turnOffRGB();
     state = LOWPOWER;
     TimerSetValue( &wakeUp, timetillwakeup );
     TimerStart( &wakeUp );

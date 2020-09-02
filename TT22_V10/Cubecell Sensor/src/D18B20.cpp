@@ -28,7 +28,7 @@ float D18B20::getSample(void) {
   ds.reset_search();
   
   if ( !ds.search(addr)) {
-    delay(250);
+    delay(100);
     ds.reset_search();
     return -101;
   }
@@ -65,6 +65,7 @@ float D18B20::getSample(void) {
   for ( i = 0; i < 9; i++) {           // we need 9 bytes
     data[i] = ds.read();
   }
+  ds.depower();
 
   // Convert the data to actual temperature
   // because the result is a 16 bit signed integer, it should
