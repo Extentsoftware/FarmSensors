@@ -27,12 +27,19 @@ uint8_t  _codingRate                                = LORA_CR_4_5;     // [1: 4/
 #define BUFFER_SIZE                                 30 // Define the payload size here
 #define SYNCWORD                                    0
 
-#define COLOR_SENT 0x505000   //color red, light 0x10
+#define COLOR_SENT 0xFFFFFF   //color red, light 0x10
 
 char txpacket[BUFFER_SIZE];
 char rxpacket[BUFFER_SIZE];
 
-#define timetillwakeup 5000
+#define MICRO_TO_SECS                               1000
+#define MICRO_TO_MIN                                60 * MICRO_TO_SECS
+#define FIVESECS                                    05 * MICRO_TO_SECS
+#define TENSECS                                     10 * MICRO_TO_SECS
+#define THIRTYSECS                                  30 * MICRO_TO_SECS
+#define THIRTYMINS                                  30 * MICRO_TO_MIN
+#define TIME_UNTIL_WAKEUP                           FIVESECS
+
 static TimerEvent_t wakeUp;
 
 static RadioEvents_t RadioEvents;
@@ -107,6 +114,9 @@ void SendTestPacket() {
     sprintf( buffer, "Tmp %s V=%d", String(value,2).c_str(), volts);
 
     Radio.Send( (uint8_t *)buffer, sizeof(buffer) );
+
+    turnOnRGB(COLOR_SENT, 100);
+    turnOffRGB();
 }
 
 void loop() {
@@ -148,7 +158,7 @@ void onSleep()
 {
     Radio.Sleep();
     state = LOWPOWER;
-    TimerSetValue( &wakeUp, timetillwakeup );
+    TimerSetValue( &wakeUp, TIME_UNTIL_WAKEUP );
     TimerStart( &wakeUp );
 }
 

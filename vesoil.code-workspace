@@ -9,6 +9,12 @@
 		},
 		{
 			"path": "TT22_V10\\sensorI2C"
+		},
+		{
+			"path": "TT22_V10\\Cubecell Sensor"
+		},
+		{
+			"path": "TT22_V10\\common"
 		}
 	],
 	"settings": {

@@ -13,6 +13,7 @@ struct SensorId
     unsigned char id[6];
 };
 
+
 struct SensorGps
 {
     long time;
@@ -21,6 +22,12 @@ struct SensorGps
     float alt;
     char sats;
     char hdop;
+};
+
+struct SensorTempId
+{
+    byte id=2;
+    SensorGps data;
 };
 
 struct SensorTemp
@@ -66,4 +73,23 @@ struct SensorReport
     SensorMoisture moist1;
     SensorMoisture moist2;
     SensorDistance distance;
+};
+
+//  | ModuleID | Metric ID | Metric Data.. | Metric ID | Metric Data.. | Metric ID | Metric Data.. | 
+//  | ModuleID | Metric ID | Metric Data.. | Metric ID | Metric Data.. | Metric ID | Metric Data.. | 
+
+enum SensorMetricType
+{
+    SMT_GPS        = 1,
+    SMT_Distance   = 2,
+    SMT_Moist      = 4,
+    SMT_AirTemp    = 5,
+    SMT_AirHum     = 6,
+    SMT_GndTemp    = 7,
+};
+
+struct SensorMetric
+{
+    byte metric;
+    byte index;         // may be used if we have multiple moisture sensors
 };
