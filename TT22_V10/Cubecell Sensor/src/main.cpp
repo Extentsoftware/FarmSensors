@@ -10,7 +10,6 @@
 #include "LoRaWan_APP.h"
 #include "D18B20.h"
 
-
 #define RF_FREQUENCY                                868E6           // Hz
 #define TX_OUTPUT_POWER                             20              // dBm
 uint32_t _bandwidth                                 = 0;            // [0: 125 kHz,  4 = LORA_BW_041
