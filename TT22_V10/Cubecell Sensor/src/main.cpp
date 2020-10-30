@@ -9,6 +9,7 @@
 #include "CubeCell_NeoPixel.h"
 #include "LoRaWan_APP.h"
 #include "D18B20.h"
+#include <CayenneLPP.h>
 
 #define RF_FREQUENCY                                868E6           // Hz
 #define TX_OUTPUT_POWER                             20              // dBm
@@ -90,16 +91,19 @@ void setup() {
 
 }
 
-void Send() {
-    SensorReport report;
-    memset( &report, 0, sizeof(report));
-    memcpy( &report.id , "CUBECL", 6);
-    report.distance.value = 10.5;
-    report.gndTemp.value = 20.5;
-    report.moist1.value = 1000;
-    report.moist2.value = 2000;
-    //Serial.printf("TX begin %d bytes ....", sizeof(report));
-    Radio.Send( (uint8_t *)&report, sizeof(report) );    
+void SendCayennePacket() {
+    CayenneLPP lpp(64);
+    lpp.reset();
+    lpp.addPresence(CH_ID_LO,getID() & 0x0000FFFF);     // id of this sensor
+    lpp.addPresence(CH_ID_HI,(getID() >> 16 ) & 0x0000FFFF);     // id of this sensor
+    lpp.addAnalogInput(CH_Moist1,100.0);
+    lpp.addAnalogInput(CH_Moist1,200.0);
+    lpp.addTemperature(CH_AirTemp,20.23);
+    lpp.addTemperature(CH_GndTemp,18.3);
+    lpp.addRelativeHumidity(CH_AirHum,78.2);
+    lpp.addVoltage(CH_Volts, getBatteryVoltage()/1000.0);
+    
+    Radio.Send( lpp.getBuffer(), lpp.getSize() );    
 }
 
 void SendTestPacket() {
@@ -123,7 +127,7 @@ void loop() {
     switch(state)
 	{
 		case TX:
-            SendTestPacket();
+            SendCayennePacket();
 		    state = LOWPOWERTX;
 		    break;
 		case LOWPOWERTX:

@@ -243,7 +243,7 @@ void ReadVolts(SensorVoltage * report) {
   report->value = power.get_battery_voltage();
 }
 
-void getSample(SensorReport *report) {
+void getSample(SensorReportV1 *report) {
   power.power_sensors(true);   // turn on power to the sensor bus
   ReadGPSData(&report->gps);
   ReadVolts(&report->volts);
@@ -499,7 +499,7 @@ void getConfig(STARTUPMODE startup_mode) {
 void getSampleAndSend() {
   // get GPS and then gather/send a sample if within the time window
   // best not to send at night as we drain the battery
-  SensorReport report;
+  SensorReportV1 report;
   memset( &report, 0, sizeof(report));
   report.capability = config.capability;
 
@@ -520,7 +520,7 @@ void getSampleAndSend() {
   power.led_onoff(true);
   LoRa.beginPacket();
   Serial.println("LoRa begin");
-  LoRa.write( (const uint8_t *)&report, sizeof(SensorReport));
+  LoRa.write( (const uint8_t *)&report, sizeof(SensorReportV1));
   Serial.println("LoRa Write");
   LoRa.endPacket();
   Serial.println("LoRa End");
@@ -579,7 +579,7 @@ void setup() {
   Serial.printf("{ \"ssid\": \"%s\", \"gpstimeout\": %d, \"gpssleep\": %d, \"fromHour\": %d, \"toHour\": %d, \"reportfreq\":%d, \"frequency\":%lu, \"txpower\":%d, \"txvolts\":%f, \"volts\":%f }\n", 
           config.ssid, config.gps_timeout, config.failedGPSsleep, config.fromHour, config.toHour, config.reportEvery,config.frequency,config.txpower,config.minvolts, currentVoltage );
 
-  Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
+  Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReportV1));
 }
 
 void loopWifiMode() {

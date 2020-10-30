@@ -113,9 +113,7 @@ void notFound(AsyncWebServerRequest *request);
 void setupWifi();
 void exitWifi();
 void toggleWifi();
-void processLoraBlock(int packetSize);
 void readLoraData(int packetSize);
-SensorReport *GetFromStore();
 void getConfig(STARTUPMODE startup_mode);
 STARTUPMODE getStartupMode();
 void flashlight(char code);
@@ -123,10 +121,11 @@ void startLoRa();
 void doModemStart();
 bool doNetworkConnect();
 void doSetupMQTT();
-bool SendMQTT(SensorReport *report);
+void SendMQTTBinary(uint8_t *report, int packetSize);
 void InitOLED();
 void DisplayPage(int page);
 void ShowNextPage();
+void ModemCheck();
 
 #ifdef HASPSRAM
 void AddToStore(SensorReport *report);

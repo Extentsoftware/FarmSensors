@@ -1,3 +1,4 @@
+#if false
 // https://github.com/me-no-dev/ESPAsyncWebServer#basic-response-with-http-code
 // https://github.com/cyberman54/ESP32-Paxcounter/blob/82fdfb9ca129f71973a1f912a04aa8c7c5232a87/src/main.cpp
 // https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/log.html
@@ -36,17 +37,6 @@ char gpsjson[32];
 #endif
 
 
-enum MODEM_STATE
-{
-    MODEM_INIT,
-    MODEM_NOT_CONNECTED,
-    MODEM_CONNECTED,
-    GPRS_CONNECTED,
-    MQ_CONNECTED,
-};
-
-enum MODEM_STATE modem_state=MODEM_INIT;
-
 #define APP_VERSION 1
 
 #include <ESPAsyncWebServer.h>
@@ -83,6 +73,14 @@ TinyGsm modem(SerialAT);
 TinyGsmClient client(modem);
 PubSubClient mqtt(client);
 GeoHash hasher(8);
+#endif
+
+
+//SensorReport* store;
+
+#ifdef HASPSRAM
+int currentStoreWriter=0;
+int currentStoreReader=0;
 #endif
 
 AsyncWebServer server(80);
@@ -140,22 +138,33 @@ void setup() {
 
   GetMyMacAddress();
 
+#ifdef HASPSRAM
+  Serial.println("memory check");
+  // GPS comms settings  
+  MemoryCheck();  
+#endif
+
 #ifdef TTGO_TBEAM2
   float vBat = power.get_battery_voltage();
   Serial.printf("Battery voltage %f\n", vBat);
 #endif
 
-  startLoRa();
-
+#ifdef HAS_GSM
+  doModemStart();
+  while (!doNetworkConnect());
   doSetupMQTT();
+#endif
 
   setupWifi();
   
+  startLoRa();
+
   networkStage = "Lora";
   networkStatus = "Ready";
 
   DisplayPage(currentPage);
 
+  //Serial.printf("End of setup - sensor packet size is %u\n", sizeof(SensorReport));
   Serial.printf("End of setup\n");
 
 }
@@ -164,22 +173,21 @@ void ShowNextPage()
 {
     currentPage++;
 
-    if (currentPage==2)
+    if (!haveReport && currentPage>2)
+      currentPage=0;
+
+    if (currentPage==9)
       currentPage=0;
 
     DisplayPage(currentPage);
 }
 
-#define L1 0
-#define L2 12
-#define L3 24
-#define L4 36
-#define L5 48
-#define C1 0
-#define C2 64
-
 void DisplayPage(int page)
 {
+    char sensor[32];
+    float d;
+    int percentFull;
+
     display.clear();
     display.setFont(ArialMT_Plain_10);
     display.setTextAlignment(TEXT_ALIGN_LEFT);
@@ -188,36 +196,75 @@ void DisplayPage(int page)
     {
         // status
         case 0:
-          display.drawString(C1, L1, networkStage);
-          display.drawString(C2, L1, networkStatus);
-                    if (wifiMode)
-          {
-            display.drawString(C1, L2, "On");
-            display.drawString(C2, L2, address);
-          }
-          else
-          {
-            display.drawString(C1, L2, "Off");
-          }
-          display.drawString(C1, L3, String("rssi ") + String(rssi, 2));
-          display.drawString(C2, L3, String("snr  ") + String(snr, 2));
-          display.drawString(C1, L4, String("pfe  ") + String(pfe, DEC));
-          display.drawString(C2, L4, String("pkts  ") + String(packetcount,DEC));
-
+          display.drawString(0, 0, "System Status");
+          display.drawString(0, 16, networkStage);
+          display.drawString(32, 16, networkStatus);
+          display.drawString(0, 32, incomingMessage);
           
 #ifdef HAS_GSM
-          display.drawString(C1, L5, String("Gsm dB: ") + String(modem.getSignalQuality(), DEC));
+          display.drawString(0, 48, String("Gsm dB: ") + String(modem.getSignalQuality(), DEC));
 #endif
           break;
         case 1:
           display.drawString(0, 0, "Wifi Status");
+          if (wifiMode)
+          {
+            display.drawString(0, 16, "On");
+            display.drawString(0, 32, address);
+          }
+          else
+          {
+            display.drawString(0, 16, "Off");
+          }
           break;
         case 2:
           display.drawString(0, 0, "Signal");
           display.drawString(0, 16, String("rssi ") + String(rssi, 2));
           display.drawString(64, 16, String("snr  ") + String(snr, 2));
+
           display.drawString(0, 32, String("pfe  ") + String(pfe, DEC));
-          display.drawString(64, 48, String("pkts  ") + String(packetcount,DEC));
+
+          display.drawString(64, 48, String("Ok:  ") + String(packetcount,DEC));
+          break;
+        case 3:
+          display.drawString(0, 0, "Sensor Id");
+          //sprintf(sensor, "%02x%02x%02x%02x%02x%02x/sensor", report.id.id[0], report.id.id[1], report.id.id[2], report.id.id[3], report.id.id[4], report.id.id[5]);          
+          display.drawString(0, 16, sensor );
+          //display.drawString(0, 32, String("Batt ") + String(report.volts.value, 2) );
+          break;
+        case 4:
+          display.drawString(0, 0, "GPS #1");
+          //display.drawString(0, 16, asctime(gmtime(&report.gps.time)));
+          //display.drawString(0, 32, String("sats ") + String((int)report.gps.sats, DEC));
+          //display.drawString(0, 48, String("hdop ") + String((int)report.gps.hdop,DEC));
+          break;
+        case 5:
+          display.drawString(0, 0, "GPS #2");
+          //display.drawString(0, 16, String("Lat ") + String(report.gps.lat, 6));
+          //display.drawString(0, 32, String("Lng ") + String(report.gps.lng, 6));
+          //display.drawString(0, 48, String("alt ") + String(report.gps.alt));
+          break;
+        case 6:
+          display.drawString(0, 0, "Distance");
+          //d = (report.distance.value < config.FullHeight)? config.FullHeight : report.distance.value;
+          //d = (d > config.EmptyHeight)? config.EmptyHeight : d;
+          //d = d - config.FullHeight;
+          //percentFull = (int)(100 * (config.EmptyHeight - d) / (config.EmptyHeight - config.FullHeight));
+          //percentFull = percentFull>100?100:percentFull;
+          //percentFull = percentFull<0?0:percentFull;
+          //display.drawString(0, 16, String(report.distance.value, 1) + String(" cm") );
+          //display.drawProgressBar(0,32,120, 12, percentFull);
+          break;
+        case 7:
+          display.drawString(0, 0, "Temp");
+          //display.drawString(0, 16, String("Air Tmp. ") + String(report.airTempHumidity.airtemp.value, 1) );
+          //display.drawString(0, 32, String("Air Hum. ") + String(report.airTempHumidity.airhum.value, 1) );
+          //display.drawString(64, 16, String("Gnd ") + String(report.gndTemp.value, 1) );
+          break;
+        case 8:
+          display.drawString(0, 0, "Moisture");
+          //display.drawString(0, 16, String("M1. ") + String(report.moist1.value, DEC) );
+          //display.drawString(0, 32, String("M2. ") + String(report.moist2.value, DEC) );
           break;
         default:
           break;
@@ -316,17 +363,15 @@ int detectDebouncedBtnPush() {
 void loop() {
   
 #ifdef HAS_GSM
-  ModemCheck();
+  mqtt.loop();
 #endif
-
-  int packetSize = LoRa.parsePacket();
-  readLoraData(packetSize);
 
   int btnState = detectDebouncedBtnPush();
   if (btnState==1)
   {
     ShowNextPage();
   }
+
 
   if (btnState==2) 
   {
@@ -338,13 +383,16 @@ void loop() {
         break;
     }
   }
+
+  int packetSize = LoRa.parsePacket();
+  readLoraData(packetSize);
 }
 
 void SystemCheck() {
-  Serial.printf("Rev %u Freq %d \n", ESP.getChipRevision(), ESP.getCpuFreqMHz());
-  Serial.printf("PSRAM avail %u free %u\n", ESP.getPsramSize(), ESP.getFreePsram());
-  Serial.printf("FLASH size  %u spd  %u\n", ESP.getFlashChipSize(), ESP.getFlashChipSpeed());
-  Serial.printf("HEAP  size  %u free  %u\n", ESP.getHeapSize(), ESP.getFreeHeap());
+  ESP_LOGI("TAG", "Rev %u Freq %d", ESP.getChipRevision(), ESP.getCpuFreqMHz());
+  ESP_LOGI("TAG", "PSRAM avail %u free %u", ESP.getPsramSize(), ESP.getFreePsram());
+  ESP_LOGI("TAG", "FLASH size  %u spd  %u", ESP.getFlashChipSize(), ESP.getFlashChipSpeed());
+  ESP_LOGI("TAG", "HEAP  size  %u free  %u", ESP.getHeapSize(), ESP.getFreeHeap());
 }
 
 void startLoRa() {
@@ -379,10 +427,8 @@ void startLoRa() {
   LoRa.receive();
 }
 
-void readLoraData(int packetSize) 
-{  
+void readLoraData(int packetSize) {  
   if (packetSize>0) { 
-    Serial.printf("lora data %d bytes\n",packetSize);
     snr = LoRa.packetSnr();
     rssi = LoRa.packetRssi();
     pfe = LoRa.packetFrequencyError();
@@ -399,11 +445,18 @@ void readLoraData(int packetSize)
     lpp.decode(buffer, packetSize, root);
     serializeJsonPretty(root, Serial);
 
-        
     #ifdef HAS_GSM
-        SendMQTTBinary(buffer, packetSize);
+        SendMQTT(&report);
     #endif
 
+    #ifdef HASPSRAM        
+        AddToStore(report);
+    #endif
+
+      //String s = LoRa.readString();
+      //strcpy( incomingMessage, s.c_str() );
+      //Serial.print(s); 
+      //Serial.printf("  %d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
   }
   DisplayPage(currentPage);
 }
@@ -496,6 +549,35 @@ void setupWifi() {
 
     server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
+#ifdef HASPSRAM
+    // Send a GET request to <IP>/get?message=<message>
+    server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
+        
+        String reply = "{ \"app\": \"hub\", \"samples\": [";
+        SensorReport *ptr=NULL;
+        ptr = GetFromStore();
+        do {      
+          char payload[132];    
+          if (ptr!=NULL)
+          {
+            GetJsonReport(*ptr, payload);
+            reply += payload;
+          }
+
+          // get next packet
+          ptr = GetFromStore();
+          
+          if (ptr!=NULL)
+            reply += ",";
+
+        } while ( ptr!=NULL );
+
+        reply += " ] }\n";
+
+        request->send(200, "text/plain",  reply);
+    });
+#endif
+
     server.onNotFound(notFound);
 
     server.begin();
@@ -515,57 +597,104 @@ void GetMyMacAddress()
 
 #ifdef HAS_GSM
 
-
 void doModemStart()
 {  
-  Serial.println("Modem Start");
   networkStage = "Modem";
   networkStatus = "Starting";
   DisplayPage(currentPage);
   delay(1000);
-  Serial.println("modem init");
 
   TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,9600);
-  Serial.println("modem restart");
+  // delay(2000);  
   modem.restart();  
   String modemInfo = modem.getModemInfo();
   delay(1000);  
   networkStatus = "Started";
-  modem_state=MODEM_NOT_CONNECTED;
 }
 
-void waitForNetwork() 
+bool waitForNetwork(uint32_t timeout_ms = 120000L) 
 {
-  networkStage = "Network";
-  SimStatus simStatus = modem.getSimStatus();
-  RegStatus regStatus = modem.getRegistrationStatus();
-  networkStatus = String("Sim: ") + String(simStatus, DEC) + String(" Reg: ") + String(regStatus, DEC);
+    for (uint32_t start = millis(); millis() - start < timeout_ms;) 
+    {
+      if (modem.isNetworkConnected()) 
+      { 
+        return true; 
+      }
+
+      delay(1000);
+      networkStage = "Network";
+      SimStatus simStatus = modem.getSimStatus();
+      RegStatus regStatus = modem.getRegistrationStatus();
+      networkStatus = String("Sim: ") + String(simStatus, DEC) + String(" Reg: ") + String(regStatus, DEC);
+      DisplayPage(currentPage);
+    }
+    return false;
+}
+
+bool doNetworkConnect()
+{
+
+  boolean status = waitForNetwork();
+
+  networkStage = Msg_Network;
+  networkStatus = (char*)(status ? Msg_Connected : Msg_Failed);
   DisplayPage(currentPage);
-  if (modem.isNetworkConnected()) 
-  { 
-    networkStage = Msg_Network;
-    networkStatus = Msg_Connected;
+
+  delay(2000);  
+
+  if (status)
+  {
+    networkStage = Msg_GPRS;
+    networkStatus = Msg_Connecting;
     DisplayPage(currentPage);
-    modem_state=MODEM_CONNECTED;
+    
+    status = modem.gprsConnect(config.apn, config.gprsUser, config.gprsPass);    
+
+    networkStatus = (char*)(status ? Msg_Connected : Msg_Failed);
+    DisplayPage(currentPage);
+
+    delay(1000);  
   }
+  else
+  {
+    // modem.restart();
+  }
+  return status;
 }
 
-void doGPRSConnect()
+char *GetGeohash(SensorReport *ptr)
 {
-  Serial.println("GPRS Connect");
+  gpsjson[0]='\0';
+  if (ptr->capability & GPS)
+  {
+    const char *geohash = hasher.encode(ptr->gps.lat, ptr->gps.lng);
+    sprintf(gpsjson, "\"geohash\":\"%s\",", geohash );
+  }
+  return gpsjson;
+}
 
-  networkStage = Msg_GPRS;
-  networkStatus = Msg_Connecting;
-  DisplayPage(currentPage);
-    
-  bool connected = modem.gprsConnect(config.apn, config.gprsUser, config.gprsPass);    
+void SendCompleteReport(SensorReport *ptr, char * topic)
+{
+  char payload[MQTT_MAX_PACKET_SIZE];
 
-  networkStatus = (char*)(connected ? Msg_Connected : Msg_Failed);
-  DisplayPage(currentPage);
-
-  if (connected) 
-  { 
-    modem_state=GPRS_CONNECTED;
+  sprintf(payload, "{%s\"lat\":%f,\"lng\":%f,\"alt\":%f,\"sats\":%d,\"hdop\":%d,\"volts\":%f,\"version\":%d,\"gt\":%f,\"at\":%f,\"ah\":%f,\"m1\":%d,\"m2\":%d,\"dist\":%f,\"snr\":%f,\"rssi\":%f,\"pfe\":%ld}"
+    , ptr->capability & GPS ? GetGeohash(ptr): ""
+    , ptr->gps.lat, ptr->gps.lng ,ptr->gps.alt ,ptr->gps.sats ,ptr->gps.hdop
+    , ptr->volts.value
+    , ptr->version 
+    , ptr->gndTemp.value
+    , ptr->airTempHumidity.airtemp.value
+    , ptr->airTempHumidity.airhum.value
+    , ptr->moist1.value
+    , ptr->moist2.value
+    , ptr->distance.value
+    , snr
+    , rssi
+    , pfe
+    );
+  if (!mqtt.publish(topic, payload, true))
+  {
+    Serial.printf("MQTT Fail %d\n", strlen(payload));
   }
 }
 
@@ -583,9 +712,13 @@ void doSetupMQTT()
   mqtt.setCallback(mqttCallback);
 }
 
-void mqttConnect()
-{
+bool SendMQTTBinary(uint32 *report) {
   char topic[32];
+  bool gprsConnected = modem.isGprsConnected();
+
+  if (!gprsConnected)
+    if (!doNetworkConnect())
+      return false;
 
   if (!mqtt.connected())
   {
@@ -596,6 +729,7 @@ void mqttConnect()
     if (!mqttConnected)
     {
       networkStatus = Msg_FailedToConnect;
+      return false;
     }
     else
     {
@@ -603,58 +737,99 @@ void mqttConnect()
       sprintf(topic, "bongo/%s/hub", macStr);
       mqtt.subscribe(topic);  
       mqtt.publish(topic, "{\"state\":\"connected\"}", true);
-      modem_state=MQ_CONNECTED;
     }
   }
-}  
 
-void mqttPoll()
-{
-  bool gprsConnected = modem.isGprsConnected();
-  if (!gprsConnected)
-    modem_state=MODEM_CONNECTED;
-  bool networkConnected = modem.isGprsConnected();
-  if (!networkConnected)
-    modem_state=MODEM_CONNECTED;
-  mqtt.loop();
-}
+  DisplayPage(currentPage);
 
-void ModemCheck()
-{
-  switch(modem_state)
+  if (!mqtt.publish(topic, payload, true))
   {
-    case MODEM_INIT:
-      doModemStart();
-      break;
-    case MODEM_NOT_CONNECTED:
-      waitForNetwork();
-      break;
-    case MODEM_CONNECTED:
-      doGPRSConnect();
-      break;
-    case GPRS_CONNECTED:
-      mqttConnect();
-      break;      
-    case MQ_CONNECTED:
-      mqttPoll();
-      break;      
+    Serial.printf("MQTT Fail %d\n", strlen(payload));
   }
+
+
+  sprintf(topic, "bongo/%02x%02x%02x%02x%02x%02x/sensor", report->id.id[0], report->id.id[1], report->id.id[2], report->id.id[3], report->id.id[4], report->id.id[5]);
+
+  SendCompleteReport(report, topic);
+
+  return true;
 }
 
-void SendMQTTBinary(uint8_t *report, int packetSize)
-{
+
+bool SendMQTT(SensorReport *report) {
   char topic[32];
-  
-  if (modem_state != MQ_CONNECTED)
-    return;
+  bool gprsConnected = modem.isGprsConnected();
 
-  if (!mqtt.publish(topic, report, packetSize))
+  if (!gprsConnected)
+    if (!doNetworkConnect())
+      return false;
+
+  if (!mqtt.connected())
   {
-    Serial.printf("MQTT Fail\n");
+    networkStage = Msg_MQTT;
+    networkStatus = Msg_Connecting;
+    DisplayPage(currentPage);
+    boolean mqttConnected = mqtt.connect(macStr);
+    if (!mqttConnected)
+    {
+      networkStatus = Msg_FailedToConnect;
+      return false;
+    }
+    else
+    {
+      networkStatus = Msg_Connected;
+      sprintf(topic, "bongo/%s/hub", macStr);
+      mqtt.subscribe(topic);  
+      mqtt.publish(topic, "{\"state\":\"connected\"}", true);
+    }
   }
 
-  return;
+  DisplayPage(currentPage);
+
+  sprintf(topic, "bongo/%02x%02x%02x%02x%02x%02x/sensor", report->id.id[0], report->id.id[1], report->id.id[2], report->id.id[3], report->id.id[4], report->id.id[5]);
+
+  SendCompleteReport(report, topic);
+
+  return true;
 }
 
 #endif
 
+#ifdef HASPSRAM
+
+void MemoryCheck() {
+  
+  store = (SensorReport *) ps_calloc(STORESIZE,  sizeof(SensorReport));
+  if (store != NULL)
+  {
+    ESP_LOGI("TAG","Memory allocated %u bytes for %d records @ %u",size, STORESIZE, store);
+  }
+  else
+    ESP_LOGI("TAG","Could not allocate memory for %u bytes",size);
+}
+
+int GetNextRingBufferPos(int pointer) {
+  pointer++;
+  if (pointer>=STORESIZE)
+    pointer=0;
+  return pointer;
+}
+
+void AddToStore(SensorReport report) {
+  memcpy( (void *)(&store[currentStoreWriter]), &report, sizeof(SensorReport) );
+  currentStoreWriter = GetNextRingBufferPos(currentStoreWriter);
+  // hit the reader?
+  if (currentStoreWriter == currentStoreReader)
+    currentStoreReader = GetNextRingBufferPos(currentStoreReader);
+}
+
+SensorReport *GetFromStore() {
+  if (currentStoreReader==currentStoreWriter)
+    return NULL;  // no data
+  SensorReport *ptr = &store[currentStoreReader];
+  currentStoreReader = GetNextRingBufferPos(currentStoreReader);
+  return ptr;
+}
+#endif
+
+#endif

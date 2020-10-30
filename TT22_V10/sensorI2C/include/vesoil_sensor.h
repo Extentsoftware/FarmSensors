@@ -149,12 +149,12 @@ void setupTempSensors();
 float readGroundTemp();
 float readAirTemp();
 float readAirHum();
-void getSample(SensorReport *report);
+void getSample(SensorReportV1 *report);
 
 // Radio
 void startLoRa();
 void stopLoRa();
-void sendSampleLora(SensorReport *report);
+void sendSampleLora(SensorReportV1 *report);
 
 // GPS
 void stopGPS();
