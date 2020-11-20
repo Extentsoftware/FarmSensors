@@ -4,12 +4,13 @@
 #include <Arduino.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <malloc.h>
+#include "CayenneLPP.h"
 
 #include "vesoil.h"
 #include "CubeCell_NeoPixel.h"
 #include "LoRaWan_APP.h"
 #include "D18B20.h"
-#include <CayenneLPP.h>
 
 #define RF_FREQUENCY                                868E6           // Hz
 #define TX_OUTPUT_POWER                             20              // dBm
@@ -27,7 +28,8 @@ uint8_t  _codingRate                                = LORA_CR_4_5;     // [1: 4/
 #define BUFFER_SIZE                                 30 // Define the payload size here
 #define SYNCWORD                                    0
 
-#define COLOR_SENT 0xFFFFFF   //color red, light 0x10
+#define COLOR_SENT 0xFFFFFF   //color white
+#define COLOR_FAIL 0xFF0000   //color red, light 0x10
 
 char txpacket[BUFFER_SIZE];
 char rxpacket[BUFFER_SIZE];
@@ -61,12 +63,12 @@ States_t state;
 
 D18B20 ds( GPIO0 );
 
-char buffer[24];
-
 void setup() {
     boardInitMcu( );
     Serial.begin(115200);
     
+    Serial.printf( "Started\n");
+
     TimerInit( &wakeUp, onWakeUp );
 
     RadioEvents.TxDone = OnTxDone;
@@ -88,36 +90,35 @@ void setup() {
     digitalWrite(Vext,HIGH); //SET POWER
 
     ds.init();
-
 }
 
-void SendCayennePacket() {
+void SendTestPacket() {
+    digitalWrite(Vext,LOW); //SET POWER
+    delay(100);
+    float value = ds.getSample();
+
+    digitalWrite(Vext,HIGH); //SET POWER
+
+    if ((int)(value=-101))
+    {
+        Serial.printf( "Tmp FAIL\n");
+        turnOnRGB(COLOR_FAIL, 100);
+        turnOffRGB();
+        return;
+    }
+
+    uint16_t volts = getBatteryVoltage();
+    
+    Serial.printf( "Tmp %s V=%d\n", String(value,2).c_str(), volts);
+
     CayenneLPP lpp(64);
     lpp.reset();
     lpp.addPresence(CH_ID_LO,getID() & 0x0000FFFF);     // id of this sensor
     lpp.addPresence(CH_ID_HI,(getID() >> 16 ) & 0x0000FFFF);     // id of this sensor
     lpp.addAnalogInput(CH_Moist1,100.0);
-    lpp.addAnalogInput(CH_Moist1,200.0);
-    lpp.addTemperature(CH_AirTemp,20.23);
-    lpp.addTemperature(CH_GndTemp,18.3);
-    lpp.addRelativeHumidity(CH_AirHum,78.2);
-    lpp.addVoltage(CH_Volts, getBatteryVoltage()/1000.0);
-    
+    lpp.addAnalogInput(CH_Volts, getBatteryVoltage()/1000.0);
     Radio.Send( lpp.getBuffer(), lpp.getSize() );    
-}
-
-void SendTestPacket() {
-    memset( buffer, 0, sizeof(buffer));
     
-    digitalWrite(Vext,LOW); //SET POWER
-    float value = ds.getSample();
-    uint16_t volts = getBatteryVoltage();
-    digitalWrite(Vext,HIGH); //SET POWER
-
-    sprintf( buffer, "Tmp %s V=%d", String(value,2).c_str(), volts);
-
-    Radio.Send( (uint8_t *)buffer, sizeof(buffer) );
-
     turnOnRGB(COLOR_SENT, 100);
     turnOffRGB();
 }
@@ -127,7 +128,7 @@ void loop() {
     switch(state)
 	{
 		case TX:
-            SendCayennePacket();
+            SendTestPacket();
 		    state = LOWPOWERTX;
 		    break;
 		case LOWPOWERTX:

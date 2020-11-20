@@ -5,15 +5,17 @@
 			"path": "hub"
 		},
 		{
-			"name": "Vesoil Sensor I2C",
-			"path": "sensorI2C"
-		},
-		{
 			"name": "Common Code",
 			"path": "common"
 		},
 		{
-			"path": "Cubecell Sensor"
+			"path": "Cubecell Header"
+		},
+		{
+			"path": "Cubecell Remote"
+		},
+		{
+			"path": "CubecellTest"
 		}
 	],
 	"settings": {
