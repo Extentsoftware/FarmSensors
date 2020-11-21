@@ -16,6 +16,7 @@ Pin oneWireData(2);
 // This is the ROM the arduino will respond to, make sure it doesn't conflict with another device
 const byte owROM[7] = { 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02 };
 
+
 // This sample emulates a DS18B20 device (temperature sensor), so we start by defining the available commands
 const byte DS18B20_START_CONVERSION = 0x44;
 const byte DS18B20_READ_SCRATCHPAD = 0xBE;

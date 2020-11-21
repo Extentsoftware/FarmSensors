@@ -4,13 +4,12 @@
 #include <Arduino.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
 #include "CayenneLPP.h"
-
-#include "vesoil.h"
 #include "CubeCell_NeoPixel.h"
 #include "LoRaWan_APP.h"
 #include "D18B20.h"
+#include "vesoil.h"
+#include <OneWire.h>
 
 #define RF_FREQUENCY                                868E6           // Hz
 #define TX_OUTPUT_POWER                             20              // dBm
@@ -60,7 +59,6 @@ typedef enum
 } States_t;
 
 States_t state;
-
 D18B20 ds( GPIO0 );
 
 void setup() {
@@ -68,7 +66,7 @@ void setup() {
     Serial.begin(115200);
     
     Serial.printf( "Started\n");
-
+    delay(1000);
     TimerInit( &wakeUp, onWakeUp );
 
     RadioEvents.TxDone = OnTxDone;
@@ -85,30 +83,26 @@ void setup() {
     // setting the sync work breaks the transmission.
     // Radio.SetSyncWord(SYNCWORD);
     state=TX;
-
-    pinMode(Vext, OUTPUT);
-    digitalWrite(Vext,HIGH); //SET POWER
-
-    ds.init();
+ 
 }
 
-void SendTestPacket() {
-    digitalWrite(Vext,LOW); //SET POWER
-    delay(100);
+bool SendTestPacket() {
+    digitalWrite(Vext,LOW); //POWER ON
+    delay(10);
     float value = ds.getSample();
 
-    digitalWrite(Vext,HIGH); //SET POWER
+    Serial.printf( "Start\n");
+    digitalWrite(Vext,HIGH); //POWER OFF
 
     if ((int)(value=-101))
     {
         Serial.printf( "Tmp FAIL\n");
-        turnOnRGB(COLOR_FAIL, 100);
-        turnOffRGB();
-        return;
+        //turnOnRGB(COLOR_FAIL, 100);
+        //turnOffRGB();
+        //return false;
     }
 
     uint16_t volts = getBatteryVoltage();
-    
     Serial.printf( "Tmp %s V=%d\n", String(value,2).c_str(), volts);
 
     CayenneLPP lpp(64);
@@ -118,22 +112,22 @@ void SendTestPacket() {
     lpp.addAnalogInput(CH_Moist1,100.0);
     lpp.addAnalogInput(CH_Volts, getBatteryVoltage()/1000.0);
     Radio.Send( lpp.getBuffer(), lpp.getSize() );    
-    
     turnOnRGB(COLOR_SENT, 100);
     turnOffRGB();
+    return true;
+    
 }
 
-void loop() {
-
+void loop() 
+{
     switch(state)
 	{
 		case TX:
-            SendTestPacket();
-		    state = LOWPOWERTX;
+		    state = SendTestPacket() ? LOWPOWERTX : LOWPOWER;
 		    break;
 		case LOWPOWERTX:
             Radio.IrqProcess( );
-			lowPowerHandler();
+            state = LOWPOWER;
 		    break;
 		case LOWPOWER:
 			lowPowerHandler();
