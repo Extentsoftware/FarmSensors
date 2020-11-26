@@ -53,7 +53,8 @@
 			"xtree": "cpp",
 			"xutility": "cpp",
 			"xiosbase": "cpp",
-			"atomic": "cpp"
+			"atomic": "cpp",
+			"xlocale": "cpp"
 		}
 	}
 }

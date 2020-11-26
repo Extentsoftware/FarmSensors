@@ -96,6 +96,7 @@ class OneWireSlave
     static void bitSent_(bool error);
 
     // interrupt handlers
+    static void waitResetTest_();
     static void waitReset_();
     static void beginPresence_();
     static void endPresence_();

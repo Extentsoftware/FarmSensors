@@ -15,11 +15,8 @@ namespace
 
 const unsigned long ResetMinDuration = 480;      // min 480us  / 484us measured
 const unsigned long ResetMaxDuration = 640;      //
-
-const unsigned long PresenceWaitDuration = 35;   //  spec 15us to 60us  / 40us measured
-
+const unsigned long PresenceWaitDuration = 0;   //  spec 15us to 60us  / 40us measured
 const unsigned long PresenceDuration = 150;      //   spec  60us to 240us  / 148us measured
-
 const unsigned long ReadBitSamplingTime = 15;    //   spec > 15us to 60us  / 31us measured
 
 // SendBitDuration varies the bus release time to indicate a "1"
@@ -46,8 +43,6 @@ const byte ReceiveCommand = (byte) - 1;
 
 void(*timerEvent)() = 0;
 }
-
-OneWireSlave OWSlave;
 
 byte OneWireSlave::rom_[8];
 byte OneWireSlave::scratchpad_[8];
@@ -423,18 +418,17 @@ void OneWireSlave::beginWaitReset_()
 {
   disableTimer_();
   pin_.inputMode();
-  pin_.attachInterrupt(&OneWireSlave::waitReset_, CHANGE);
+  pin_.attachInterrupt( &OneWireSlave::waitReset_, CHANGE );
   //resetStart_ = (unsigned int) - 1;
   resetStart_ = (unsigned long) - 1;
 }
-
 
 void OneWireSlave::waitReset_()
 {
   onEnterInterrupt_();
   bool state = pin_.read();
   unsigned long now = micros();
-  if (state)
+  if (!state)
   {
     if (resetStart_ == (unsigned long) - 1)
     {
@@ -487,7 +481,6 @@ void OneWireSlave::beginPresence_()
 void OneWireSlave::endPresence_()
 {
   releaseBus_();
-
   beginWaitCommand_();
 }
 

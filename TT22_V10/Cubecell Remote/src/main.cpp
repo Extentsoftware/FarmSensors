@@ -1,21 +1,14 @@
-/*
- ATtiny85 test code
-
- https://learn.sparkfun.com/tutorials/tiny-avr-programmer-hookup-guide/attiny85-use-hints
- https://gitea.youb.fr/IanF/OneWireArduinoSlaveATTINY85/src/branch/master/OneWireSlave.cpp
-
- */
-
 #include "Arduino.h"
 #include "OneWireSlave.h"
 
-// This is the pin that will be used for one-wire data (depending on your arduino model, you are limited to a few choices, because some pins don't have complete interrupt support)
+// This is the pin that will be used for one-wire data (depending on your arduino model, you are limited to a few choices, because 
+// some pins don't have complete interrupt support)
 // On Arduino Uno, you can use pin 2 or pin 3
+Pin led(4);
 Pin oneWireData(2);
 
 // This is the ROM the arduino will respond to, make sure it doesn't conflict with another device
 const byte owROM[7] = { 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02 };
-
 
 // This sample emulates a DS18B20 device (temperature sensor), so we start by defining the available commands
 const byte DS18B20_START_CONVERSION = 0x44;
@@ -44,6 +37,11 @@ void owReceive(OneWireSlave::ReceiveEvent evt, byte data);
 
 void setup()
 {
+	led.outputMode();
+	led.writeHigh();
+	delay(50);
+	led.writeLow();
+	
 	// Setup the OneWire library
 	OWSlave.setReceiveCallback(&owReceive);
 	OWSlave.begin(owROM, oneWireData.getPinNumber());
@@ -51,9 +49,9 @@ void setup()
 
 void loop()
 {
-	delay(10);
 
 	cli();//disable interrupts
+
 	// Be sure to not block interrupts for too long, OneWire timing is very tight for some operations. 1 or 2 microseconds (yes, microseconds, not milliseconds) can be too much depending on your master controller, but then it's equally unlikely that you block exactly at the moment where it matters.
 	// This can be mitigated by using error checking and retry in your high-level communication protocol. A good thing to do anyway.
 	DeviceState localState = state;
@@ -82,6 +80,9 @@ void loop()
 
 void owReceive(OneWireSlave::ReceiveEvent evt, byte data)
 {
+	led.writeHigh();
+	led.writeLow();
+
 	switch (evt)
 	{
 	case OneWireSlave::RE_Byte:

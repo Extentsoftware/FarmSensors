@@ -1,5 +1,5 @@
-#ifndef _LowLevel_h
-#define _LowLevel_h
+#ifndef _pindirect_h
+#define _pindirect_h
 
 #include <inttypes.h>
 
@@ -28,59 +28,6 @@
 #define DIRECT_WRITE_LOW(base, mask)    ((*((base)+2)) &= ~(mask))
 #define DIRECT_WRITE_HIGH(base, mask)   ((*((base)+2)) |= (mask))
 
-#if defined (__AVR_ATtiny85__)
-
-/* Note : The attiny85 clock speed = 16mhz (fuses L 0xF1, H 0xDF. E oxFF
-          OSCCAL VALUE must also be calibrated to 16mhz
-
-*/
-#define CLEARINTERRUPT GIFR |= (1 << INTF0) | (1<<PCIF);
-#define USERTIMER_COMPA_vect TIMER1_COMPA_vect
-
-__attribute__((always_inline)) static inline void UserTimer_Init( void )
-{
-  TCCR1 = 0;                  //stop the timer
-  TCNT1 = 0;
-  //GTCCR |= (1<<PSR1);       //reset the prescaler
-  TIMSK = 0;                  // clear timer interrupts enable
-}
-__attribute__((always_inline)) static inline void UserTimer_Run(int skipTicks)
-{
-
-  TCNT1 = 0;                  //zero the timer
-  GTCCR |= (1 << PSR1);       //reset the prescaler
-  OCR1A = skipTicks;          //set the compare value
-  TCCR1 |= (1 << CTC1) |  (0 << CS13) |  (1 << CS12) | (1 << CS11) | (0 << CS10);//32 prescaler
-  //TCCR1 |= (1 << CTC1) |  (0 << CS13) |  (1 << CS12) | (0 << CS11) | (0 << CS10);//8 prescaler
-  TIMSK |= (1 << OCIE1A);     //interrupt on Compare Match A
-}
-
-__attribute__((always_inline)) static inline void UserTimer_Stop()
-{
-  TIMSK = 0;    //&= ~(1 << OCIE1A);// clear timer interrupt enable
-  TCCR1 = 0;
-}
-
-
-#elif defined (__AVR_ATmega328P__)
-#define CLEARINTERRUPT EIFR |= (1 << INTF0)
-#define USERTIMER_COMPA_vect TIMER1_COMPA_vect
-
-__attribute__((always_inline)) static inline void UserTimer_Init( void )
-{
-  TCCR1A = 0;
-  TCCR1B = 0;
-  TIMSK1 |= (1 << OCIE1A);  // enable timer compare interrupt
-}
-__attribute__((always_inline)) static inline void UserTimer_Run(short skipTicks)
-{
-  TCNT1 = 0;
-  OCR1A = skipTicks;
-  // turn on CTC mode with 64 prescaler
-  TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10);
-}
-#define UserTimer_Stop() TCCR1B = 0
-#endif
 
 #elif defined(__MK20DX128__) || defined(__MK20DX256__)
 #define PIN_TO_BASEREG(pin)             (portOutputRegister(pin))
@@ -140,9 +87,7 @@ class Pin
 
   public:
     Pin()
-      : mask_(0)
-      , reg_(0)
-      , interruptNumber_((byte) - 1)
+      : interruptNumber_((byte) - 1)
       , pinNumber_(255)
     { }
 
@@ -187,7 +132,7 @@ class Pin
 
     inline void attachInterrupt(void (*handler)(), int mode)
     {
-      CLEARINTERRUPT;  // clear any pending interrupt (we want to call the handler only for interrupts happening after it is attached)
+      GIFR |= (1 << INTF0) | (1<<PCIF);
       ::attachInterrupt(interruptNumber_, handler, mode);
     }
 
