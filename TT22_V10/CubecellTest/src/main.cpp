@@ -1,7 +1,8 @@
 #include "Arduino.h"
 #include "OWSlave.h"
 
-const byte MyROM[7] = { 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02 };
+byte MyROM[7] = { 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02 };
+//const byte MyROM[7] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff };
 
 Pin datawire(2);
 Pin debug_(4);
@@ -20,14 +21,14 @@ enum DeviceState
 
 volatile DeviceState state = DS_WaitingReset;
 volatile unsigned long conversionStartTime = 0;
-volatile byte scratchpad[9];
+byte scratchpad[9];
 
 void owReceive(OWSlave::ReceiveEvent evt, byte data);
 
 void setup()
 {
 	OneWireSlave.setReceiveCallback(&owReceive);
-	OneWireSlave.begin(MyROM, datawire, debug_);
+	OneWireSlave.begin(MyROM, datawire);
 }
 
 
@@ -67,7 +68,7 @@ void owReceive(OWSlave::ReceiveEvent evt, byte data)
 
 			case DS18B20_READ_SCRATCHPAD:
 				state = DS_WaitingReset;
-				OneWireSlave.writeData((const byte*)scratchpad, 9, false);
+				OneWireSlave.writeData(scratchpad, 9);
 				break;
 
 			case DS18B20_WRITE_SCRATCHPAD:

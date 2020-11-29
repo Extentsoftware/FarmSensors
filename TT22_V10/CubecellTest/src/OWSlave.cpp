@@ -3,6 +3,8 @@
 /* Note : The attiny85 clock speed = 16mhz (fuses L 0xF1, H 0xDF. E oxFF
           OSCCAL VALUE must also be calibrated to 16mhz
 
+https://www.instructables.com/ATTiny-Port-Manipulation/
+https://www.instructables.com/ATTiny-Port-Manipulation-Part-2-AnalogRead/
 */
 
 namespace
@@ -10,8 +12,8 @@ namespace
   const unsigned long PresenceWaitDuration = 30;   // spec 15us to 60us  / 40us measured
   const unsigned long PresenceDuration = 150;      // spec  60us to 240us  / 148us measured
   const unsigned long ReadBitSamplingTime = 15;    // spec > 15us to 60us  / 31us measured
-  const unsigned long ReadBitMaxDuration = 70;     // anything over this is an error
-  const unsigned long SendBitDuration = 60;        // bus release time spec 15us / measured 19us
+  const unsigned long ReadBitMaxDuration = 100;    // anything over this is an error
+  const unsigned long SendBitDuration = 55;        // bus release time spec 15us / measured 19us
   const unsigned long ResetMinDuration = 400;      // min 480us  / 484us measured
   const unsigned long ResetMaxDuration = 640;      //
 
@@ -29,21 +31,67 @@ static volatile bool _oneShot = false;
 
 byte OWSlave::rom_[8];
 Pin OWSlave::pin_;
-Pin OWSlave::debug_;
 OWSlave::State OWSlave::state_;
 
-byte OWSlave::bufferByte_;
-byte OWSlave::bufferBitPos_;
-short OWSlave::bufferPos_;
-short OWSlave::bufferLen_;
-short OWSlave::buffer_[8];
-bool OWSlave::bufferInverseToggle_;
-bool OWSlave::bufferSendWithInverse_;
+byte OWSlave::read_bufferByte_;
+byte OWSlave::read_bufferBitPos_;
+byte OWSlave::read_bufferPos_;
+byte OWSlave::read_buffer_[32];
+
+volatile byte OWSlave::write_bufferLen_;
+volatile byte OWSlave::write_bufferPos_;
+volatile byte OWSlave::write_bufferBitPos_;
+volatile byte* OWSlave::write_ptr_;
+volatile bool OWSlave::write_inverse;
+volatile bool OWSlave::write_bitToSend;
 
 volatile unsigned int OWSlave::debugValue;
 volatile unsigned long OWSlave::_readStartTime;
 
 void(*OWSlave::clientReceiveCallback_)(OWSlave::ReceiveEvent evt, byte data);
+
+__attribute__((always_inline)) static inline void Pin2ModeOuput()
+{
+  DDRB |= (1 << DDB2);
+}
+
+__attribute__((always_inline)) static inline void Pin2ModeInput()
+{
+  // no pullup
+  DDRB &= ~(1 << DDB2);
+  PORTB &= ~(1 << PORTB2);  //activate pull-up resistor for PB3
+}
+
+__attribute__((always_inline)) static inline void Pin2ModeInputPullup()
+{
+  DDRB &= ~(1 << DDB2);
+  PORTB |= (1 << PORTB2);  //activate pull-up resistor for PB3
+}
+
+__attribute__((always_inline)) static inline void Pin2Set1()
+{
+  PORTB |= (1 << PORTB2);
+}
+
+__attribute__((always_inline)) static inline void Pin2Set0()
+{
+  PORTB &= ~(1 << PORTB2);
+}
+
+__attribute__((always_inline)) static inline bool Pin2Read()
+{
+  return PINB & ~(1 << PINB2);
+}
+
+inline void Pin2attachInterrupt(void (*handler)(), int mode)
+{
+  GIFR |= (1 << INTF0) | (1<<PCIF);
+  ::attachInterrupt(0, handler, mode);
+}
+
+inline void Pin2detachInterrupt() {
+  ::detachInterrupt(0);
+}
 
 __attribute__((always_inline)) static inline void UserTimer_Init( void )
 {
@@ -80,17 +128,11 @@ ISR(USERTIMER_COMPA_vect) // timer1 interrupt
   event();
 }
 
-void OWSlave::begin(const byte* rom, Pin pin, Pin debug)
+void OWSlave::begin(byte* rom, Pin pin)
 {
   pin_ = pin;
-  debug_ = debug;
-  
 
-  memcpy(rom_, rom, 7);
-  rom_[7] = crc8(rom_, 7);
-
-  debug_.outputMode();
-  debug_.writeLow();
+  makeRom(rom);
 
   state_ = State::WaitingForReset;
 
@@ -103,6 +145,12 @@ void OWSlave::begin(const byte* rom, Pin pin, Pin debug)
 
   // start 1-wire activity
   beginRead();
+}
+
+void OWSlave::makeRom(byte *rom)
+{
+  memcpy(rom_, rom, 7);
+  rom_[7] = crc8(rom, 7);
 }
 
 void OWSlave::end()
@@ -150,68 +198,65 @@ void OWSlave::ReadInterrupt()
     sei();
     return;
   }
-  
-  if (state_ == State::Writing )
+
+
+  sei();
+
+  if (duration > ReadBitMaxDuration)
+    return;
+
+  bool bit = duration < ReadBitSamplingTime;
+
+  ReadBit( bit );
+}
+
+void OWSlave::ReadPulseWriting( bool bit )
+{
+  // we just sent the complement (write_inverse = true)
+  // master says we sent a good bit
+  if (write_inverse && bit == write_bitToSend )
   {
-    if (duration < ReadBitSamplingTime)
-    {
-      sei();
-      WriteNextBit();
-    }
+    AdvanceWriteBuffer1Bit();
+    WriteNextBit();
   }
   else
   {
-    ReadPulse( duration );
+    state_ = State::WaitingForReset;
   }
-  sei();
-}
-
-
-void OWSlave::ReadPulse( unsigned long duration )
-{
-    debugValue = duration;
-    if (duration > ReadBitSamplingTime && duration < ReadBitMaxDuration)
-    {
-      // handle read 0
-      ReadBit( false );
-      return;
-    }
-
-    if (duration < ReadBitSamplingTime)
-    {
-      // handle read 1
-      ReadBit( true );
-      return;
-    }
 }
 
 void OWSlave::ReadBit( bool bit )
 {
-  bufferByte_ |= ((bit ? 1 : 0) << bufferBitPos_);
-  ++bufferBitPos_;
+  read_bufferByte_ |= ((bit ? 1 : 0) << read_bufferBitPos_);
+  ++read_bufferBitPos_;
 
   // got a whole byte
-  if (bufferBitPos_ == 8)
+  if (read_bufferBitPos_ == 8)
   {
-    bufferBitPos_ = 0;
-    ++bufferPos_;
-    if (bufferPos_==sizeof(buffer_))
+    read_bufferBitPos_ = 0;
+    ++read_bufferPos_;
+    if (read_bufferPos_==sizeof(read_buffer_))
     {
-      bufferPos_=0;
+      read_bufferPos_=0;
     }
-    buffer_[bufferPos_] = bufferByte_;
+    read_buffer_[read_bufferPos_] = read_bufferByte_;
 
     switch (state_)
     {
       case State::Writing:
+        WriteNextBit();
+        break;
+      case State::WritingRom:
+        ReadPulseWriting( bit );
+        break;
       case State::WaitingForReset:
         // throw away
         break;
       case State::WaitingForCommand:
-        handleCommand(bufferByte_);
+        handleCommand(read_bufferByte_);
         break;
       case State::WaitingForData:
-        handleDataByte(bufferByte_);
+        handleDataByte(read_bufferByte_);
         break;
     }
   }
@@ -227,7 +272,7 @@ void OWSlave::handleCommand(byte command)
     case 0xEC: // CONDITIONAL SEARCH ROM
       return;
     case 0x33: // READ ROM
-      writeData(rom_, sizeof(rom_), false);
+      writeData(rom_, 8);
       return;
     case 0x55: // MATCH ROM
       // beginReceiveBytes_(scratchpad_, 8, &OneWireSlave::matchRomBytesReceived_);
@@ -243,15 +288,9 @@ void OWSlave::handleCommand(byte command)
   }
 }
 
-void OWSlave::beginSearchRom_()
-{
-  // write the rom with complement
-  writeData(rom_, sizeof(rom_), true);
-}
-
 void OWSlave::handleDataByte(byte data)
 {
- 
+  clientReceiveCallback_(ReceiveEvent::RE_Byte, data );
 }
 
 ////////////////////////  Presence
@@ -279,72 +318,70 @@ void OWSlave::endPresence_()
 
 //////////////////////////////////////// Sending
 
-void OWSlave::writeByte(byte data)
-{
-  writeData(&data, 1, false);
-}
-
-void OWSlave::writeData(const byte* src, int len, bool inverse)
+void OWSlave::beginSearchRom_()
 {
   // stop listening for incoming data
   endRead();
-  clearBuffer();
-  memcpy(buffer_, src, len);
-  bufferLen_=sizeof(len);
-  bufferByte_ = buffer_[bufferPos_];
-  bufferSendWithInverse_ = inverse;
-  bufferInverseToggle_ = false;
-  state_=State::Writing;
+  state_=State::WritingRom;
+  write_bufferPos_=0;
+  write_bufferBitPos_=0;
+  write_bufferLen_=8;
+  write_ptr_ = rom_;
+  write_inverse = false;
   beginRead();
 }
 
-void OWSlave::clearBuffer()
+////////////////////////////////////////////////////
+void OWSlave::writeByte(byte data)
 {
-  bufferByte_=0;
-  bufferBitPos_ = 0;
-  bufferPos_=0;
-  bufferLen_=0;
-  bufferSendWithInverse_ = false;
-  bufferInverseToggle_ = false;
-  memset( &OWSlave::buffer_, 0, sizeof(OWSlave::buffer_));
+  writeData(&data, 1);
 }
 
-void OWSlave::AdvanceWriteBufferBy1Bit()
+void OWSlave::writeData(byte* src, int len)
+{
+  // stop listening for incoming data
+  endRead();
+  state_=State::Writing;
+  write_bufferPos_=0;
+  write_bufferBitPos_=0;
+  write_bufferLen_=len;
+  write_ptr_ = src;
+  beginRead();
+}
+
+void OWSlave::AdvanceWriteBuffer1Bit()
 {  
-  ++bufferBitPos_;
-  if (bufferBitPos_==8)
+  ++write_bufferBitPos_;
+  if (write_bufferBitPos_==8)
   {
-    bufferBitPos_=0;
-    ++bufferPos_;
-    if (bufferPos_==bufferLen_)
+    write_bufferBitPos_=0;
+    ++write_bufferPos_;
+    ++write_ptr_;
+    if (write_bufferPos_==write_bufferLen_)
     {
       // writing has finished;
       endWrite();
     }
   }
-
 }
 
 void OWSlave::WriteNextBit()
-{  
-  bool currentBit = bitRead(bufferByte_, bufferBitPos_);
-  bool bitToSend = currentBit;
+{ 
+  write_bitToSend = bitRead(*write_ptr_, write_bufferBitPos_);
 
-  if (bufferSendWithInverse_)
+  if (state_ == State::WritingRom)  
   {
-    if (bufferInverseToggle_)
+    if (write_inverse==0)
     {
-      bitToSend = !bitToSend; 
-      AdvanceWriteBufferBy1Bit();
+      write_bitToSend = !write_bitToSend;
     }
-    bufferInverseToggle_ = !bufferInverseToggle_;
+    write_inverse = !write_inverse;
   }
   else
-  {    
-    AdvanceWriteBufferBy1Bit();
-  }
-  
-  if (bitToSend)
+    // normal write mode
+    AdvanceWriteBuffer1Bit();
+
+  if (write_bitToSend)
   {
     releaseBus_();
   }
@@ -353,31 +390,42 @@ void OWSlave::WriteNextBit()
     pullLow_(); // this must be executed first because the timing is very tight with some master devices  
     setTimerEvent(SendBitDuration, true, &OWSlave::endWriteBit);  
   }     
+
 }
 
 void OWSlave::endWriteBit()
 {
-  releaseBus_();
+  releaseBus_();  
 }
 
 void OWSlave::endWrite()
 {
-  clearBuffer();
   state_= State::WaitingForCommand;
 }
 
+void OWSlave::clearBuffer()
+{
+  read_bufferByte_=0;
+  read_bufferBitPos_ = 0;
+  read_bufferPos_=0;
+  memset( &OWSlave::read_buffer_, 0, sizeof(OWSlave::read_buffer_));
+}
+
+
 void OWSlave::pullLow_()
 {
-  pin_.writeLow();
-  pin_.outputMode();
-  pin_.writeLow();
+
+  // pin_.outputMode();
+  // pin_.writeLow();
+  Pin2ModeOuput();
+  Pin2Set0();
 }
 
 void OWSlave::releaseBus_()
-{  
-  pin_.writeLow(); // make sure the internal pull-up resistor is disabled
-  pin_.inputMode();
-  pin_.writeLow(); // make sure the internal pull-up resistor is disabled
+{ 
+  // pin_.inputMode(); 
+  Pin2ModeInput();
+  Pin2Set0();
 }
 
 byte OWSlave::crc8(const byte* data, short numBytes)

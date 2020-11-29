@@ -19,16 +19,17 @@ class OWSlave
       WaitingForReset,
       WaitingForCommand,
       WaitingForData,
-      Writing
+      Writing,
+      WritingRom
     };
 
     //! Starts listening for the 1-wire master, on the specified pin, as a virtual slave device identified by the specified ROM (7 bytes, starting from the family code, CRC will be computed internally). Reset, Presence, SearchRom and MatchRom are handled automatically. The library will use the external interrupt on the specified pin (note that this is usually not possible with all pins, depending on the board), as well as one hardware timer. Blocking interrupts (either by disabling them explicitely with sei/cli, or by spending time in another interrupt) can lead to malfunction of the library, due to tight timing for some 1-wire operations.
-    void begin(const byte* rom, Pin pin, Pin debug);
+    void begin( byte* rom, Pin pin);
 
     //! Stops all 1-wire activities, which frees hardware resources for other purposes.
     void end();
 
-    static void writeData(const byte* src, int len, bool inverse=false);
+    static void writeData(byte* src, int len);
 
     static void writeByte(byte data);
 
@@ -40,21 +41,25 @@ class OWSlave
   private:
     static byte rom_[8];
     static Pin pin_;
-    static Pin debug_;
     static volatile unsigned long _readStartTime;
     static State state_;
 
     // buffer for reading/writing
-    static byte bufferByte_;
-    static byte bufferBitPos_;
-    static short bufferPos_;
-    static short bufferLen_;
-    static short buffer_[8];
-    static bool bufferSendWithInverse_; // special send mode for search rom
-    static bool bufferInverseToggle_;   // 
+    static byte read_bufferByte_;
+    static byte read_bufferBitPos_;
+    static byte read_bufferPos_;
+    static byte read_buffer_[32];
+
+    volatile static byte write_bufferLen_;
+    volatile static byte write_bufferPos_;
+    volatile static byte write_bufferBitPos_;
+    volatile static byte* write_ptr_;
+    volatile static bool write_inverse;
+    volatile static bool write_bitToSend;
 
     static void(*clientReceiveCallback_)(ReceiveEvent evt, byte data);
 
+    static void makeRom(byte *rom);
     static void pullLow_();
     static void releaseBus_();
     static void beginRead();
@@ -64,7 +69,7 @@ class OWSlave
     static void ReadInterrupt();
     static void waitRead();
     static void clearBuffer();
-    static void ReadPulse( unsigned long duration );
+    static void ReadPulseWriting( bool bit );
     static void ReadBit( bool bit );
 
     static void handleCommand(byte command);
@@ -73,7 +78,7 @@ class OWSlave
     static void WriteNextBit();
     static void endWriteBit();
     static void endWrite();
-    static void AdvanceWriteBufferBy1Bit();
+    static void AdvanceWriteBuffer1Bit();
 
     static void beginPrePresence_();
     static void beginPresence_();
