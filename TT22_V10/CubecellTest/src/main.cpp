@@ -34,18 +34,21 @@ void setup()
 
 void loop()
 {
-	//       // get here if duration is bad.
+	// //       // get here if duration is bad.
     // delayMicroseconds(1000);
-	// if (OneWireSlave.debugValue>0)
+	// if ((int)OneWireSlave.state_>0)
 	// {
     // 	debug_.writeHigh();
-    // 	delayMicroseconds(OneWireSlave.debugValue*10);
-    // 	debug_.writeLow();
+    //  	delayMicroseconds((int)OneWireSlave.debugValue*10);
+    //  	debug_.writeLow();
 	// }
 }
 
 void owReceive(OWSlave::ReceiveEvent evt, byte data)
 {
+
+	return;
+
 	switch (evt)
 	{
 	case OWSlave::RE_Byte:

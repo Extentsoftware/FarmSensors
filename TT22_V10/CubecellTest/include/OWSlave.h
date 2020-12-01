@@ -20,7 +20,9 @@ class OWSlave
       WaitingForCommand,
       WaitingForData,
       Writing,
-      WritingRom
+      WritingRom,
+      WritingRomCompliment,
+      WritingRomChecking
     };
 
     //! Starts listening for the 1-wire master, on the specified pin, as a virtual slave device identified by the specified ROM (7 bytes, starting from the family code, CRC will be computed internally). Reset, Presence, SearchRom and MatchRom are handled automatically. The library will use the external interrupt on the specified pin (note that this is usually not possible with all pins, depending on the board), as well as one hardware timer. Blocking interrupts (either by disabling them explicitely with sei/cli, or by spending time in another interrupt) can lead to malfunction of the library, due to tight timing for some 1-wire operations.
@@ -54,8 +56,7 @@ class OWSlave
     volatile static byte write_bufferPos_;
     volatile static byte write_bufferBitPos_;
     volatile static byte* write_ptr_;
-    volatile static bool write_inverse;
-    volatile static bool write_bitToSend;
+    volatile static bool write_lastBitSent;
 
     static void(*clientReceiveCallback_)(ReceiveEvent evt, byte data);
 
@@ -71,14 +72,17 @@ class OWSlave
     static void clearBuffer();
     static void ReadPulseWriting( bool bit );
     static void ReadBit( bool bit );
+    static bool AddBitToReadBuffer( bool bit );
+    static void AdvanceReadBuffer();
 
     static void handleCommand(byte command);
     static void handleDataByte(byte data);
 
     static void WriteNextBit();
+    static void WriteComplement();
     static void endWriteBit();
     static void endWrite();
-    static void AdvanceWriteBuffer1Bit();
+    static bool AdvanceWriteBuffer1Bit();
 
     static void beginPrePresence_();
     static void beginPresence_();
