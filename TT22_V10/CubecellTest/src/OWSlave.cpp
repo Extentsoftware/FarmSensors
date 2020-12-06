@@ -9,13 +9,13 @@ https://www.instructables.com/ATTiny-Port-Manipulation-Part-2-AnalogRead/
 
 namespace
 {
-  const unsigned long PresenceWaitDuration = 30;   // spec 15us to 60us  / 40us measured
-  const unsigned long PresenceDuration = 150;      // spec  60us to 240us  / 148us measured
-  const unsigned long ReadBitSamplingTime = 15;    // spec > 15us to 60us  / 31us measured
-  const unsigned long ReadBitMaxDuration = 100;    // anything over this is an error
-  const unsigned long SendBitDuration = 55;        // bus release time spec 15us / measured 19us
-  const unsigned long ResetMinDuration = 400;      // min 480us  / 484us measured
-  const unsigned long ResetMaxDuration = 640;      //
+  const unsigned int PresenceWaitDuration = 30;   // spec 15us to 60us  / 40us measured
+  const unsigned int PresenceDuration = 150;      // spec  60us to 240us  / 148us measured
+  const unsigned int ReadBitSamplingTime = 25;    // spec > 15us to 60us  / 31us measured
+  const unsigned int ReadBitMaxDuration = 100;    // anything over this is an error
+  const unsigned int SendBitDuration = 35;        // bus release time spec 15us / measured 19us
+  const unsigned int ResetMinDuration = 400;      // min 480us  / 484us measured
+  const unsigned int ResetMaxDuration = 640;      //
 
   const byte ReceiveCommand = (byte) - 1;
 }
@@ -33,18 +33,19 @@ byte OWSlave::rom_[8];
 Pin OWSlave::pin_;
 OWSlave::State OWSlave::state_;
 
-byte OWSlave::read_bufferByte_;
-byte OWSlave::read_bufferBitPos_;
-byte OWSlave::read_bufferPos_;
+volatile byte OWSlave::read_bufferByte_;
+volatile byte OWSlave::read_bufferBitPos_;
+volatile byte OWSlave::read_bufferPos_;
 byte OWSlave::read_buffer_[32];
 
-volatile byte OWSlave::write_bufferLen_;
-volatile byte OWSlave::write_bufferPos_;
-volatile byte OWSlave::write_bufferBitPos_;
-volatile byte* OWSlave::write_ptr_;
-volatile bool OWSlave::write_lastBitSent;
+byte OWSlave::write_bufferLen_;
+byte OWSlave::write_bufferPos_;
+byte OWSlave::write_bufferBitPos_;
+byte* OWSlave::write_ptr_;
+byte OWSlave::write_byte;
+bool OWSlave::write_lastBitSent;
 
-volatile unsigned int OWSlave::debugValue;
+volatile unsigned long OWSlave::debugValue;
 volatile unsigned long OWSlave::_readStartTime;
 
 void(*OWSlave::clientReceiveCallback_)(OWSlave::ReceiveEvent evt, byte data);
@@ -90,6 +91,7 @@ inline void Pin2attachInterrupt(void (*handler)(), int mode)
 
 inline void Pin2detachInterrupt() {
   ::detachInterrupt(0);
+
 }
 
 __attribute__((always_inline)) static inline void UserTimer_Init( void )
@@ -104,7 +106,7 @@ __attribute__((always_inline)) static inline void UserTimer_Run(int skipTicks)
 {
   TCNT1 = 0;                  //zero the timer
   GTCCR |= (1 << PSR1);       //reset the prescaler
-  OCR1A = skipTicks / 2;          //set the compare value
+  OCR1A = skipTicks / 2;      //set the compare value
   TCCR1 |= (1 << CTC1) |  (0 << CS13) |  (1 << CS12) | (1 << CS11) | (0 << CS10);//32 prescaler
   TIMSK |= (1 << OCIE1A);     //interrupt on Compare Match A
 }
@@ -140,7 +142,7 @@ void OWSlave::begin(byte* rom, Pin pin)
 
   clearBuffer();
 
-  debugValue = 0;
+  debugValue = 1;
 
   // start 1-wire activity
   beginRead();
@@ -180,44 +182,60 @@ void OWSlave::ReadInterrupt()
 {
   cli();
 
-  bool v = pin_.read();
+  bool pinHigh = Pin2Read();
   unsigned long now = micros();
-  unsigned long duration = now - _readStartTime;
-  _readStartTime = now;
-
-  if (!v)
+  
+  // start timing
+  if (!pinHigh)
   {
-    // reset counter    
-    return;
-  }
-
-  if (duration > ResetMinDuration )
-  {
-    beginPrePresence_();
+    _readStartTime = now;
     sei();
     return;
   }
 
-  sei();
+  unsigned long duration = (now - _readStartTime);
 
-  if (duration > ReadBitMaxDuration)
+  if (duration==0)
+  {
+    sei();
     return;
+  }
 
-  bool bit = duration < ReadBitSamplingTime;
+
+  if (duration > ResetMinDuration )
+  {    
+    beginPrePresence_();
+    sei();
+    return;
+  }
+  
+  if (duration > ReadBitMaxDuration)
+  {
+    sei();
+    return;
+  }
+
+  bool bit = duration < ReadBitSamplingTime && duration!=0;
+
+  // getting bits ok
+  //if (bit)
+  //  debugValue = duration;
 
   ReadBit( bit );
+  sei();
 }
 
 void OWSlave::ReadBit( bool bit )
 {
   switch (state_)
-  {
+  {    
+    case State::WritingRom:
+      if (bit)
+        WriteNextRomBit();
+      break;
     case State::Writing:
       if (bit)
         WriteNextBit();
-      break;
-    case State::WritingRom:
-      WriteNextBit();
       break;
     case State::WritingRomCompliment:
       WriteComplement();
@@ -227,9 +245,13 @@ void OWSlave::ReadBit( bool bit )
       break;
     case State::WaitingForReset:
       break;
-    case State::WaitingForCommand:
-      if (AddBitToReadBuffer(  bit ))
-        handleCommand(read_bufferByte_);
+    case State::WaitingForCommand:      
+      debugValue = ++read_bufferBitPos_;
+      // if (AddBitToReadBuffer( bit ))
+      // {        
+      //   debugValue = 30;
+      //   handleCommand(read_bufferByte_);
+      // }
       break;
     case State::WaitingForData:
       if (AddBitToReadBuffer(  bit ))
@@ -240,6 +262,34 @@ void OWSlave::ReadBit( bool bit )
       break;
   }
 }
+
+void OWSlave::handleCommand(byte command)
+{
+  switch (command)
+  {
+    case 0xF0: // SEARCH ROM      
+      //debugValue = 40;
+      beginSearchRom_();
+      return;
+    case 0xEC: // CONDITIONAL SEARCH ROM    
+      return;
+    case 0x33: // READ ROM
+      writeData(rom_, 8);
+      return;
+    case 0x55: // MATCH ROM
+      // beginReceiveBytes_(scratchpad_, 8, &OneWireSlave::matchRomBytesReceived_);
+      return;
+    case 0xCC: // SKIP ROM
+      // beginReceiveBytes_(scratchpad_, 1, &OneWireSlave::notifyClientByteReceived_);
+      return;
+    case 0xA5: // RESUME
+      return;
+    default:       
+      clientReceiveCallback_(ReceiveEvent::RE_Byte, command );
+      return;
+  }
+}
+
 void OWSlave::ReadPulseWriting( bool bit )
 {
   // we just sent the complement (write_inverse = true)
@@ -269,7 +319,7 @@ bool OWSlave::AddBitToReadBuffer( bool bit )
   ++read_bufferBitPos_;
 
   // got a whole byte?
-  return (read_bufferBitPos_ == 8);
+  return (read_bufferBitPos_ >= 8);
 }
 
 void OWSlave::AdvanceReadBuffer()
@@ -284,31 +334,6 @@ void OWSlave::AdvanceReadBuffer()
   read_buffer_[read_bufferPos_] = 0;
 }
 
-void OWSlave::handleCommand(byte command)
-{
-  switch (command)
-  {
-    case 0xF0: // SEARCH ROM
-      beginSearchRom_();
-      return;
-    case 0xEC: // CONDITIONAL SEARCH ROM
-      return;
-    case 0x33: // READ ROM
-      writeData(rom_, 8);
-      return;
-    case 0x55: // MATCH ROM
-      // beginReceiveBytes_(scratchpad_, 8, &OneWireSlave::matchRomBytesReceived_);
-      return;
-    case 0xCC: // SKIP ROM
-      // beginReceiveBytes_(scratchpad_, 1, &OneWireSlave::notifyClientByteReceived_);
-      return;
-    case 0xA5: // RESUME
-      return;
-    default:
-      clientReceiveCallback_(ReceiveEvent::RE_Byte, command );
-      return;
-  }
-}
 
 void OWSlave::handleDataByte(byte data)
 {
@@ -341,14 +366,16 @@ void OWSlave::beginSearchRom_()
 {
   // stop listening for incoming data
   //endRead();
+
   state_=State::WritingRom;
   write_lastBitSent=false;
   write_bufferPos_=0;
   write_bufferBitPos_=0;
   write_bufferLen_=8;
   write_ptr_ = rom_;
+  write_byte = rom_[0];
   
-  //beginRead();
+  // beginRead();
 }
 
 ////////////////////////////////////////////////////
@@ -360,14 +387,15 @@ void OWSlave::writeByte(byte data)
 void OWSlave::writeData(byte* src, int len)
 {
   // stop listening for incoming data
-  endRead();
+  //endRead();
   write_lastBitSent=false;
   state_=State::Writing;
   write_bufferPos_=0;
   write_bufferBitPos_=0;
   write_bufferLen_=len;
   write_ptr_ = src;
-  beginRead();
+  write_byte = src[0];
+  //beginRead();
 }
 
 bool OWSlave::AdvanceWriteBuffer1Bit()
@@ -378,6 +406,7 @@ bool OWSlave::AdvanceWriteBuffer1Bit()
     write_bufferBitPos_=0;
     ++write_bufferPos_;
     ++write_ptr_;
+    write_byte = *write_ptr_;
     if (write_bufferPos_==write_bufferLen_)
     {
       // writing has finished;
@@ -388,21 +417,11 @@ bool OWSlave::AdvanceWriteBuffer1Bit()
   return false;
 }
 
-void OWSlave::WriteNextBit()
+void OWSlave::WriteNextRomBit()
 { 
-  bool bit = bitRead(*write_ptr_, write_bufferBitPos_);
-  write_lastBitSent = bit;
+  write_lastBitSent = bitRead(write_byte, write_bufferBitPos_);
 
-  if (state_ == State::WritingRom)  
-  {
-    state_ = State::WritingRomCompliment;
-  }
-  else
-  {
-    AdvanceWriteBuffer1Bit();
-  }  
-
-  if (bit)
+  if (write_lastBitSent)
   {
     releaseBus_();
   }
@@ -411,12 +430,12 @@ void OWSlave::WriteNextBit()
     pullLow_(); // this must be executed first because the timing is very tight with some master devices  
     setTimerEvent(SendBitDuration, true, &OWSlave::endWriteBit);  
   }
+
+  state_ = State::WritingRomCompliment;
 }
 
 void OWSlave::WriteComplement()
 { 
-  state_ = State::WritingRomChecking;
-
   if (!write_lastBitSent)
   {
     releaseBus_();
@@ -426,6 +445,24 @@ void OWSlave::WriteComplement()
     pullLow_(); // this must be executed first because the timing is very tight with some master devices  
     setTimerEvent(SendBitDuration, true, &OWSlave::endWriteBit);  
   }     
+  state_ = State::WritingRomChecking;
+}
+
+void OWSlave::WriteNextBit()
+{ 
+  write_lastBitSent = bitRead(write_byte, write_bufferBitPos_);
+
+  if (write_lastBitSent)
+  {
+    releaseBus_();
+  }
+  else
+  {
+    pullLow_(); // this must be executed first because the timing is very tight with some master devices  
+    setTimerEvent(SendBitDuration, true, &OWSlave::endWriteBit);  
+  }
+
+  AdvanceWriteBuffer1Bit();
 }
 
 void OWSlave::endWriteBit()

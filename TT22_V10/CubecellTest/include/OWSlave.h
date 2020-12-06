@@ -38,25 +38,27 @@ class OWSlave
     //! Sets (or replaces) a function to be called when something is received. The callback is executed from interrupts and should be as short as possible. Failure to return quickly can prevent the library from correctly reading the next byte.
     void setReceiveCallback(void(*callback)(ReceiveEvent evt, byte data));
 
-    volatile static unsigned int debugValue;
+    volatile static unsigned long debugValue;
+
+    static State state_;
 
   private:
     static byte rom_[8];
     static Pin pin_;
     static volatile unsigned long _readStartTime;
-    static State state_;
 
     // buffer for reading/writing
-    static byte read_bufferByte_;
-    static byte read_bufferBitPos_;
-    static byte read_bufferPos_;
+    static volatile byte read_bufferByte_;
+    static volatile byte read_bufferBitPos_;
+    static volatile byte read_bufferPos_;
     static byte read_buffer_[32];
 
-    volatile static byte write_bufferLen_;
-    volatile static byte write_bufferPos_;
-    volatile static byte write_bufferBitPos_;
-    volatile static byte* write_ptr_;
-    volatile static bool write_lastBitSent;
+    static byte write_bufferLen_;
+    static byte write_bufferPos_;
+    static byte write_bufferBitPos_;
+    static byte* write_ptr_;
+    static bool write_lastBitSent;
+    static byte write_byte;
 
     static void(*clientReceiveCallback_)(ReceiveEvent evt, byte data);
 
@@ -79,6 +81,7 @@ class OWSlave
     static void handleDataByte(byte data);
 
     static void WriteNextBit();
+    static void WriteNextRomBit();
     static void WriteComplement();
     static void endWriteBit();
     static void endWrite();

@@ -15,7 +15,7 @@ namespace
 
 const unsigned long ResetMinDuration = 480;      // min 480us  / 484us measured
 const unsigned long ResetMaxDuration = 640;      //
-const unsigned long PresenceWaitDuration = 0;   //  spec 15us to 60us  / 40us measured
+const unsigned long PresenceWaitDuration = 40;   //  spec 15us to 60us  / 40us measured
 const unsigned long PresenceDuration = 150;      //   spec  60us to 240us  / 148us measured
 const unsigned long ReadBitSamplingTime = 15;    //   spec > 15us to 60us  / 31us measured
 
