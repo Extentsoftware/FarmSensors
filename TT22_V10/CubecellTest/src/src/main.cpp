@@ -1,8 +1,15 @@
+// https://github.com/HelTecAutomation/ASR650x-Arduino 
+// https://heltec-automation-docs.readthedocs.io/en/latest/cubecell/capsule-sensor/htcc-ac01/sensor_pinout_diagram.html
+
 #include <Arduino.h>
-#include "D18B20.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include "CayenneLPP.h"
-#include "LoRaWan_APP.h"
 #include "vesoil.h"
+#include "CubeCell_NeoPixel.h"
+#include "LoRaWan_APP.h"
+#include "D18B20.h"
+#include <OneWire.h>
 
 #define RF_FREQUENCY                                868E6           // Hz
 #define TX_OUTPUT_POWER                             20              // dBm
@@ -35,7 +42,6 @@ char rxpacket[BUFFER_SIZE];
 #define TIME_UNTIL_WAKEUP                           FIVESECS
 
 static TimerEvent_t wakeUp;
-static TimerEvent_t sleep;
 
 static RadioEvents_t RadioEvents;
 void OnTxDone( void );
@@ -47,13 +53,12 @@ void onSleep();
 typedef enum
 {
     LOWPOWER,
-    WAIT_TX,
+    LOWPOWERTX,
     RX,
     TX
 } States_t;
 
 States_t state;
-
 D18B20 ds( GPIO0 );
 
 void setup() {
@@ -63,7 +68,6 @@ void setup() {
     Serial.printf( "Started\n");
     delay(1000);
     TimerInit( &wakeUp, onWakeUp );
-    TimerInit( &sleep, onSleep );
 
     RadioEvents.TxDone = OnTxDone;
     RadioEvents.TxTimeout = OnTxTimeout;
@@ -79,19 +83,27 @@ void setup() {
     // setting the sync work breaks the transmission.
     // Radio.SetSyncWord(SYNCWORD);
     state=TX;
-    pinMode(Vext, OUTPUT);
-    digitalWrite(Vext, HIGH); 
-
-    onSleep();
+ 
 }
 
 bool SendTestPacket() {
     digitalWrite(Vext,LOW); //POWER ON
     delay(10);
     float value = ds.getSample();
-    delay(1000);
+
+    Serial.printf( "Start\n");
     digitalWrite(Vext,HIGH); //POWER OFF
-    Serial.printf( "Tmp %s\n", String(value,2).c_str());
+
+    if ((int)(value=-101))
+    {
+        Serial.printf( "Tmp FAIL\n");
+        //turnOnRGB(COLOR_FAIL, 100);
+        //turnOffRGB();
+        //return false;
+    }
+
+    uint16_t volts = getBatteryVoltage();
+    Serial.printf( "Tmp %s V=%d\n", String(value,2).c_str(), volts);
 
     CayenneLPP lpp(64);
     lpp.reset();
@@ -103,6 +115,7 @@ bool SendTestPacket() {
     turnOnRGB(COLOR_SENT, 100);
     turnOffRGB();
     return true;
+    
 }
 
 void loop() 
@@ -110,10 +123,11 @@ void loop()
     switch(state)
 	{
 		case TX:
-		    state = SendTestPacket() ? WAIT_TX : LOWPOWER;
+		    state = SendTestPacket() ? LOWPOWERTX : LOWPOWER;
 		    break;
-		case WAIT_TX:
+		case LOWPOWERTX:
             Radio.IrqProcess( );
+            state = LOWPOWER;
 		    break;
 		case LOWPOWER:
 			lowPowerHandler();
@@ -125,25 +139,21 @@ void loop()
 
 void OnTxDone( void )
 {
-   Serial.printf( "OnTxDone\n");
-   onSleep();
+    onSleep();
 }
 
 void OnTxTimeout( void )
 {
-    Serial.printf( "OnTxTimeout\n");
     onSleep();
 }
 
 void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)
 {
-    Serial.printf( "OnRxDone\n");
 	state=TX;
 }
 
 void onSleep()
 {
-    Serial.printf( "On sleep\n");
     Radio.Sleep();
     state = LOWPOWER;
     TimerSetValue( &wakeUp, TIME_UNTIL_WAKEUP );
@@ -152,6 +162,5 @@ void onSleep()
 
 void onWakeUp()
 {
-    Serial.printf( "On wakeup\n");
     state = TX;
 }

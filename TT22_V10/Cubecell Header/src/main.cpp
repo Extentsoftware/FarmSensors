@@ -102,7 +102,7 @@ bool SendTestPacket() {
         return false;
     }
     uint16_t temp = ds.performConversion(false);
-    uint16_t adc = 0; // ds.performConversion(true);
+    uint16_t adc =  ds.performConversion(true);
     uint16_t volts = getBatteryVoltage();
     Serial.printf( "Tmp %d ADC=%d, V=%d\n", temp, adc, volts);
 

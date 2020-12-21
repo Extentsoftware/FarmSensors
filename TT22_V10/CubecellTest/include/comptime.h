@@ -1,3 +1,5 @@
+// copied - source unknown
+
 #define YY (((__DATE__[9]-'0')*16 + __DATE__[10])-'0')
 #define MMM (\
              __DATE__ [2] == '?' ? 1 \

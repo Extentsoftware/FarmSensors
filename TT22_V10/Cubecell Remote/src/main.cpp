@@ -1,121 +1,127 @@
-#include "Arduino.h"
-#include "OneWireSlave.h"
+//  generate Device ID based on compile date and time
+#include <comptime.h>
 
-// This is the pin that will be used for one-wire data (depending on your arduino model, you are limited to a few choices, because 
-// some pins don't have complete interrupt support)
-// On Arduino Uno, you can use pin 2 or pin 3
-Pin led(4);
-Pin oneWireData(2);
+// initialize oneWireSlave object
+#include <OneWireSlave.h>
+OneWireSlave ow;
 
-// This is the ROM the arduino will respond to, make sure it doesn't conflict with another device
-const byte owROM[7] = { 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02 };
+// Device include file must have the functions void setup() and void loop()
+#define FAM 0x91
 
-// This sample emulates a DS18B20 device (temperature sensor), so we start by defining the available commands
-const byte DS18B20_START_CONVERSION = 0x44;
-const byte DS18B20_READ_SCRATCHPAD = 0xBE;
-const byte DS18B20_WRITE_SCRATCHPAD = 0x4E;
+//  Valid Onewire commands
+#define CMD_Readbuffer 		0xBE
+#define CMD_Writebuffer 	0x4E
+#define CMD_Copybuffer 		0x48
+#define CMD_RecallMemory 	0xB8
+#define CMD_StartTmpConv    0x44
+#define CMD_StartAdcConv    0x45
 
-// TODO:
-// - handle configuration (resolution, alarms)
 
-enum DeviceState
+uint8_t control[4] {0x00, 0x00, 0x00, 0x00};
+uint8_t scratchpad[2] {0x00, 0x00};
+
+uint8_t id[8] = { FAM, SERIAL_NUMBER, 0x00 };
+
+static void StartPWM()
 {
-	DS_WaitingReset,
-	DS_WaitingCommand,
-	DS_ConvertingTemperature,
-	DS_TemperatureConverted,
-};
-volatile DeviceState state = DS_WaitingReset;
+	    /*
+    Control Register for Timer/Counter-1 (Timer/Counter-1 is configured with just one register: this one)
+    TCCR1 is 8 bits: [CTC1:PWM1A:COM1A1:COM1A0:CS13:CS12:CS11:CS10]
+    0<<PWM1A: bit PWM1A remains clear, which prevents Timer/Counter-1 from using pin OC1A (which is shared with OC0B)
+    0<<COM1A0: bits COM1A0 and COM1A1 remain clear, which also prevents Timer/Counter-1 from using pin OC1A (see PWM1A above)
+    1<<CS10: sets bit CS11 which tells Timer/Counter-1  to not use a prescalar
+    */
+    TCCR1 = 0<<PWM1A | 0<<COM1A0 | 1<<CS10;
 
-// scratchpad, with the CRC byte at the end
-volatile byte scratchpad[9];
-
-volatile unsigned long conversionStartTime = 0;
-
-// This function will be called each time the OneWire library has an event to notify (reset, error, byte received)
-void owReceive(OneWireSlave::ReceiveEvent evt, byte data);
-
-void setup()
-{
-	led.outputMode();
-	led.writeHigh();
-	delay(50);
-	led.writeLow();
+    /*
+    General Control Register for Timer/Counter-1 (this is for Timer/Counter-1 and is a poorly named register)
+    GTCCR is 8 bits: [TSM:PWM1B:COM1B1:COM1B0:FOC1B:FOC1A:PSR1:PSR0]
+    1<<PWM1B: sets bit PWM1B which enables the use of OC1B (since we disabled using OC1A in TCCR1)
+    2<<COM1B0: sets bit COM1B1 and leaves COM1B0 clear, which (when in PWM mode) clears OC1B on compare-match, and sets at BOTTOM
+    */
+    GTCCR = 1<<PWM1B | 2<<COM1B0;
 	
-	// Setup the OneWire library
-	OWSlave.setReceiveCallback(&owReceive);
-	OWSlave.begin(owROM, oneWireData.getPinNumber());
 }
 
-void loop()
+static void initTemp()
 {
+	ADMUX =
+		(0 << REFS2) |     // Sets ref. voltage to 1.1v
+		(1 << REFS1) |     // Sets ref. voltage to 1.1v
+		(0 << REFS0) |     // Sets ref. voltage to 1.1v
+	    (0 << ADLAR) |     // do not left shift result (for 10-bit values)
+		(1 << MUX3)  |     // use ADC2 for input (PB4), MUX bit 3
+		(1 << MUX2)  |     // use ADC2 for input (PB4), MUX bit 2
+		(1 << MUX1)  |     // use ADC2 for input (PB4), MUX bit 1
+		(1 << MUX0);       // use ADC2 for input (PB4), MUX bit 0
 
-	cli();//disable interrupts
-
-	// Be sure to not block interrupts for too long, OneWire timing is very tight for some operations. 1 or 2 microseconds (yes, microseconds, not milliseconds) can be too much depending on your master controller, but then it's equally unlikely that you block exactly at the moment where it matters.
-	// This can be mitigated by using error checking and retry in your high-level communication protocol. A good thing to do anyway.
-	DeviceState localState = state;
-	unsigned long localConversionStartTime = conversionStartTime;
-	sei();//enable interrupts
-
-	if (localState == DS_ConvertingTemperature && millis() > localConversionStartTime + 750)
-	{
-		float temperature = 42.0f; // here you could plug any logic you want to return the emulated temperature
-		int16_t raw = (int16_t)(temperature * 16.0f + 0.5f);
-
-		byte data[9];
-		data[0] = (byte)raw;
-		data[1] = (byte)(raw >> 8);
-		for (int i = 2; i < 8; ++i)
-			data[i] = 0;
-		data[8] = OWSlave.crc8(data, 8);
-
-		cli();
-		memcpy((void*)scratchpad, data, 9);
-		state = DS_TemperatureConverted;
-		OWSlave.beginWriteBit(1, true); // now that conversion is finished, start sending ones until reset
-		sei();
-	}
+  	ADCSRA = 
+		(1 << ADEN)  |     // Enable ADC 
+		(1 << ADPS2) |     // set prescaler to 128
+		(1 << ADPS1) |
+		(1 << ADPS0); 
 }
 
-void owReceive(OneWireSlave::ReceiveEvent evt, byte data)
+static void initADC2()
 {
-	led.writeHigh();
-	led.writeLow();
+  	ADMUX =
+		(0 << REFS2) |     // Sets ref. voltage to Vcc, bit 2
+		(0 << REFS1) |     // Sets ref. voltage to Vcc, bit 1   
+		(0 << REFS0) |     // Sets ref. voltage to Vcc, bit 0
+	    (0 << ADLAR) |     // do not left shift result (for 10-bit values)
+		(0 << MUX3)  |     // use ADC2 for input (PB0), MUX bit 3
+		(0 << MUX2)  |     // use ADC2 for input (PB0), MUX bit 2
+		(1 << MUX1)  |     // use ADC2 for input (PB0), MUX bit 1
+		(1 << MUX0);       // use ADC2 for input (PB0), MUX bit 0
 
-	switch (evt)
-	{
-	case OneWireSlave::RE_Byte:
-		switch (state)
-		{
-		case DS_WaitingCommand:
-			switch (data)
-			{
-			case DS18B20_START_CONVERSION:
-				state = DS_ConvertingTemperature;
-				conversionStartTime = millis();
-				OWSlave.beginWriteBit(0, true); // send zeros as long as the conversion is not finished
-				break;
-
-			case DS18B20_READ_SCRATCHPAD:
-				state = DS_WaitingReset;
-				OWSlave.beginWrite((const byte*)scratchpad, 9, 0);
-				break;
-
-			case DS18B20_WRITE_SCRATCHPAD:
-				
-				break;
-			}
-			break;
-		}
-		break;
-
-	case OneWireSlave::RE_Reset:
-		state = DS_WaitingCommand;
-		break;
-
-	case OneWireSlave::RE_Error:
-		state = DS_WaitingReset;
-		break;
-	}
+  	ADCSRA = 
+		(1 << ADEN)  |     // Enable ADC 
+		(1 << ADPS2) |     // set prescaler to 128
+		(1 << ADPS1) |
+		(1 << ADPS0); 
 }
+
+static void performConversion(bool adc){
+	scratchpad[0] = 0;
+	scratchpad[1] = 0;
+	
+	if (adc)
+		initADC2();
+	else
+		initTemp();
+	
+	ADCSRA |= (1 << ADSC);         // start ADC measurement
+    while (ADCSRA & (1 << ADSC) ); // wait till conversion complete 
+	// for 10-bit resolution:
+	scratchpad[0] = ADCL;
+	scratchpad[1] = ADCH;
+}
+
+void onCommand(uint8_t cmd) {
+  switch (cmd) {
+    case CMD_Readbuffer: 
+		ow.write(&scratchpad[0], 2, &ow.reset);
+		break;
+    case CMD_Writebuffer: 
+    	ow.read(&control[0], 2, &ow.reset);
+		break;
+	case CMD_StartTmpConv:
+		performConversion(false);
+		ow.reset();
+		break;
+	case CMD_StartAdcConv:
+		performConversion(true);
+		ow.reset();
+		break;
+    case CMD_RecallMemory:
+		ow.reset();
+	 	break;
+  }
+};
+
+int main() {
+	StartPWM();
+  	ow.begin(&onCommand, id);
+	while (1) {}
+}
+

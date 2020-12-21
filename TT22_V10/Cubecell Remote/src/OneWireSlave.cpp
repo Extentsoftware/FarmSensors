@@ -1,757 +1,260 @@
-#include "OneWireSlave.h"
+#include <OneWireSlave.h>
 
-// uncomment this line to enable sending messages along with errors (but takes more program memory)
-//#define ERROR_MESSAGES
+uint8_t* owid;
 
-#ifdef ERROR_MESSAGES
-#define ERROR(msg) error_(msg)
-#else
-#define ERROR(msg) error_(0)
-#endif
+volatile uint8_t bitp;  //pointer to current Byte
+volatile uint8_t ByteP; //pointer to current Bit
+volatile uint8_t mode; //state
+volatile uint8_t wmode; //if 0 next bit that send the device is  0
+volatile uint8_t actbit; //current
+volatile uint8_t srcount; //counter for search rom
+volatile uint8_t scrc; //CRC calculation
+volatile uint8_t cbuf; //Input buffer for a command
+void(*onCommand_)(uint8_t);
+uint8_t* rxBuffer_;
+uint8_t* txBuffer_;
+uint8_t rxBufferLength_;
+uint8_t txBufferLength_;
+void(*rxCallback_)();
+void(*txCallback_)();
 
-namespace
-{
-#if defined (__AVR_ATtiny85__)
+PIN_INT {
+  uint8_t lwmode = wmode; //let this variables in registers
+  uint8_t lmode = mode;
+  if ((lwmode == OWW_WRITE_0)) {
+    SET_LOW;  //if necessary set 0-Bit
+    lwmode = OWW_NO_WRITE;
+  }
+  DIS_OWINT; //disable interrupt, only in OWM_SLEEP mode it is active
+  switch (lmode) {
+    case OWM_SLEEP:
+      TCNT_REG = ~(OWT_MIN_RESET);
+      EN_OWINT; //other edges ?
+      break;
+    //start of reading with falling edge from master, reading closed in timer isr
+    case OWM_MATCH_ROM:  //falling edge wait for receive
+    case OWM_READ:
+    case OWM_READ_COMMAND:
+      TCNT_REG = ~(OWT_READLINE); //wait a time for reading
+      break;
+    case OWM_SEARCH_ROM:   //Search algorithm waiting for receive or send
+      if (srcount < 2) { //this means bit or complement is writing,
+        TCNT_REG = ~(OWT_LOWTIME);
+      } else
+        TCNT_REG = ~(OWT_READLINE); //init for read answer of master
+      break;
+    case OWM_WRITE:
+      TCNT_REG = ~(OWT_LOWTIME);
+      break;
+    case OWM_CHK_RESET:  //rising edge of reset pulse
+      SET_FALLING
+      TCNT_REG = ~(OWT_RESET_PRESENCE); //waiting for sending presence pulse
+      lmode = OWM_RESET;
+      break;
+  }
+  EN_TIMER;
+  mode = lmode;
+  wmode = lwmode;
 
-const unsigned long ResetMinDuration = 480;      // min 480us  / 484us measured
-const unsigned long ResetMaxDuration = 640;      //
-const unsigned long PresenceWaitDuration = 40;   //  spec 15us to 60us  / 40us measured
-const unsigned long PresenceDuration = 150;      //   spec  60us to 240us  / 148us measured
-const unsigned long ReadBitSamplingTime = 15;    //   spec > 15us to 60us  / 31us measured
-
-// SendBitDuration varies the bus release time to indicate a "1"
-// measured total send bit duration is 63us versus 60us in the spec
-const unsigned long SendBitDuration = 20;   // bus release time spec 15us / measured 19us
-
-
-#elif defined (__AVR_ATmega328P__)
-
-const unsigned long ResetMinDuration = 480;
-const unsigned long ResetMaxDuration = 900;
-
-const unsigned long PresenceWaitDuration = 15;
-
-const unsigned long PresenceDuration = 200;
-
-const unsigned long ReadBitSamplingTime = 25;
-
-const unsigned long SendBitDuration = 35;
-
-#endif
-
-const byte ReceiveCommand = (byte) - 1;
-
-void(*timerEvent)() = 0;
+}
+void OneWireSlave::reset(){
+  mode = OWM_SLEEP;
 }
 
-byte OneWireSlave::rom_[8];
-byte OneWireSlave::scratchpad_[8];
-Pin OneWireSlave::pin_;
-
-unsigned long OneWireSlave::resetStart_ = 0;;
-unsigned long OneWireSlave::lastReset_ = 0;
-
-void(*OneWireSlave::receiveBitCallback_)(bool bit, bool error);
-void(*OneWireSlave::bitSentCallback_)(bool error);
-void(*OneWireSlave::clientReceiveCallback_)(ReceiveEvent evt, byte data);
-void(*OneWireSlave::clientReceiveBitCallback_)(bool bit);
-
-byte OneWireSlave::receivingByte_;
-
-byte OneWireSlave::searchRomBytePos_;
-byte OneWireSlave::searchRomBitPos_;
-bool OneWireSlave::searchRomInverse_;
-bool OneWireSlave::resumeCommandFlag_;
-bool OneWireSlave::alarmedFlag_;
-
-const byte* OneWireSlave::sendBuffer_;
-byte* OneWireSlave::recvBuffer_;
-short OneWireSlave::bufferLength_;
-byte OneWireSlave::bufferBitPos_;
-short OneWireSlave::bufferPos_;
-void(*OneWireSlave::receiveBytesCallback_)(bool error);
-void(*OneWireSlave::sendBytesCallback_)(bool error);
-
-volatile bool OneWireSlave::waitingSynchronousWriteToComplete_;
-volatile bool OneWireSlave::synchronousWriteError_;
-
-bool OneWireSlave::sendingClientBytes_;
-
-bool OneWireSlave::singleBit_;
-bool OneWireSlave::singleBitRepeat_;
-void(*OneWireSlave::singleBitSentCallback_)(bool error);
-
-void(*OneWireSlave::logCallback_)(const char* message);
-
-
-ISR(USERTIMER_COMPA_vect) // timer1 interrupt
-{
-  UserTimer_Stop(); // disable clock
-  void(*event)() = timerEvent;
-  timerEvent = 0;
-  event();
-}
-
-void OneWireSlave::begin(const byte* rom, byte pinNumber)
-{
-  pin_ = Pin(pinNumber);
-  resetStart_ = (unsigned long) - 1;
-  lastReset_ = 0;
-
-  memcpy(rom_, rom, 7);
-  rom_[7] = crc8(rom_, 7);
-
-  resumeCommandFlag_ = false;
-  alarmedFlag_       = false;
-
-  clientReceiveBitCallback_ = 0;
-  sendingClientBytes_ = false;
-
-  // log("Enabling 1-wire library")
-
-  cli(); // disable interrupts
-  pin_.inputMode();
-  pin_.writeLow(); // make sure the internal pull-up resistor is disabled
-
-  // prepare hardware timer
-  UserTimer_Init();
-
-  // start 1-wire activity
-  beginWaitReset_();
-  sei(); // enable interrupts
-}
-
-void OneWireSlave::end()
-{
-  // log("Disabling 1-wire library");
-
-  cli();
-  disableTimer_();
-  pin_.detachInterrupt();
-  releaseBus_();
-  sei();
-}
-
-bool OneWireSlave::write(const byte* bytes, short numBytes)
-{
-  // TODO: put the arduino to sleep between interrupts to save power?
-  waitingSynchronousWriteToComplete_ = true;
-  beginWrite(bytes, numBytes, &OneWireSlave::onSynchronousWriteComplete_);
-  while (waitingSynchronousWriteToComplete_)
-    delay(1);
-  return !synchronousWriteError_;
-}
-
-void OneWireSlave::onSynchronousWriteComplete_(bool error)
-{
-  synchronousWriteError_ = error;
-  waitingSynchronousWriteToComplete_ = false;
-}
-
-void OneWireSlave::beginWrite(const byte* bytes, short numBytes, void(*complete)(bool error))
-{
-  cli();
-  endWrite_(true);
-  sendingClientBytes_ = true;
-  beginWriteBytes_(bytes, numBytes, complete == 0 ? noOpCallback_ : complete);
-  sei();
-}
-
-void OneWireSlave::endWrite_(bool error, bool resetInterrupts)
-{
-  if (resetInterrupts)
-    beginWaitReset_();
-
-  if (sendingClientBytes_)
-  {
-    sendingClientBytes_ = false;
-    if (sendBytesCallback_ != 0)
-    {
-      void(*callback)(bool error) = sendBytesCallback_;
-      sendBytesCallback_ = noOpCallback_;
-      callback(error);
+TIMER_INT {
+  //Ask input line sate
+  uint8_t p = ((OW_PIN & OW_PINN) == OW_PINN);
+  //Interrupt still active ?
+  if (CHK_INT_EN) {
+    //maybe reset pulse
+    if (p == 0) {
+      mode = OWM_CHK_RESET; //wait for rising edge
+      SET_RISING;
+    }
+    DIS_TIMER;
+  } else {
+    switch (mode) {
+      case OWM_RESET:  //Reset pulse and time after is finished, now go in presence state
+        mode = OWM_PRESENCE;
+        SET_LOW;
+        TCNT_REG = ~(OWT_PRESENCE);
+        DIS_OWINT;  //No Pin interrupt necessary only wait for presence is done
+        break;
+      case OWM_SEARCH_ROM:
+        RESET_LOW;  //Set low also if nothing send (branch takes time and memory)
+        srcount++;  //next search rom mode
+        switch (srcount) {
+          case 1: wmode = !actbit; //preparation sending complement
+            break;
+          case 3:
+            if (p != (actbit == 1)) { //check master bit
+              mode = OWM_SLEEP; //not the same go sleep
+            } else {
+              bitp = (bitp << 1); //prepare next bit
+              if (bitp == 0) {
+                bitp = 1;
+                ByteP++;
+                if (ByteP >= 8) {
+                  mode = OWM_SLEEP; //all bits processed
+                  break;
+                }
+              }
+              srcount = 0;
+              actbit = (owid[ByteP] & bitp) == bitp;
+              wmode = actbit;
+            }
+            break;
+        }
+        break;
+      case OWM_PRESENCE:
+        RESET_LOW;  //Presence is done now wait for a command
+        mode = OWM_READ_COMMAND;
+        cbuf = 0; bitp = 1; //Command buffer have to set zero, only set bits will write in
+        break;
+      case OWM_READ_COMMAND:
+        if (p) {  //Set bit if line high
+          cbuf |= bitp;
+        }
+        bitp = (bitp << 1);
+        if (!bitp) { //8-Bits read
+          bitp = 1;
+          switch (cbuf) {
+            case 0x55: ByteP = 0; mode = OWM_MATCH_ROM; break;
+            case 0xF0:  //initialize search rom
+              mode = OWM_SEARCH_ROM;
+              srcount = 0;
+              ByteP = 0;
+              actbit = (owid[ByteP] & bitp) == bitp; //set actual bit
+              wmode = actbit; //prepare for writing when next falling edge
+              break;
+            default:
+              mode = OWM_SLEEP; //all other commands do nothing
+              onCommand_(cbuf);
+          }
+        }
+        break;
+      case OWM_MATCH_ROM:
+        if (p == ((owid[ByteP]&bitp) == bitp)) { //Compare with ID Buffer
+          bitp = (bitp << 1);
+          if (!bitp) {
+            ByteP++;
+            bitp = 1;
+            if (ByteP >= 8) {
+              mode = OWM_READ_COMMAND; //same? get next command
+              cbuf = 0;
+              break;
+            }
+          }
+        } else {
+          mode = OWM_SLEEP;
+        }
+        break;
+      case OWM_READ:
+        if (p) {
+          rxBuffer_[ByteP] |= bitp;
+        }
+        bitp = (bitp << 1);
+        if (!bitp) {
+          ByteP++;
+          bitp = 1;
+          if (ByteP == rxBufferLength_) {
+            rxCallback_();
+//            mode = OWM_SLEEP;
+            break;
+          } else rxBuffer_[ByteP] = 0;
+        }
+        break;
+      case OWM_WRITE: //  write to host
+        RESET_LOW;
+        bitp = (bitp << 1);
+        if (!bitp) {
+          ByteP++;
+          bitp = 1;
+          //if (ByteP == 2) txCallback_();
+          if (ByteP >= txBufferLength_) {
+            txCallback_();
+//            mode = OWM_SLEEP;
+            break;
+          };
+        }
+        actbit = (bitp & txBuffer_[ByteP]) == bitp;
+        wmode = actbit; //prepare for send firs bit
+        break;
     }
   }
-  else if (singleBitSentCallback_ != 0)
-  {
-    void(*callback)(bool) = singleBitSentCallback_;
-    singleBitSentCallback_ = 0;
-    callback(error);
+  if (mode == OWM_SLEEP) {
+    DIS_TIMER;
+  }
+  if (mode != OWM_PRESENCE)  {
+    TCNT_REG = ~(OWT_MIN_RESET - OWT_READLINE); //OWT_READLINE around OWT_LOWTIME
+    EN_OWINT;
   }
 }
 
-bool OneWireSlave::writeBit(bool value)
+
+void noOpCallback_() {}
+
+uint8_t OneWireSlave::crc8(const uint8_t* data, uint8_t numBytes)
 {
-  // TODO: put the arduino to sleep between interrupts to save power?
-  waitingSynchronousWriteToComplete_ = true;
-  beginWriteBit(value, false, &OneWireSlave::onSynchronousWriteComplete_);
-  while (waitingSynchronousWriteToComplete_)
-    delay(1);
-  return !synchronousWriteError_;
-}
-
-void OneWireSlave::beginWriteBit(bool value, bool repeat, void(*bitSent)(bool))
-{
-  cli();
-  endWrite_(true);
-
-  singleBit_ = value;
-  singleBitRepeat_ = repeat;
-  singleBitSentCallback_ = bitSent;
-  beginSendBit_(value, &OneWireSlave::onSingleBitSent_);
-  sei();
-}
-
-void OneWireSlave::onSingleBitSent_(bool error)
-{
-  if (!error && singleBitRepeat_)
-  {
-    beginSendBit_(singleBit_, &OneWireSlave::onSingleBitSent_);
-  }
-  else
-  {
-    beginReceiveBytes_(scratchpad_, 1, &OneWireSlave::notifyClientByteReceived_);
-  }
-
-  if (singleBitSentCallback_ != 0)
-  {
-    void(*callback)(bool) = singleBitSentCallback_;
-    singleBitSentCallback_ = 0;
-    callback(error);
-  }
-}
-
-void OneWireSlave::stopWrite()
-{
-  beginWrite(0, 0, 0);
-}
-
-void OneWireSlave::alarmed(bool value)
-{
-  alarmedFlag_ = value;
-}
-
-byte OneWireSlave::crc8(const byte* data, short numBytes)
-{
-  byte crc = 0;
-
+  uint8_t crc = 0;
   while (numBytes--) {
-    byte inbyte = *data++;
-    for (byte i = 8; i; i--) {
-      byte mix = (crc ^ inbyte) & 0x01;
+    uint8_t inByte = *data++;
+    for (short i = 8; i; i--) {
+      uint8_t mix = (crc ^ inByte) & 0x01;
       crc >>= 1;
       if (mix) crc ^= 0x8C;
-      inbyte >>= 1;
+      inByte >>= 1;
     }
   }
   return crc;
 }
 
-#if defined (__AVR_ATtiny85__)
-
-void OneWireSlave::setTimerEvent_(short delayMicroSeconds, void(*handler)())
-{
-  delayMicroSeconds -= 8; // remove overhead (tuned on attiny85, values 0 - 10 work ok)
-
-  short skipTicks = delayMicroSeconds / 2; // 16mhz clock, prescaler = 32
-  if (skipTicks < 1) skipTicks = 1;
-  timerEvent = handler;
-  UserTimer_Run(skipTicks);
+void OneWireSlave::begin(void (*onCommand)(uint8_t), uint8_t* owId) {
+  owid = owId;
+  owid[7] = crc8(owid,7);
+  onCommand_ = onCommand;
+  mode = OWM_SLEEP;
+  wmode = OWW_NO_WRITE;
+  OW_DDR &= ~OW_PINN;
+  SET_FALLING
+  CLKPR=(1<<CLKPCE);
+  CLKPR=0; /*8Mhz*/ 
+  TIMSK=0;
+  GIMSK=(1<<INT0);  /*set direct GIMSK register*/
+  TCCR0B=(1<<CS00)|(1<<CS01); /*8mhz /64 couse 8 bit Timer interrupt every 8us*/
+  DIS_TIMER;
+  sei();
 }
 
-#elif defined (__AVR_ATmega328P__)
-
-void OneWireSlave::setTimerEvent_(short delayMicroSeconds, void(*handler)())
-{
-  delayMicroSeconds -= 10; // remove overhead (tuned on Arduino Uno)
-
-  // prescaler 64
-  short skipTicks = (delayMicroSeconds - 3) / 4; // round the micro seconds delay to a number of ticks to skip (4us per tick, so 4us must skip 0 tick, 8us must skip 1 tick, etc.)
-  if (skipTicks < 1) skipTicks = 1;
-  timerEvent = handler;
-  UserTimer_Run(skipTicks);
+void OneWireSlave::read(uint8_t* buffer, uint8_t numBytes, void (*complete)()) { //  read from master
+  cli();
+  OneWireSlave::beginReceiveBytes_(buffer, numBytes, complete);
+  sei();
 }
 
-#endif
-
-void OneWireSlave::disableTimer_()
-{
-  UserTimer_Stop();
+void OneWireSlave::beginReceiveBytes_(uint8_t* buffer, uint8_t numBytes, void(*complete)()) {
+  rxBuffer_ = buffer;
+  rxBufferLength_ = numBytes;
+  rxCallback_ = complete;
+  mode = OWM_READ;
+  ByteP = 0;
+  rxBuffer_[0] = 0;
 }
 
-void OneWireSlave::onEnterInterrupt_()
-{
+void OneWireSlave::write(uint8_t* buffer, uint8_t numBytes, void (*complete)()) { //write to master
+  //cli();
+  OneWireSlave::beginWriteBytes_(buffer, numBytes, complete == 0 ? noOpCallback_ : complete);
+  //sei();
 }
 
-void OneWireSlave::onLeaveInterrupt_()
-{
+void OneWireSlave::beginWriteBytes_(uint8_t* buffer, uint8_t numBytes, void(*complete)()) {
+  mode = OWM_WRITE;
+  txBuffer_ = buffer;
+  txBufferLength_ = numBytes;
+  txCallback_ = complete;
+  ByteP = 0;
+  bitp = 1;
+  actbit = (bitp & txBuffer_[0]) == bitp;
+  wmode = actbit; //prepare for send firs bit
 }
 
-void OneWireSlave::error_(const char* message)
-{
-  if (logCallback_ != 0)
-    logCallback_(message);
-  endWrite_(true);
-  if (clientReceiveCallback_ != 0)
-    clientReceiveCallback_(RE_Error, 0);
-}
-
-void OneWireSlave::pullLow_()
-{
-  pin_.outputMode();
-  pin_.writeLow();
-}
-
-void OneWireSlave::releaseBus_()
-{
-  pin_.inputMode();
-}
-
-void OneWireSlave::beginResetDetection_()
-{
-  setTimerEvent_(ResetMinDuration - 50, &OneWireSlave::resetCheck_);
-  resetStart_ = micros() - 50;
-}
-
-void OneWireSlave::beginResetDetectionSendZero_()
-{
-  setTimerEvent_(ResetMinDuration - SendBitDuration - 50, &OneWireSlave::resetCheck_);
-  resetStart_ = micros() - SendBitDuration - 50;
-}
-
-void OneWireSlave::cancelResetDetection_()
-{
-  disableTimer_();
-  resetStart_ = (unsigned long) - 1;
-}
-
-void OneWireSlave::resetCheck_()
-{
-  onEnterInterrupt_();
-  if (!pin_.read())
-  {
-    pin_.attachInterrupt(&OneWireSlave::waitReset_, CHANGE);
-    // log("Reset detected during another operation");
-  }
-  onLeaveInterrupt_();
-}
-
-void OneWireSlave::beginReceiveBit_(void(*completeCallback)(bool bit, bool error))
-{
-  receiveBitCallback_ = completeCallback;
-  pin_.attachInterrupt(&OneWireSlave::receive_, FALLING);
-}
-
-void OneWireSlave::receive_()
-{
-  onEnterInterrupt_();
-
-  pin_.detachInterrupt();
-  setTimerEvent_(ReadBitSamplingTime, &OneWireSlave::readBit_);
-
-  onLeaveInterrupt_();
-}
-
-void OneWireSlave::readBit_()
-{
-  onEnterInterrupt_();
-
-  bool bit = pin_.read();
-  if (bit)
-    cancelResetDetection_();
-  else
-    beginResetDetection_();
-  receiveBitCallback_(bit, false);
-  //dbgOutput.writeLow();
-  //dbgOutput.writeHigh();
-
-  onLeaveInterrupt_();
-}
-
-void OneWireSlave::beginSendBit_(bool bit, void(*completeCallback)(bool error))
-{
-  bitSentCallback_ = completeCallback;
-  if (bit)
-  {
-    pin_.attachInterrupt(&OneWireSlave::sendBitOne_, FALLING);
-  }
-  else
-  {
-    pin_.attachInterrupt(&OneWireSlave::sendBitZero_, FALLING);
-  }
-}
-
-void OneWireSlave::sendBitOne_()
-{
-  onEnterInterrupt_();
-
-  beginResetDetection_();
-  bitSentCallback_(false);
-
-  onLeaveInterrupt_();
-}
-
-void OneWireSlave::sendBitZero_()
-{
-  pullLow_(); // this must be executed first because the timing is very tight with some master devices
-
-  onEnterInterrupt_();
-
-  pin_.detachInterrupt();
-  setTimerEvent_(SendBitDuration, &OneWireSlave::endSendBitZero_);
-
-  onLeaveInterrupt_();
-}
-
-void OneWireSlave::endSendBitZero_()
-{
-  onEnterInterrupt_();
-
-  releaseBus_();
-  beginResetDetectionSendZero_();
-  bitSentCallback_(false);
-
-  onLeaveInterrupt_();
-}
-
-void OneWireSlave::beginWaitReset_()
-{
-  disableTimer_();
-  pin_.inputMode();
-  pin_.attachInterrupt( &OneWireSlave::waitReset_, CHANGE );
-  //resetStart_ = (unsigned int) - 1;
-  resetStart_ = (unsigned long) - 1;
-}
-
-void OneWireSlave::waitReset_()
-{
-  onEnterInterrupt_();
-  bool state = pin_.read();
-  unsigned long now = micros();
-  if (!state)
-  {
-    if (resetStart_ == (unsigned long) - 1)
-    {
-      onLeaveInterrupt_();
-      return;
-    }
-    static unsigned long resetDuration = now - resetStart_;
-    //resetStart_ = (unsigned int) - 1;
-    resetStart_ = (unsigned long) - 1;
-    if (resetDuration >= ResetMinDuration)
-    {
-
-     // The following test has been removed because of a bug which causes the value of 
-     // resetduration to exceed ResetMaxDuration intermittently. This happens
-     // only on the attiny platform - possibly due to the implementation of
-     // micros() in the attiny core 
-     
-     // if (resetDuration > ResetMaxDuration)
-     // {
-     //  ERROR("Reset too long");
-     //   onLeaveInterrupt_();
-     //   return;
-     // }
-
-      lastReset_ = now;
-      pin_.detachInterrupt();
-      unsigned long alreadyElapsedTime = micros() - now;
-      setTimerEvent_(alreadyElapsedTime < PresenceWaitDuration ? PresenceWaitDuration - alreadyElapsedTime : 0, &OneWireSlave::beginPresence_);
-      endWrite_(true, false);
-      if (clientReceiveCallback_ != 0)
-        clientReceiveCallback_(RE_Reset, 0);
-    } else
-    {
-      //ERROR("Reset too short");
-    }
-  }
-  else
-  {
-    resetStart_ = now;
-  }
-  onLeaveInterrupt_();
-}
-
-void OneWireSlave::beginPresence_()
-{
-  pullLow_();
-  setTimerEvent_(PresenceDuration, &OneWireSlave::endPresence_);
-}
-
-void OneWireSlave::endPresence_()
-{
-  releaseBus_();
-  beginWaitCommand_();
-}
-
-void OneWireSlave::beginWaitCommand_()
-{
-  bufferPos_ = ReceiveCommand;
-  beginReceive_();
-}
-
-void OneWireSlave::beginReceive_()
-{
-  receivingByte_ = 0;
-  bufferBitPos_ = 0;
-  beginReceiveBit_(&OneWireSlave::onBitReceived_);
-}
-
-void OneWireSlave::onBitReceived_(bool bit, bool error)
-{
-  if (error)
-  {
-    ERROR("Invalid bit");
-    if (bufferPos_ >= 0)
-      receiveBytesCallback_(true);
-    return;
-  }
-
-   receivingByte_ |= ((bit ? 1 : 0) << bufferBitPos_);
-  ++bufferBitPos_;
-
-  if (clientReceiveBitCallback_ != 0 && bufferPos_ != ReceiveCommand)
-    clientReceiveBitCallback_(bit);
-
-  if (bufferBitPos_ == 8)
-  {
-    // log("received byte", (long)receivingByte_);
-
-    if (bufferPos_ == ReceiveCommand)
-    {
-      bufferPos_ = 0;
-      switch (receivingByte_)
-      {
-        case 0xF0: // SEARCH ROM
-          resumeCommandFlag_ = false;
-          beginSearchRom_();
-          return;
-        case 0xEC: // CONDITIONAL SEARCH ROM
-          resumeCommandFlag_ = false;
-          if (alarmedFlag_)
-          {
-            beginSearchRom_();
-          }
-          else
-          {
-            beginWaitReset_();
-          }
-          return;
-        case 0x33: // READ ROM
-          resumeCommandFlag_ = false;
-          beginWriteBytes_(rom_, 8, &OneWireSlave::noOpCallback_);
-          return;
-        case 0x55: // MATCH ROM
-          resumeCommandFlag_ = false;
-          beginReceiveBytes_(scratchpad_, 8, &OneWireSlave::matchRomBytesReceived_);
-          return;
-        case 0xCC: // SKIP ROM
-          resumeCommandFlag_ = false;
-          beginReceiveBytes_(scratchpad_, 1, &OneWireSlave::notifyClientByteReceived_);
-          return;
-        case 0xA5: // RESUME
-          if (resumeCommandFlag_)
-          {
-            beginReceiveBytes_(scratchpad_, 1, &OneWireSlave::notifyClientByteReceived_);
-          }
-          else
-          {
-            beginWaitReset_();
-          }
-          return;
-        default:
-          ERROR("Unknown command");
-          return;
-      }
-    }
-    else
-    {
-      recvBuffer_[bufferPos_++] = receivingByte_;
-      receivingByte_ = 0;
-      bufferBitPos_ = 0;
-      if (bufferPos_ == bufferLength_)
-      {
-        beginWaitReset_();
-        receiveBytesCallback_(false);
-        return;
-      }
-    }
-  }
-
-  beginReceiveBit_(&OneWireSlave::onBitReceived_);
-}
-
-void OneWireSlave::beginSearchRom_()
-{
-  searchRomBytePos_ = 0;
-  searchRomBitPos_ = 0;
-  searchRomInverse_ = false;
-
-  beginSearchRomSendBit_();
-}
-
-void OneWireSlave::beginSearchRomSendBit_()
-{
-  byte currentByte = rom_[searchRomBytePos_];
-  bool currentBit = bitRead(currentByte, searchRomBitPos_);
-  bool bitToSend = searchRomInverse_ ? !currentBit : currentBit;
-
-  beginSendBit_(bitToSend, &OneWireSlave::continueSearchRom_);
-}
-
-void OneWireSlave::continueSearchRom_(bool error)
-{
-  if (error)
-  {
-    ERROR("Failed to send bit");
-    return;
-  }
-
-  searchRomInverse_ = !searchRomInverse_;
-  if (searchRomInverse_)
-  {
-    beginSearchRomSendBit_();
-  }
-  else
-  {
-    beginReceiveBit_(&OneWireSlave::searchRomOnBitReceived_);
-  }
-}
-
-void OneWireSlave::searchRomOnBitReceived_(bool bit, bool error)
-{
-  if (error)
-  {
-    ERROR("Bit read error during ROM search");
-    return;
-  }
-
-  byte currentByte = rom_[searchRomBytePos_];
-  bool currentBit = bitRead(currentByte, searchRomBitPos_);
-
-  if (bit == currentBit)
-  {
-    ++searchRomBitPos_;
-    if (searchRomBitPos_ == 8)
-    {
-      searchRomBitPos_ = 0;
-      ++searchRomBytePos_;
-    }
-
-    if (searchRomBytePos_ == 8)
-    {
-      // log("ROM sent entirely");
-
-      beginWaitReset_();
-    }
-    else
-    {
-      beginSearchRomSendBit_();
-    }
-  }
-  else
-  {
-    // log("Leaving ROM search");
-    beginWaitReset_();
-  }
-}
-
-void OneWireSlave::beginWriteBytes_(const byte * data, short numBytes, void(*complete)(bool error))
-{
-  sendBuffer_ = data;
-  bufferLength_ = numBytes;
-  bufferPos_ = 0;
-  bufferBitPos_ = 0;
-  sendBytesCallback_ = complete;
-
-  if (sendBuffer_ != 0 && bufferLength_ > 0)
-  {
-    bool bit = bitRead(sendBuffer_[0], 0);
-    beginSendBit_(bit, &OneWireSlave::bitSent_);
-  }
-  else
-  {
-    endWrite_(true);
-    beginReceiveBytes_(scratchpad_, 1, &OneWireSlave::notifyClientByteReceived_);
-  }
-}
-
-void OneWireSlave::bitSent_(bool error)
-{
-  if (error)
-  {
-    ERROR("error sending a bit");
-    sendBytesCallback_(true);
-    return;
-  }
-
-  ++bufferBitPos_;
-  if (bufferBitPos_ == 8)
-  {
-    bufferBitPos_ = 0;
-    ++bufferPos_;
-  }
-
-  if (bufferPos_ == bufferLength_)
-  {
-    endWrite_(false);
-    sendBytesCallback_(false);
-    return;
-  }
-
-  bool bit = bitRead(sendBuffer_[bufferPos_], bufferBitPos_);
-  beginSendBit_(bit, &OneWireSlave::bitSent_);
-}
-
-void OneWireSlave::beginReceiveBytes_(byte * buffer, short numBytes, void(*complete)(bool error))
-{
-  recvBuffer_ = buffer;
-  bufferLength_ = numBytes;
-  bufferPos_ = 0;
-  receiveBytesCallback_ = complete;
-  beginReceive_();
-}
-
-void OneWireSlave::noOpCallback_(bool error)
-{
-  if (error)
-    ERROR("error during an internal 1-wire operation");
-}
-
-void OneWireSlave::matchRomBytesReceived_(bool error)
-{
-  if (error)
-  {
-    resumeCommandFlag_ = false;
-    ERROR("error receiving match rom bytes");
-    return;
-  }
-
-  if (memcmp(rom_, scratchpad_, 8) == 0)
-  {
-    // log("ROM matched");
-    resumeCommandFlag_ = true;
-    beginReceiveBytes_(scratchpad_, 1, &OneWireSlave::notifyClientByteReceived_);
-  }
-  else
-  {
-    // log("ROM not matched");
-    resumeCommandFlag_ = false;
-    beginWaitReset_();
-  }
-}
-
-void OneWireSlave::notifyClientByteReceived_(bool error)
-{
-  if (error)
-  {
-    if (clientReceiveCallback_ != 0)
-      clientReceiveCallback_(RE_Error, 0);
-    ERROR("error receiving custom bytes");
-    return;
-  }
-
-  beginReceiveBytes_(scratchpad_, 1, &OneWireSlave::notifyClientByteReceived_);
-  if (clientReceiveCallback_ != 0)
-    clientReceiveCallback_(RE_Byte, scratchpad_[0]);
-}
