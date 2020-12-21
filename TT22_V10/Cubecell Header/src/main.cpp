@@ -7,7 +7,7 @@
 #include "CayenneLPP.h"
 #include "CubeCell_NeoPixel.h"
 #include "LoRaWan_APP.h"
-#include "D18B20.h"
+#include "AT85ADC.h"
 #include "vesoil.h"
 #include <OneWire.h>
 
@@ -39,7 +39,7 @@ char rxpacket[BUFFER_SIZE];
 #define TENSECS                                     10 * MICRO_TO_SECS
 #define THIRTYSECS                                  30 * MICRO_TO_SECS
 #define THIRTYMINS                                  30 * MICRO_TO_MIN
-#define TIME_UNTIL_WAKEUP                           FIVESECS
+#define TIME_UNTIL_WAKEUP                           1000
 
 static TimerEvent_t wakeUp;
 
@@ -49,6 +49,7 @@ void OnTxTimeout( void );
 void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr );
 void onWakeUp();
 void onSleep();
+void onRadioSleep();
 
 typedef enum
 {
@@ -59,14 +60,15 @@ typedef enum
 } States_t;
 
 States_t state;
-D18B20 ds( GPIO0 );
+AT85ADC ds( GPIO0 );
 
 void setup() {
     boardInitMcu( );
     Serial.begin(115200);
+    delay(1000);
     
     Serial.printf( "Started\n");
-    delay(1000);
+    state=TX;
     TimerInit( &wakeUp, onWakeUp );
 
     RadioEvents.TxDone = OnTxDone;
@@ -81,29 +83,28 @@ void setup() {
                                 LORA_CRC, LORA_FREQ_HOP, LORA_HOP_PERIOD, LORA_IQ_INVERSION_ON, 36000 );
 
     // setting the sync work breaks the transmission.
-    // Radio.SetSyncWord(SYNCWORD);
-    state=TX;
- 
+    // Radio.SetSyncWord(SYNCWORD); 
 }
 
 bool SendTestPacket() {
     digitalWrite(Vext,LOW); //POWER ON
     delay(10);
-    float value = ds.getSample();
+    
+    bool success = ds.search();
 
-    Serial.printf( "Start\n");
     digitalWrite(Vext,HIGH); //POWER OFF
 
-    if ((int)(value=-101))
+    if (!success)
     {
         Serial.printf( "Tmp FAIL\n");
-        //turnOnRGB(COLOR_FAIL, 100);
-        //turnOffRGB();
-        //return false;
+        turnOnRGB(COLOR_FAIL, 100);
+        turnOffRGB();
+        return false;
     }
-
+    uint16_t temp = ds.performConversion(false);
+    uint16_t adc = 0; // ds.performConversion(true);
     uint16_t volts = getBatteryVoltage();
-    Serial.printf( "Tmp %s V=%d\n", String(value,2).c_str(), volts);
+    Serial.printf( "Tmp %d ADC=%d, V=%d\n", temp, adc, volts);
 
     CayenneLPP lpp(64);
     lpp.reset();
@@ -111,9 +112,8 @@ bool SendTestPacket() {
     lpp.addPresence(CH_ID_HI,(getID() >> 16 ) & 0x0000FFFF);     // id of this sensor
     lpp.addAnalogInput(CH_Moist1,100.0);
     lpp.addAnalogInput(CH_Volts, getBatteryVoltage()/1000.0);
-    Radio.Send( lpp.getBuffer(), lpp.getSize() );    
     turnOnRGB(COLOR_SENT, 100);
-    turnOffRGB();
+    Radio.Send( lpp.getBuffer(), lpp.getSize() );    
     return true;
     
 }
@@ -123,11 +123,18 @@ void loop()
     switch(state)
 	{
 		case TX:
-		    state = SendTestPacket() ? LOWPOWERTX : LOWPOWER;
+		    if ( SendTestPacket())
+            {
+                state= LOWPOWERTX;
+            }
+            else
+            {
+                onSleep();
+            }
 		    break;
 		case LOWPOWERTX:
+            // wait for TX to complete
             Radio.IrqProcess( );
-            state = LOWPOWER;
 		    break;
 		case LOWPOWER:
 			lowPowerHandler();
@@ -139,12 +146,14 @@ void loop()
 
 void OnTxDone( void )
 {
-    onSleep();
+    turnOffRGB();
+    onRadioSleep();
 }
 
 void OnTxTimeout( void )
 {
-    onSleep();
+    turnOffRGB();
+    onRadioSleep();
 }
 
 void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)
@@ -152,9 +161,14 @@ void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)
 	state=TX;
 }
 
-void onSleep()
+void onRadioSleep()
 {
     Radio.Sleep();
+    onSleep();
+}
+
+void onSleep()
+{
     state = LOWPOWER;
     TimerSetValue( &wakeUp, TIME_UNTIL_WAKEUP );
     TimerStart( &wakeUp );

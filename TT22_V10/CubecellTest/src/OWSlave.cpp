@@ -20,22 +20,21 @@ namespace
   const byte ReceiveCommand = (byte) - 1;
 }
 
-void setTimerEvent(short delayMicroSeconds, bool oneShot, void(*handler)());
+void setTimerEvent(short delayMicroSeconds, void(*handler)());
 
 #define CLEARINTERRUPT GIFR |= (1 << INTF0) | (1<<PCIF);
 #define USERTIMER_COMPA_vect TIMER1_COMPA_vect
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
 
 static void(*timerEvent)() = 0;
-static volatile bool _oneShot = false;
 
 byte OWSlave::rom_[8];
 Pin OWSlave::pin_;
 OWSlave::State OWSlave::state_;
 
-volatile byte OWSlave::read_bufferByte_;
-volatile byte OWSlave::read_bufferBitPos_;
-volatile byte OWSlave::read_bufferPos_;
+byte OWSlave::read_bufferByte_;
+byte OWSlave::read_bufferBitPos_;
+byte OWSlave::read_bufferPos_;
 byte OWSlave::read_buffer_[32];
 
 byte OWSlave::write_bufferLen_;
@@ -45,8 +44,11 @@ byte* OWSlave::write_ptr_;
 byte OWSlave::write_byte;
 bool OWSlave::write_lastBitSent;
 
-volatile unsigned long OWSlave::debugValue;
+volatile unsigned long OWSlave::debugValue1;
+volatile unsigned long OWSlave::debugValue2;
+
 volatile unsigned long OWSlave::_readStartTime;
+volatile bool OWSlave::pinState;
 
 void(*OWSlave::clientReceiveCallback_)(OWSlave::ReceiveEvent evt, byte data);
 
@@ -113,7 +115,6 @@ __attribute__((always_inline)) static inline void UserTimer_Run(int skipTicks)
 
 __attribute__((always_inline)) static inline void UserTimer_Stop()
 {
-  //TIMSK = 0;    //&= ~(1 << OCIE1A);// clear timer interrupt enable
   TIMSK &= ~(1 << OCIE1A);
   TCCR1 = 0;
 }
@@ -121,11 +122,8 @@ __attribute__((always_inline)) static inline void UserTimer_Stop()
 ISR(USERTIMER_COMPA_vect) // timer1 interrupt
 {
   void(*event)() = timerEvent;
-	if (_oneShot)
-	{
-  	UserTimer_Stop(); // disable clock
-  	timerEvent = 0;
-	}
+ 	UserTimer_Stop(); // disable clock
+	timerEvent = 0;
   event();
 }
 
@@ -142,7 +140,8 @@ void OWSlave::begin(byte* rom, Pin pin)
 
   clearBuffer();
 
-  debugValue = 1;
+  debugValue1 = 1;
+  debugValue2 = 1;
 
   // start 1-wire activity
   beginRead();
@@ -168,7 +167,7 @@ void OWSlave::beginRead()
   UserTimer_Stop();
 
   releaseBus_();
-
+  pinState = Pin2Read();
   _readStartTime = micros();
   pin_.attachInterrupt( &OWSlave::ReadInterrupt, CHANGE );
 }
@@ -183,6 +182,15 @@ void OWSlave::ReadInterrupt()
   cli();
 
   bool pinHigh = Pin2Read();
+
+  if (pinState==pinHigh)
+  {
+    sei();
+    return;
+  }
+
+  pinState=pinHigh;
+
   unsigned long now = micros();
   
   // start timing
@@ -197,13 +205,14 @@ void OWSlave::ReadInterrupt()
 
   if (duration==0)
   {
+    debugValue1 = 2;
     sei();
     return;
   }
 
-
   if (duration > ResetMinDuration )
   {    
+    //debugValue1 = 3;
     beginPrePresence_();
     sei();
     return;
@@ -211,15 +220,14 @@ void OWSlave::ReadInterrupt()
   
   if (duration > ReadBitMaxDuration)
   {
+    debugValue1 = 4;
     sei();
     return;
   }
 
-  bool bit = duration < ReadBitSamplingTime && duration!=0;
-
-  // getting bits ok
-  //if (bit)
-  //  debugValue = duration;
+  bool bit = duration < ReadBitSamplingTime;
+  debugValue1 = 5;
+  debugValue2 = bit?5:10;
 
   ReadBit( bit );
   sei();
@@ -246,12 +254,12 @@ void OWSlave::ReadBit( bool bit )
     case State::WaitingForReset:
       break;
     case State::WaitingForCommand:      
-      debugValue = ++read_bufferBitPos_;
-      // if (AddBitToReadBuffer( bit ))
-      // {        
-      //   debugValue = 30;
-      //   handleCommand(read_bufferByte_);
-      // }
+      debugValue1 = ++read_bufferBitPos_;
+      if (AddBitToReadBuffer( bit ))
+      {        
+        debugValue1 = 30;
+        handleCommand(read_bufferByte_);
+      }
       break;
     case State::WaitingForData:
       if (AddBitToReadBuffer(  bit ))
@@ -343,19 +351,21 @@ void OWSlave::handleDataByte(byte data)
 ////////////////////////  Presence
 void OWSlave::beginPrePresence_()
 {
-  setTimerEvent(PresenceWaitDuration, true, &OWSlave::beginPresence_);
+  endRead();
+  setTimerEvent(PresenceWaitDuration, &OWSlave::beginPresence_);
 }
 
 void OWSlave::beginPresence_()
 {
   pullLow_();
-  setTimerEvent(PresenceDuration, true, &OWSlave::endPresence_);
+  setTimerEvent(PresenceDuration, &OWSlave::endPresence_);
 }
 
 void OWSlave::endPresence_()
 {
-  clearBuffer();
+  beginRead();
   releaseBus_();
+  clearBuffer();
   clientReceiveCallback_(ReceiveEvent::RE_Reset, 0 );
   state_ = State::WaitingForCommand;
 }
@@ -428,7 +438,7 @@ void OWSlave::WriteNextRomBit()
   else
   {
     pullLow_(); // this must be executed first because the timing is very tight with some master devices  
-    setTimerEvent(SendBitDuration, true, &OWSlave::endWriteBit);  
+    setTimerEvent(SendBitDuration, &OWSlave::endWriteBit);  
   }
 
   state_ = State::WritingRomCompliment;
@@ -443,7 +453,7 @@ void OWSlave::WriteComplement()
   else
   {
     pullLow_(); // this must be executed first because the timing is very tight with some master devices  
-    setTimerEvent(SendBitDuration, true, &OWSlave::endWriteBit);  
+    setTimerEvent(SendBitDuration, &OWSlave::endWriteBit);  
   }     
   state_ = State::WritingRomChecking;
 }
@@ -459,7 +469,7 @@ void OWSlave::WriteNextBit()
   else
   {
     pullLow_(); // this must be executed first because the timing is very tight with some master devices  
-    setTimerEvent(SendBitDuration, true, &OWSlave::endWriteBit);  
+    setTimerEvent(SendBitDuration, &OWSlave::endWriteBit);  
   }
 
   AdvanceWriteBuffer1Bit();
@@ -511,9 +521,8 @@ void OWSlave::setReceiveCallback(void(*callback)(ReceiveEvent evt, byte data)) {
   clientReceiveCallback_ = callback;
 }
 
-void OWSlave::setTimerEvent(short delayMicroSeconds, bool oneShot, void(*handler)())
+void OWSlave::setTimerEvent(short delayMicroSeconds, void(*handler)())
 {  
-	_oneShot = oneShot;
   timerEvent = handler;
   UserTimer_Run(delayMicroSeconds);
 }

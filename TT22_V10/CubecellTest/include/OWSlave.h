@@ -38,7 +38,9 @@ class OWSlave
     //! Sets (or replaces) a function to be called when something is received. The callback is executed from interrupts and should be as short as possible. Failure to return quickly can prevent the library from correctly reading the next byte.
     void setReceiveCallback(void(*callback)(ReceiveEvent evt, byte data));
 
-    volatile static unsigned long debugValue;
+    static volatile unsigned long debugValue1;
+    static volatile unsigned long debugValue2;
+    static volatile bool pinState;
 
     static State state_;
 
@@ -48,9 +50,9 @@ class OWSlave
     static volatile unsigned long _readStartTime;
 
     // buffer for reading/writing
-    static volatile byte read_bufferByte_;
-    static volatile byte read_bufferBitPos_;
-    static volatile byte read_bufferPos_;
+    static byte read_bufferByte_;
+    static byte read_bufferBitPos_;
+    static byte read_bufferPos_;
     static byte read_buffer_[32];
 
     static byte write_bufferLen_;
@@ -93,7 +95,7 @@ class OWSlave
     static void beginSearchRom_();
 
     static byte crc8(const byte* data, short numBytes);
-    static void setTimerEvent(short delayMicroSeconds, bool oneShot, void(*handler)());
+    static void setTimerEvent(short delayMicroSeconds, void(*handler)());
 };
 
 extern OWSlave OneWireSlave;

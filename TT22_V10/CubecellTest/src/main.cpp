@@ -35,32 +35,14 @@ void setup()
 void loop()
 {
 	//       // get here if duration is bad.
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-    delayMicroseconds(50000);
-	if ((int)OneWireSlave.debugValue>0)
-	{
-    	debug_.writeHigh();
-     	delayMicroseconds((int)OneWireSlave.debugValue*100);
-     	debug_.writeLow();
-	}
+    delayMicroseconds(OneWireSlave.debugValue2*100);
+
+	 if ((int)OneWireSlave.debugValue1>0)
+	 {
+     	debug_.writeHigh();
+      	delayMicroseconds((int)OneWireSlave.debugValue1*100);
+      	debug_.writeLow();
+	 }
 }
 
 void owReceive(OWSlave::ReceiveEvent evt, byte data)
