@@ -88,11 +88,9 @@ void setup() {
 
 bool SendTestPacket() {
     digitalWrite(Vext,LOW); //POWER ON
-    delay(10);
+    delay(100);             // stabalise
     
     bool success = ds.search();
-
-    digitalWrite(Vext,HIGH); //POWER OFF
 
     if (!success)
     {
@@ -103,6 +101,9 @@ bool SendTestPacket() {
     }
     uint16_t temp = ds.performConversion(false);
     uint16_t adc =  ds.performConversion(true);
+
+    digitalWrite(Vext,HIGH); //POWER OFF
+
     uint16_t volts = getBatteryVoltage();
     Serial.printf( "Tmp %d ADC=%d, V=%d\n", temp, adc, volts);
 

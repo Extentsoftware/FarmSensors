@@ -31,7 +31,7 @@ static void StartPWM()
     0<<COM1A0: bits COM1A0 and COM1A1 remain clear, which also prevents Timer/Counter-1 from using pin OC1A (see PWM1A above)
     1<<CS10: sets bit CS11 which tells Timer/Counter-1  to not use a prescalar
     */
-    TCCR1 = 0<<PWM1A | 0<<COM1A0 | 1<<CS10;
+    //TCCR1 = 0<<PWM1A | 0<<COM1A0 | 1<<CS10;
 
     /*
     General Control Register for Timer/Counter-1 (this is for Timer/Counter-1 and is a poorly named register)
@@ -39,7 +39,29 @@ static void StartPWM()
     1<<PWM1B: sets bit PWM1B which enables the use of OC1B (since we disabled using OC1A in TCCR1)
     2<<COM1B0: sets bit COM1B1 and leaves COM1B0 clear, which (when in PWM mode) clears OC1B on compare-match, and sets at BOTTOM
     */
-    GTCCR = 1<<PWM1B | 2<<COM1B0;
+    //GTCCR = 1<<PWM1B | 2<<COM1B0;
+
+	// Timer/Counter 1 initialization
+	// Clock source: System Clock
+	// Clock value: 16000.000 kHz
+	// Mode: Normal top=0xFF
+	// OC1A output: Toggle on compare match
+	// OC1B output: Disconnected
+	// Timer Period: 0.016 ms
+	// Output Pulse(s):
+	// OC1A Period: 0.032 ms Width: 0.016 ms
+	// Timer1 Overflow Interrupt: Off
+	// Compare A Match Interrupt: Off
+	// Compare B Match Interrupt: Off
+	DDRB= (1<<DDB1) ; // ouput pin 1
+	PLLCSR=(0<<PCKE) | (0<<PLLE) | (0<<PLOCK);
+
+	TCCR1=(0<<CTC1) | (0<<PWM1A) | (0<<COM1A1) | (1<<COM1A0) | (0<<CS13) | (0<<CS12) | (0<<CS11) | (1<<CS10);
+	GTCCR=(0<<TSM) | (0<<PWM1B) | (0<<COM1B1) | (0<<COM1B0) | (0<<PSR1) | (0<<PSR0);
+	TCNT1=0x00;
+	OCR1A=0x00;
+	OCR1B=0x00;
+	OCR1C=0x00;
 	
 }
 
@@ -50,10 +72,10 @@ static void initTemp()
 		(1 << REFS1) |     // Sets ref. voltage to 1.1v
 		(0 << REFS0) |     // Sets ref. voltage to 1.1v
 	    (0 << ADLAR) |     // do not left shift result (for 10-bit values)
-		(1 << MUX3)  |     // use ADC2 for input (PB4), MUX bit 3
-		(1 << MUX2)  |     // use ADC2 for input (PB4), MUX bit 2
-		(1 << MUX1)  |     // use ADC2 for input (PB4), MUX bit 1
-		(1 << MUX0);       // use ADC2 for input (PB4), MUX bit 0
+		(1 << MUX3)  |     // 
+		(1 << MUX2)  |     // Set of internal temp sensor
+		(1 << MUX1)  |     // 
+		(1 << MUX0);       // 
 
   	ADCSRA = 
 		(1 << ADEN)  |     // Enable ADC 
