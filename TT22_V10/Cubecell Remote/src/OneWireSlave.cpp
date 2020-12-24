@@ -55,7 +55,6 @@ PIN_INT {
   EN_TIMER;
   mode = lmode;
   wmode = lwmode;
-
 }
 void OneWireSlave::reset(){
   mode = OWM_SLEEP;

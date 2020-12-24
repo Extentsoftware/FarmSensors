@@ -5,8 +5,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-// OW_PORT Pin 7  - PB2
-
+//  OW_PORT Pin 7  - PINB2 / INT0
 //OW Pin
 #define OW_PORT PORTB //1 Wire Port
 #define OW_PIN PINB //1 Wire Pin as number
@@ -22,6 +21,7 @@
 #define SET_FALLING MCUCR=(1<<ISC01); //set interrupt at falling edge
 #define CHK_INT_EN (GIMSK&(1<<INT0))==(1<<INT0) //test if interrupt enabled
 #define PIN_INT ISR(INT0_vect)  // the interrupt service routine
+
 //Timer Interrupt
 #define EN_TIMER {TIMSK |= (1<<TOIE0); TIFR|=(1<<TOV0);} //enable timer interrupt
 #define DIS_TIMER TIMSK  &= ~(1<<TOIE0); // disable timer interrupt

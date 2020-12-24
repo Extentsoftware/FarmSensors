@@ -15,108 +15,83 @@ OneWireSlave ow;
 #define CMD_RecallMemory 	0xB8
 #define CMD_StartTmpConv    0x44
 #define CMD_StartAdcConv    0x45
+#define CMD_StartFrqConv	0x46
 
-
+uint8_t channel=0;
 uint8_t control[4] {0x00, 0x00, 0x00, 0x00};
 uint8_t scratchpad[2] {0x00, 0x00};
-
 uint8_t id[8] = { FAM, SERIAL_NUMBER, 0x00 };
+static volatile int counter=0;
 
-static void StartPWM()
+ISR(PCINT0_vect)
 {
-	    /*
-    Control Register for Timer/Counter-1 (Timer/Counter-1 is configured with just one register: this one)
-    TCCR1 is 8 bits: [CTC1:PWM1A:COM1A1:COM1A0:CS13:CS12:CS11:CS10]
-    0<<PWM1A: bit PWM1A remains clear, which prevents Timer/Counter-1 from using pin OC1A (which is shared with OC0B)
-    0<<COM1A0: bits COM1A0 and COM1A1 remain clear, which also prevents Timer/Counter-1 from using pin OC1A (see PWM1A above)
-    1<<CS10: sets bit CS11 which tells Timer/Counter-1  to not use a prescalar
-    */
-    //TCCR1 = 0<<PWM1A | 0<<COM1A0 | 1<<CS10;
+	++counter;
+}
 
-    /*
-    General Control Register for Timer/Counter-1 (this is for Timer/Counter-1 and is a poorly named register)
-    GTCCR is 8 bits: [TSM:PWM1B:COM1B1:COM1B0:FOC1B:FOC1A:PSR1:PSR0]
-    1<<PWM1B: sets bit PWM1B which enables the use of OC1B (since we disabled using OC1A in TCCR1)
-    2<<COM1B0: sets bit COM1B1 and leaves COM1B0 clear, which (when in PWM mode) clears OC1B on compare-match, and sets at BOTTOM
-    */
-    //GTCCR = 1<<PWM1B | 2<<COM1B0;
+ISR(TIM1_OVF_vect)
+{
+	// count complete, save results in scratchpad
+	TIMSK &= ~(1<<TOIE1);  // stop running interrupt
+	TCCR1=0;
+	GTCCR=0;
+	// disable pin-change triggers
+	GIMSK &= ~(1<<PCIE);
+	PCMSK = (0<<PCINT5) | (0<<PCINT4) | (0<<PCINT3) | (0<<PCINT2) | (0<<PCINT1) | (0<<PCINT0);
+	GIFR &= ~(1<<PCIF);
 
-	// Timer/Counter 1 initialization
-	// Clock source: System Clock
-	// Clock value: 16000.000 kHz
-	// Mode: Normal top=0xFF
-	// OC1A output: Toggle on compare match
-	// OC1B output: Disconnected
-	// Timer Period: 0.016 ms
-	// Output Pulse(s):
-	// OC1A Period: 0.032 ms Width: 0.016 ms
-	// Timer1 Overflow Interrupt: Off
-	// Compare A Match Interrupt: Off
-	// Compare B Match Interrupt: Off
-	DDRB= (1<<DDB1) ; // ouput pin 1
+	scratchpad[0] = counter & 0xFF;
+	scratchpad[1] = counter >> 8;
+}
+
+static void performCount()
+{
+	counter=0;
+	
+	DDRB= (1<<DDB1) ; // ouput pin 1 (real pin 6)
 	PLLCSR=(0<<PCKE) | (0<<PLLE) | (0<<PLOCK);
 
-	TCCR1=(0<<CTC1) | (0<<PWM1A) | (0<<COM1A1) | (1<<COM1A0) | (0<<CS13) | (0<<CS12) | (0<<CS11) | (1<<CS10);
+	// Timer Period: 1.024 ms
+	// TCCR1=(0<<CTC1) | (0<<PWM1A) | (0<<COM1A1) | (1<<COM1A0) | (0<<CS13) | (1<<CS12) | (1<<CS11) | (1<<CS10);
+
+	// Timer Period: 4.096 ms
+	TCCR1=(0<<CTC1) | (0<<PWM1A) | (0<<COM1A1) | (0<<COM1A0) | (1<<CS13) | (0<<CS12) | (0<<CS11) | (1<<CS10);
 	GTCCR=(0<<TSM) | (0<<PWM1B) | (0<<COM1B1) | (0<<COM1B0) | (0<<PSR1) | (0<<PSR0);
 	TCNT1=0x00;
 	OCR1A=0x00;
 	OCR1B=0x00;
 	OCR1C=0x00;
-	
+
+	// turn on pin change interrupt on pin PB0 (real pin 5)
+	GIMSK |= (1<<PCIE);
+	PCMSK = (0<<PCINT5) | (0<<PCINT4) | (0<<PCINT3) | (0<<PCINT2) | (0<<PCINT1) | (1<<PCINT0);
+	GIFR |= (1<<PCIF);
+
+	TIMSK |= (1<<TOIE1);  // continually running
+
+	// and start counting!
+	counter=0;
 }
 
-static void initTemp()
+static void performAdc()
 {
-	ADMUX =
-		(0 << REFS2) |     // Sets ref. voltage to 1.1v
-		(1 << REFS1) |     // Sets ref. voltage to 1.1v
-		(0 << REFS0) |     // Sets ref. voltage to 1.1v
-	    (0 << ADLAR) |     // do not left shift result (for 10-bit values)
-		(1 << MUX3)  |     // 
-		(1 << MUX2)  |     // Set of internal temp sensor
-		(1 << MUX1)  |     // 
-		(1 << MUX0);       // 
-
-  	ADCSRA = 
-		(1 << ADEN)  |     // Enable ADC 
-		(1 << ADPS2) |     // set prescaler to 128
-		(1 << ADPS1) |
-		(1 << ADPS0); 
-}
-
-static void initADC2()
-{
-  	ADMUX =
-		(0 << REFS2) |     // Sets ref. voltage to Vcc, bit 2
-		(0 << REFS1) |     // Sets ref. voltage to Vcc, bit 1   
-		(0 << REFS0) |     // Sets ref. voltage to Vcc, bit 0
-	    (0 << ADLAR) |     // do not left shift result (for 10-bit values)
-		(0 << MUX3)  |     // use ADC2 for input (PB0), MUX bit 3
-		(0 << MUX2)  |     // use ADC2 for input (PB0), MUX bit 2
-		(1 << MUX1)  |     // use ADC2 for input (PB0), MUX bit 1
-		(1 << MUX0);       // use ADC2 for input (PB0), MUX bit 0
-
-  	ADCSRA = 
-		(1 << ADEN)  |     // Enable ADC 
-		(1 << ADPS2) |     // set prescaler to 128
-		(1 << ADPS1) |
-		(1 << ADPS0); 
-}
-
-static void performConversion(bool adc){
 	scratchpad[0] = 0;
 	scratchpad[1] = 0;
-	
-	if (adc)
-		initADC2();
-	else
-		initTemp();
-	
-	ADCSRA |= (1 << ADSC);         // start ADC measurement
-    while (ADCSRA & (1 << ADSC) ); // wait till conversion complete 
-	// for 10-bit resolution:
+  	ADMUX = channel;
+  	ADCSRA = 
+		(1 << ADEN)  |     			// Enable ADC 
+		(1 << ADPS2) |     			// set prescaler to 128
+		(1 << ADPS1) |
+		(1 << ADPS0); 
+	ADCSRA |= (1 << ADSC);         	// start ADC measurement
+    while (ADCSRA & (1 << ADSC) ); 	// wait till conversion complete 
 	scratchpad[0] = ADCL;
 	scratchpad[1] = ADCH;
+}
+
+static void performAdcWithReset()
+{
+	performAdc();
+	ow.reset();
 }
 
 void onCommand(uint8_t cmd) {
@@ -128,11 +103,16 @@ void onCommand(uint8_t cmd) {
     	ow.read(&control[0], 2, &ow.reset);
 		break;
 	case CMD_StartTmpConv:
-		performConversion(false);
+		channel=0x8F;
+		performAdc();
 		ow.reset();
 		break;
 	case CMD_StartAdcConv:
-		performConversion(true);
+		channel=0;
+		ow.read(&channel, 1, &performAdcWithReset);
+		break;
+	case CMD_StartFrqConv:
+		performCount();
 		ow.reset();
 		break;
     case CMD_RecallMemory:
@@ -142,7 +122,7 @@ void onCommand(uint8_t cmd) {
 };
 
 int main() {
-	StartPWM();
+	TIMSK &= ~(1<<TOIE1);  // stop running interrupt
   	ow.begin(&onCommand, id);
 	while (1) {}
 }

@@ -9,7 +9,6 @@
 #include "LoRaWan_APP.h"
 #include "AT85ADC.h"
 #include "vesoil.h"
-#include <OneWire.h>
 
 #define RF_FREQUENCY                                868E6           // Hz
 #define TX_OUTPUT_POWER                             20              // dBm
@@ -99,13 +98,16 @@ bool SendTestPacket() {
         turnOffRGB();
         return false;
     }
-    uint16_t temp = ds.performConversion(false);
-    uint16_t adc =  ds.performConversion(true);
+    
+    //uint16_t temp = ds.performTemp();
+    uint16_t temp = ds.performAdc(AT85_TEMP);
+    uint16_t adc =  ds.performAdc(AT85_ADC3);
+    uint16_t frq =  ds.performFreq();
 
     digitalWrite(Vext,HIGH); //POWER OFF
 
     uint16_t volts = getBatteryVoltage();
-    Serial.printf( "Tmp %d ADC=%d, V=%d\n", temp, adc, volts);
+    Serial.printf( "Tmp %d ADC=%d Frq=%d V=%d\n", temp, adc, frq, volts);
 
     CayenneLPP lpp(64);
     lpp.reset();
