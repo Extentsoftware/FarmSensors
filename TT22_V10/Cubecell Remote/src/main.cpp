@@ -1,3 +1,9 @@
+/////////////////////////////////////////////////////////////
+//
+// Attiny85 1-wire ADC and frequency counter.
+//
+/////////////////////////////////////////////////////////////
+
 //  generate Device ID based on compile date and time
 #include <comptime.h>
 
@@ -49,9 +55,6 @@ static void performCount()
 	
 	DDRB= (1<<DDB1) ; // ouput pin 1 (real pin 6)
 	PLLCSR=(0<<PCKE) | (0<<PLLE) | (0<<PLOCK);
-
-	// Timer Period: 1.024 ms
-	// TCCR1=(0<<CTC1) | (0<<PWM1A) | (0<<COM1A1) | (1<<COM1A0) | (0<<CS13) | (1<<CS12) | (1<<CS11) | (1<<CS10);
 
 	// Timer Period: 4.096 ms
 	TCCR1=(0<<CTC1) | (0<<PWM1A) | (0<<COM1A1) | (0<<COM1A0) | (1<<CS13) | (0<<CS12) | (0<<CS11) | (1<<CS10);
