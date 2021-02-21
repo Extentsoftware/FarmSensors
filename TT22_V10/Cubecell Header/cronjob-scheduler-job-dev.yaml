@@ -1,0 +1,119 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  annotations:
+    meta.helm.sh/release-name: scheduler-job
+    meta.helm.sh/release-namespace: dev
+  creationTimestamp: "2021-01-31T09:08:14Z"
+  labels:
+    app: scheduler-job-dev
+    app.kubernetes.io/managed-by: Helm
+    chart: scheduler-job-v0.1.0
+    heritage: Helm
+    release: scheduler-job
+  name: scheduler-job-dev
+  namespace: dev
+  resourceVersion: "93035856"
+  selfLink: /apis/batch/v1beta1/namespaces/dev/cronjobs/scheduler-job-dev
+  uid: fcf2b461-9ef2-4217-9c44-fa9d3ac148e1
+spec:
+  concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: scheduler-job-dev
+        appVersion: "20210131.1"
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containers:
+          - env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: app_environment
+              value: dev
+            image: gluteusmaximus/scheduler-job:20210131.1
+            imagePullPolicy: Always
+            name: scheduler-job
+            resources:
+              limits:
+                memory: 300Mi
+              requests:
+                memory: 250Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: OnFailure
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+  schedule: '*/1 * * * *'
+  successfulJobsHistoryLimit: 0
+  suspend: false
+status:
+  active:
+  - apiVersion: batch/v1
+    kind: Job
+    name: scheduler-job-dev-1612084380
+    namespace: dev
+    resourceVersion: "93034646"
+    uid: a88182d6-19b8-4a0a-8293-3e3c6c9683d8
+  - apiVersion: batch/v1
+    kind: Job
+    name: scheduler-job-dev-1612084500
+    namespace: dev
+    resourceVersion: "93034822"
+    uid: 3a26da48-a98e-4ea4-9594-a71a480092c3
+  - apiVersion: batch/v1
+    kind: Job
+    name: scheduler-job-dev-1612084560
+    namespace: dev
+    resourceVersion: "93034957"
+    uid: b5398a3d-b3d6-4f74-a3cd-11ae7b6bde76
+  - apiVersion: batch/v1
+    kind: Job
+    name: scheduler-job-dev-1612084620
+    namespace: dev
+    resourceVersion: "93035087"
+    uid: 27b1c20f-dfa4-4e9a-88e2-c59d35c82425
+  - apiVersion: batch/v1
+    kind: Job
+    name: scheduler-job-dev-1612084680
+    namespace: dev
+    resourceVersion: "93035243"
+    uid: 6aa79f2b-326f-43f8-982c-536a63d5cf53
+  - apiVersion: batch/v1
+    kind: Job
+    name: scheduler-job-dev-1612084740
+    namespace: dev
+    resourceVersion: "93035409"
+    uid: a7d24198-b9a4-42e0-a013-d8009dab4fe0
+  - apiVersion: batch/v1
+    kind: Job
+    name: scheduler-job-dev-1612084800
+    namespace: dev
+    resourceVersion: "93035524"
+    uid: ec7161b6-a5f8-481b-8353-ba11dd7c0991
+  - apiVersion: batch/v1
+    kind: Job
+    name: scheduler-job-dev-1612084860
+    namespace: dev
+    resourceVersion: "93035618"
+    uid: e939962d-eb91-49a3-a1c9-f53468dca88e
+  - apiVersion: batch/v1
+    kind: Job
+    name: scheduler-job-dev-1612084920
+    namespace: dev
+    resourceVersion: "93035742"
+    uid: 25cab108-f2e0-4d55-925e-dcff4e4d5e04
+  - apiVersion: batch/v1
+    kind: Job
+    name: scheduler-job-dev-1612084980
+    namespace: dev
+    resourceVersion: "93035855"
+    uid: 8f6e7e67-e502-4971-adee-bdb6e5563677
+  lastScheduleTime: "2021-01-31T09:23:00Z"
