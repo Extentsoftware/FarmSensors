@@ -14,17 +14,6 @@ Comment3 ""
 Comment4 ""
 $EndDescr
 $Comp
-L power:GND #PWR0102
-U 1 1 5FEBD9E9
-P 2600 2500
-F 0 "#PWR0102" H 2600 2250 50  0001 C CNN
-F 1 "GND" V 2605 2372 50  0000 R CNN
-F 2 "" H 2600 2500 50  0001 C CNN
-F 3 "" H 2600 2500 50  0001 C CNN
-	1    2600 2500
-	0    -1   -1   0   
-$EndComp
-$Comp
 L power:GND #PWR0103
 U 1 1 5FEBF066
 P 4150 3300
@@ -123,20 +112,6 @@ F 6 "Y" H 7150 2650 50  0001 C CNN "Spice_Netlist_Enabled"
 	0    1    1    0   
 $EndComp
 $Comp
-L Device:R_Small R2
-U 1 1 5FED1E82
-P 7150 2300
-F 0 "R2" V 6954 2300 50  0000 C CNN
-F 1 "1.6k" V 7045 2300 50  0000 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P7.62mm_Horizontal" H 7150 2300 50  0001 C CNN
-F 3 "~" H 7150 2300 50  0001 C CNN
-F 4 "R" H 7150 2300 50  0001 C CNN "Spice_Primitive"
-F 5 "1.6k" H 7150 2300 50  0001 C CNN "Spice_Model"
-F 6 "Y" H 7150 2300 50  0001 C CNN "Spice_Netlist_Enabled"
-	1    7150 2300
-	0    1    1    0   
-$EndComp
-$Comp
 L Device:R_Small R1
 U 1 1 5FED2E2E
 P 7150 1800
@@ -182,20 +157,6 @@ $EndComp
 Wire Wire Line
 	7250 2650 7400 2650
 $Comp
-L Device:R_Small R4
-U 1 1 5FEDEBD3
-P 8250 2000
-F 0 "R4" H 8191 1954 50  0000 R CNN
-F 1 "1m" H 8191 2045 50  0000 R CNN
-F 2 "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P7.62mm_Horizontal" H 8250 2000 50  0001 C CNN
-F 3 "~" H 8250 2000 50  0001 C CNN
-F 4 "R" H 8250 2000 50  0001 C CNN "Spice_Primitive"
-F 5 "1m" H 8250 2000 50  0001 C CNN "Spice_Model"
-F 6 "Y" H 8250 2000 50  0001 C CNN "Spice_Netlist_Enabled"
-	1    8250 2000
-	-1   0    0    1   
-$EndComp
-$Comp
 L power:GND #PWR0106
 U 1 1 5FEDFA02
 P 7950 2350
@@ -211,7 +172,7 @@ L Device:C_Small C2
 U 1 1 5FEE0E3A
 P 8550 2000
 F 0 "C2" H 8458 1954 50  0000 R CNN
-F 1 "660p" H 8458 2045 50  0000 R CNN
+F 1 "1n" H 8458 2045 50  0000 R CNN
 F 2 "Capacitor_THT:C_Disc_D4.3mm_W1.9mm_P5.00mm" H 8550 2000 50  0001 C CNN
 F 3 "~" H 8550 2000 50  0001 C CNN
 F 4 "C" H 8550 2000 50  0001 C CNN "Spice_Primitive"
@@ -225,10 +186,6 @@ Wire Wire Line
 Connection ~ 7950 2300
 Wire Wire Line
 	7950 2300 7950 2350
-Wire Wire Line
-	7050 2300 6900 2300
-Wire Wire Line
-	6900 2300 6900 2650
 Wire Wire Line
 	6500 1800 7050 1800
 Connection ~ 7700 1800
@@ -258,32 +215,10 @@ Wire Wire Line
 	6500 1800 6500 2450
 Wire Wire Line
 	6400 2650 6900 2650
-$Comp
-L Device:C_Small C1
-U 1 1 5FED50FB
-P 7450 2300
-F 0 "C1" V 7221 2300 50  0000 C CNN
-F 1 "660p" V 7312 2300 50  0000 C CNN
-F 2 "Capacitor_THT:C_Disc_D4.3mm_W1.9mm_P5.00mm" H 7450 2300 50  0001 C CNN
-F 3 "~" H 7450 2300 50  0001 C CNN
-F 4 "C" H 7450 2300 50  0001 C CNN "Spice_Primitive"
-F 5 "660p" H 7450 2300 50  0001 C CNN "Spice_Model"
-F 6 "Y" H 7450 2300 50  0001 C CNN "Spice_Netlist_Enabled"
-	1    7450 2300
-	0    1    1    0   
-$EndComp
-Wire Wire Line
-	7350 2300 7250 2300
 Wire Wire Line
 	6400 2850 6400 3300
 Wire Wire Line
-	6400 3300 5300 3300
-Wire Wire Line
-	5300 3300 5300 2450
-Wire Wire Line
-	5300 2450 5400 2450
-Wire Wire Line
-	4150 3150 4150 3300
+	4150 3150 4150 3200
 $Comp
 L power:GND #PWR0108
 U 1 1 5FF04FB6
@@ -313,31 +248,16 @@ Wire Wire Line
 $Comp
 L power:GND #PWR0110
 U 1 1 5FF07632
-P 5400 2700
-F 0 "#PWR0110" H 5400 2450 50  0001 C CNN
-F 1 "GND" H 5405 2527 50  0000 C CNN
-F 2 "" H 5400 2700 50  0001 C CNN
-F 3 "" H 5400 2700 50  0001 C CNN
-	1    5400 2700
+P 5250 2850
+F 0 "#PWR0110" H 5250 2600 50  0001 C CNN
+F 1 "GND" H 5255 2677 50  0000 C CNN
+F 2 "" H 5250 2850 50  0001 C CNN
+F 3 "" H 5250 2850 50  0001 C CNN
+	1    5250 2850
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
 	5400 2650 5400 2700
-Wire Wire Line
-	3150 1650 3150 2400
-Wire Wire Line
-	3150 2400 2600 2400
-$Comp
-L power:+3.3V #PWR0101
-U 1 1 5FEE1C51
-P 2600 2600
-F 0 "#PWR0101" H 2600 2450 50  0001 C CNN
-F 1 "+3.3V" H 2615 2773 50  0000 C CNN
-F 2 "" H 2600 2600 50  0001 C CNN
-F 3 "" H 2600 2600 50  0001 C CNN
-	1    2600 2600
-	0    1    1    0   
-$EndComp
 $Comp
 L Connector:Conn_Coaxial J2
 U 1 1 5FEE9D77
@@ -352,8 +272,6 @@ $EndComp
 Wire Wire Line
 	7950 2200 7950 2300
 Wire Wire Line
-	7550 2300 7950 2300
-Wire Wire Line
 	7700 2000 7750 2000
 Wire Wire Line
 	7700 1800 7700 2000
@@ -366,4 +284,120 @@ Text Label 8750 1800 0    50   ~ 0
 AOUT
 Wire Wire Line
 	4750 2550 4900 2550
+Wire Wire Line
+	6900 2650 6900 2850
+Connection ~ 6400 2850
+$Comp
+L power:GND #PWR0111
+U 1 1 604855D1
+P 6400 3700
+F 0 "#PWR0111" H 6400 3450 50  0001 C CNN
+F 1 "GND" H 6405 3527 50  0000 C CNN
+F 2 "" H 6400 3700 50  0001 C CNN
+F 3 "" H 6400 3700 50  0001 C CNN
+	1    6400 3700
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5100 2450 5100 3300
+Wire Wire Line
+	5100 3300 6400 3300
+Wire Wire Line
+	5100 2450 5400 2450
+Wire Wire Line
+	5400 2650 5250 2650
+Connection ~ 5400 2650
+Wire Wire Line
+	4750 2250 4750 2350
+Wire Wire Line
+	4750 2350 4950 2350
+Wire Wire Line
+	4950 2350 4950 2650
+Wire Wire Line
+	4950 2650 4750 2650
+Connection ~ 4750 2350
+Wire Wire Line
+	4750 2750 4750 2650
+Connection ~ 4750 2650
+Wire Wire Line
+	4750 2750 4750 3200
+Wire Wire Line
+	4750 3200 4150 3200
+Connection ~ 4750 2750
+Connection ~ 4150 3200
+Wire Wire Line
+	4150 3200 4150 3300
+Wire Wire Line
+	6400 2850 6900 2850
+Wire Wire Line
+	3150 1650 3150 2400
+$Comp
+L power:GND #PWR0102
+U 1 1 5FEBD9E9
+P 2600 2500
+F 0 "#PWR0102" H 2600 2250 50  0001 C CNN
+F 1 "GND" V 2605 2372 50  0000 R CNN
+F 2 "" H 2600 2500 50  0001 C CNN
+F 3 "" H 2600 2500 50  0001 C CNN
+	1    2600 2500
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	3150 2400 2600 2400
+$Comp
+L power:+3.3V #PWR0101
+U 1 1 5FEE1C51
+P 2600 2600
+F 0 "#PWR0101" H 2600 2450 50  0001 C CNN
+F 1 "+3.3V" H 2615 2773 50  0000 C CNN
+F 2 "" H 2600 2600 50  0001 C CNN
+F 3 "" H 2600 2600 50  0001 C CNN
+	1    2600 2600
+	0    1    1    0   
+$EndComp
+Connection ~ 6400 3300
+Wire Wire Line
+	6400 3500 6400 3700
+$Comp
+L Device:C_Small C1
+U 1 1 60488260
+P 5250 2750
+F 0 "C1" H 5158 2704 50  0000 R CNN
+F 1 "10p" H 5158 2795 50  0000 R CNN
+F 2 "Capacitor_THT:C_Disc_D4.3mm_W1.9mm_P5.00mm" H 5250 2750 50  0001 C CNN
+F 3 "~" H 5250 2750 50  0001 C CNN
+F 4 "C" H 5250 2750 50  0001 C CNN "Spice_Primitive"
+F 5 "660p" H 5250 2750 50  0001 C CNN "Spice_Model"
+F 6 "Y" H 5250 2750 50  0001 C CNN "Spice_Netlist_Enabled"
+	1    5250 2750
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:C_Small C3
+U 1 1 60547F0B
+P 6400 3400
+F 0 "C3" H 6308 3354 50  0000 R CNN
+F 1 "330p" H 6308 3445 50  0000 R CNN
+F 2 "Capacitor_THT:C_Disc_D4.3mm_W1.9mm_P5.00mm" H 6400 3400 50  0001 C CNN
+F 3 "~" H 6400 3400 50  0001 C CNN
+F 4 "C" H 6400 3400 50  0001 C CNN "Spice_Primitive"
+F 5 "660p" H 6400 3400 50  0001 C CNN "Spice_Model"
+F 6 "Y" H 6400 3400 50  0001 C CNN "Spice_Netlist_Enabled"
+	1    6400 3400
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:R_Small R2
+U 1 1 5FEDEBD3
+P 8250 2000
+F 0 "R2" H 8191 1954 50  0000 R CNN
+F 1 "1m" H 8191 2045 50  0000 R CNN
+F 2 "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P7.62mm_Horizontal" H 8250 2000 50  0001 C CNN
+F 3 "~" H 8250 2000 50  0001 C CNN
+F 4 "R" H 8250 2000 50  0001 C CNN "Spice_Primitive"
+F 5 "1m" H 8250 2000 50  0001 C CNN "Spice_Model"
+F 6 "Y" H 8250 2000 50  0001 C CNN "Spice_Netlist_Enabled"
+	1    8250 2000
+	-1   0    0    1   
+$EndComp
 $EndSCHEMATC
