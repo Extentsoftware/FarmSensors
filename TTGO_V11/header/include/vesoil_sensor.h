@@ -1,0 +1,168 @@
+#ifndef __VESOIL_SENSOR__
+#define __VESOIL_SENSOR__
+
+#define FREQUENCY 868E6
+#define BAND      125E3   
+#define SPREAD       12   
+#define CODERATE      6
+#define SYNCWORD 0xa5a5
+#define PREAMBLE      8
+#define TXPOWER      20   // max transmit power
+#define MINBATVOLTS   3   // minimum voltage on battery - if lower, device goes to deep sleep to recharge
+
+#define SCK           5   // GPIO5  -- SX1278's SCK
+#define MISO         19   // GPIO19 -- SX1278's MISnO
+#define MOSI         27   // GPIO27 -- SX1278's MOSI
+#define SS           18   // GPIO18 -- SX1278's CS
+#define RST          14   // GPIO14 -- SX1278's RESET
+#define DI0          26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
+#define GPSBAUD      9600
+
+
+#define ADC_ADDR     0x48 // Base address of ADS1115
+
+
+#ifdef TTGO_LORA32_V1
+#define TRIGPIN      13    // 13 // ultrasound
+#define ECHOPIN      2    // ultrasound
+#define ONE_WIRE_BUS 25   // used for Dallas temp sensor
+
+#define OLED_SDA      4
+#define OLED_SCL      15
+#define OLED_RST      16
+#define PWRSDA        21
+#define PWRSCL        22
+#define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected
+#define BUSPWR        4       // GPIO04 -- sensor bus power control
+#undef  HASPSRAM
+#define BTN1          0 
+
+#endif
+
+#ifdef TTGO_TBEAM_V07
+#define TRIGPIN      13    // 13 // ultrasound
+#define ECHOPIN      2    // ultrasound
+#define ONE_WIRE_BUS 25   // used for Dallas temp sensor
+
+#define GPSRX         12
+#define GPSTX         15   
+#define PWRSDA        TBP_NO_PIN    
+#define PWRSCL        TBP_NO_PIN
+#define BATTERY_PIN   35            // battery level measurement pin, here is the voltage divider connected
+#define BUSPWR        TBP_NO_PIN    // GPIO04 -- sensor bus power control
+#define HASPSRAM
+#define PSRAMSIZE     64000000
+#define STORESIZE     PSRAMSIZE / sizeof(SensorReport)
+#define BTN1          39           // V07 board is GPIO39
+#define DHTPIN        32           // DHT11/DHT22
+
+#endif
+
+#ifdef TTGO_TBEAM_V10
+#define TRIGPIN       14   // 13 // ultrasound
+#define ECHOPIN       13   // ultrasound
+#define ONE_WIRE_BUS  25   // used for Dallas temp sensor
+
+#define GPSRX         34   
+#define GPSTX         12   
+#define PWRSDA        21    
+#define PWRSCL        22
+#define BATTERY_PIN   -1      // battery level measurement pin, here is the voltage divider connected
+#define BUSPWR        4       // GPIO04 -- sensor bus power control
+
+#define HASPSRAM
+#define PSRAMSIZE     64000000
+#define STORESIZE     PSRAMSIZE / sizeof(SensorReport)
+
+#define BTN1          38      // GPIO38 On board button (V07 board is GPIO39)
+#define DHTPIN        15      // DHT11/DHT22
+
+#endif
+
+
+#define ERR_LOWPOWER  0x15  // 00010101
+#define INFO_WIFI     0x33  // 00110011
+#define INFO_SENSOR   0xAA  // 10101010
+#define INFO_NOGPS    0x49  // 01001001
+
+
+#ifndef SENSE_CAPABILITY
+#define SENSE_CAPABILITY 255
+#endif
+
+inline SensorCapability operator|(SensorCapability a, SensorCapability b)
+{
+    return static_cast<SensorCapability>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+inline SensorCapability operator&(SensorCapability a, SensorCapability b)
+{
+    return static_cast<SensorCapability>(static_cast<int>(a) & static_cast<int>(b));
+}
+
+struct SensorConfig
+{
+  char  ssid[16] = "VESTRONG_S";
+  char  password[16] = "";
+  int   gps_timeout = 4 * 60;    // wait n seconds to get GPS fix
+  int   failedGPSsleep = 5 * 60; // sleep this long if failed to get GPS
+  int   reportEvery =  60 * 60;  // get sample every n seconds
+  int   fromHour = 6;            // between these hours
+  int   toHour = 22;             // between these hours
+  long  frequency = FREQUENCY;   // LoRa transmit frequency
+  int   txpower = TXPOWER;       // LoRa transmit power
+  long  preamble = PREAMBLE;     // bits to send before transmition
+  int   syncword = SYNCWORD;     // unique packet identifier
+  float minvolts = MINBATVOLTS;   // power supply must be delivering this voltage in order to xmit.
+  int   lowvoltsleep = 60*60*8;  // sleep this long (seconds) if low on volts (8hrs)
+  long  bandwidth = BAND;        // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
+  int   spreadFactor = SPREAD;   // signal processing gain. higher values give greater range but take longer (more power) to transmit
+  int   codingRate = CODERATE;   // extra info for CRC
+  bool  enableCRC = true;        // cyclic redundancy check mode
+  SensorCapability capability = (SensorCapability)SENSE_CAPABILITY;
+} default_config;
+
+enum STARTUPMODE
+{
+    NORMAL=0,
+    WIFI=1,
+    RESET=2
+};
+
+enum GPSLOCK
+{
+    LOCK_DISABLED,
+    LOCK_OK,
+    LOCK_FAIL,
+    LOCK_WINDOW
+};
+
+void loopSensorMode();
+void loopWifiMode();
+void setConfigParam(const String& var, const char *value);
+void getSampleAndSend();
+void setupSerial();
+void smartDelay(unsigned long ms);
+
+// Sensors
+void setupTempSensors();
+float readGroundTemp();
+float readAirTemp();
+float readAirHum();
+void getSample(SensorReportV1 *report);
+
+// Radio
+void startLoRa();
+void stopLoRa();
+void sendSampleLora(SensorReportV1 *report);
+
+// GPS
+void stopGPS();
+void startGPS();
+GPSLOCK getGpsLock();
+
+// WiFi
+void notFound(AsyncWebServerRequest *request);
+void setupWifi();
+
+#endif

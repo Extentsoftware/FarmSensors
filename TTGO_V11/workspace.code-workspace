@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"name": "header",
+			"path": "Header"
+		},
+		{
+			"path": "remote"
+		},
+		{
+			"path": "hub"
+		}
+	],
+	"settings": {}
+}
