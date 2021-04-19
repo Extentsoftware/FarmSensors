@@ -38,7 +38,7 @@ char rxpacket[BUFFER_SIZE];
 #define TENSECS                                     10 * MICRO_TO_SECS
 #define THIRTYSECS                                  30 * MICRO_TO_SECS
 #define THIRTYMINS                                  30 * MICRO_TO_MIN
-#define TIME_UNTIL_WAKEUP                           1000
+#define TIME_UNTIL_WAKEUP                           2000
 
 static TimerEvent_t wakeUp;
 
@@ -64,7 +64,8 @@ AT85ADC ds( GPIO0 );
 void setup() {
     boardInitMcu( );
     Serial.begin(115200);
-    
+    delay(1000);
+
     Serial.printf( "Started\n");
     state=TX;
     TimerInit( &wakeUp, onWakeUp );
@@ -82,11 +83,13 @@ void setup() {
 
     // setting the sync work breaks the transmission.
     // Radio.SetSyncWord(SYNCWORD); 
+    pinMode(Vext,OUTPUT);
+    digitalWrite(Vext, LOW);
 }
 
 bool SendTestPacket() {
-    digitalWrite(Vext,LOW); //POWER ON
-    delay(100);             // stabalise
+    digitalWrite(Vext,HIGH); //POWER ON
+    delayMicroseconds(100);
     
     bool success = ds.search();
 
@@ -94,8 +97,8 @@ bool SendTestPacket() {
     {
         digitalWrite(Vext,HIGH); //POWER ON
         Serial.printf( "Tmp FAIL\n");
-        turnOnRGB(COLOR_FAIL, 100);
-        turnOffRGB();
+        //turnOnRGB(COLOR_FAIL, 100);
+        //turnOffRGB();
         return false;
     }
     
@@ -104,7 +107,7 @@ bool SendTestPacket() {
     uint16_t adc =  ds.performAdc(AT85_ADC3);
     uint16_t frq =  ds.performFreq();
 
-    digitalWrite(Vext,HIGH); //POWER OFF
+    digitalWrite(Vext,LOW); //POWER OFF
 
     uint16_t volts = getBatteryVoltage();
     Serial.printf( "Tmp %d ADC=%d Frq=%d V=%d\n", temp, adc, frq, volts);
@@ -115,14 +118,14 @@ bool SendTestPacket() {
     lpp.addPresence(CH_ID_HI,(getID() >> 16 ) & 0x0000FFFF);     // id of this sensor
     lpp.addAnalogInput(CH_Moist1,100.0);
     lpp.addAnalogInput(CH_Volts, getBatteryVoltage()/1000.0);
-    turnOnRGB(COLOR_SENT, 100);
+    //turnOnRGB(COLOR_SENT, 100);
     Radio.Send( lpp.getBuffer(), lpp.getSize() );    
     return true;
     
 }
 
 void loop() 
-{
+{    
     switch(state)
 	{
 		case TX:
@@ -149,13 +152,13 @@ void loop()
 
 void OnTxDone( void )
 {
-    turnOffRGB();
+    //turnOffRGB();
     onRadioSleep();
 }
 
 void OnTxTimeout( void )
 {
-    turnOffRGB();
+    //turnOffRGB();
     onRadioSleep();
 }
 

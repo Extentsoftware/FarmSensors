@@ -83,28 +83,36 @@ void setup() {
 
     // setting the sync work breaks the transmission.
     // Radio.SetSyncWord(SYNCWORD); 
+
+    //pinMode(GPIO5,OUTPUT);
+    //digitalWrite(GPIO5,HIGH); //POWER ON
 }
 
 bool SendTestPacket() {
-    digitalWrite(Vext,LOW); //POWER ON
-    delay(100);             // stabalise
+    //digitalWrite(Vext,LOW); //POWER ON
+    //delay(100);             // stabalise
+
+    uint16_t temp = 0;
+    uint16_t adc =  0;
+    uint16_t frq =  0;
     
     bool success = ds.search();
 
     if (!success)
     {
         Serial.printf( "Tmp FAIL\n");
-        turnOnRGB(COLOR_FAIL, 100);
-        turnOffRGB();
-        return false;
+        //turnOnRGB(COLOR_FAIL, 100);
+        //turnOffRGB();
+        //return false;
     }
-    
-    //uint16_t temp = ds.performTemp();
-    uint16_t temp = ds.performAdc(AT85_TEMP);
-    uint16_t adc =  ds.performAdc(AT85_ADC3);
-    uint16_t frq =  ds.performFreq();
+    else
+    {
+        temp = ds.performAdc(AT85_TEMP);
+        adc =  ds.performAdc(AT85_ADC3);
+        frq =  ds.performFreq();
+    }
 
-    digitalWrite(Vext,HIGH); //POWER OFF
+    //digitalWrite(Vext,HIGH); //POWER OFF
 
     uint16_t volts = getBatteryVoltage();
     Serial.printf( "Tmp %d ADC=%d Frq=%d V=%d\n", temp, adc, frq, volts);
@@ -115,7 +123,7 @@ bool SendTestPacket() {
     lpp.addPresence(CH_ID_HI,(getID() >> 16 ) & 0x0000FFFF);     // id of this sensor
     lpp.addAnalogInput(CH_Moist1,100.0);
     lpp.addAnalogInput(CH_Volts, getBatteryVoltage()/1000.0);
-    turnOnRGB(COLOR_SENT, 100);
+    //turnOnRGB(COLOR_SENT, 100);
     Radio.Send( lpp.getBuffer(), lpp.getSize() );    
     return true;
     
@@ -149,18 +157,21 @@ void loop()
 
 void OnTxDone( void )
 {
-    turnOffRGB();
+    Serial.printf( "OnTxDone\n");
+    //turnOffRGB();
     onRadioSleep();
 }
 
 void OnTxTimeout( void )
 {
-    turnOffRGB();
+    Serial.printf( "OnTxTimeout\n");
+    //turnOffRGB();
     onRadioSleep();
 }
 
 void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)
 {
+    Serial.printf( "OnRxDone\n");
 	state=TX;
 }
 
