@@ -18,6 +18,9 @@ void AT85ADC::init(void) {
 
 bool AT85ADC::search() 
 {
+  byte type_s;  
+  float celsius, fahrenheit;
+  
   ds.reset_search();
   
   if ( !ds.search(addr, true)) {
@@ -33,6 +36,7 @@ bool AT85ADC::search()
     // the first ROM byte indicates which chip
   switch (addr[0]) {
     case 0x91:
+      type_s = 0;
       break;
     default:
       return false;
@@ -42,6 +46,8 @@ bool AT85ADC::search()
 
 uint16_t AT85ADC::performConversion(uint8_t cmd, uint8_t channel, uint32_t delayMs) 
 {
+  byte present = 0;
+ 
   ds.reset();
   ds.select(addr);
   ds.write(cmd);   // start conversion, with parasite power on at the end
@@ -51,7 +57,7 @@ uint16_t AT85ADC::performConversion(uint8_t cmd, uint8_t channel, uint32_t delay
 
   delay(delayMs);                  // maybe 750ms is enough, maybe not
   
-  ds.reset();
+  present = ds.reset();
   ds.select(addr);    
   ds.write(0xBE);               // Read Scratchpad
 
