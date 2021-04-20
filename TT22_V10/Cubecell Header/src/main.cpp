@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "CayenneLPP.h"
+#include <CayenneLPP.h>
 #include "CubeCell_NeoPixel.h"
 #include "LoRaWan_APP.h"
 #include "AT85ADC.h"
@@ -26,8 +26,12 @@ uint8_t  _codingRate                                = LORA_CR_4_5;     // [1: 4/
 #define BUFFER_SIZE                                 30 // Define the payload size here
 #define SYNCWORD                                    0
 
-#define COLOR_SENT 0xFFFFFF   //color white
-#define COLOR_FAIL 0xFF0000   //color red, light 0x10
+#define BATTLOW                                     3000
+#define COLOR_SENDING                               0x020202   //color white
+#define COLOR_SENT                                  0x000200   //color green
+#define COLOR_FAIL_SENSOR                           0x020000   
+#define COLOR_FAIL_TX                               0x020002 
+#define COLOR_DURATION                              10
 
 char txpacket[BUFFER_SIZE];
 char rxpacket[BUFFER_SIZE];
@@ -38,7 +42,8 @@ char rxpacket[BUFFER_SIZE];
 #define TENSECS                                     10 * MICRO_TO_SECS
 #define THIRTYSECS                                  30 * MICRO_TO_SECS
 #define THIRTYMINS                                  30 * MICRO_TO_MIN
-#define TIME_UNTIL_WAKEUP                           1000
+#define TIME_UNTIL_WAKEUP_NORMAL                    5000
+#define TIME_UNTIL_WAKEUP_LOWPOWER                  10000
 
 static TimerEvent_t wakeUp;
 
@@ -47,8 +52,7 @@ void OnTxDone( void );
 void OnTxTimeout( void );
 void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr );
 void onWakeUp();
-void onSleep();
-void onRadioSleep();
+void onSleep(uint32_t duration);
 
 typedef enum
 {
@@ -83,47 +87,48 @@ void setup() {
 
     // setting the sync work breaks the transmission.
     // Radio.SetSyncWord(SYNCWORD); 
-
-    //pinMode(GPIO5,OUTPUT);
-    //digitalWrite(GPIO5,HIGH); //POWER ON
 }
 
-bool SendTestPacket() {
-    //digitalWrite(Vext,LOW); //POWER ON
-    //delay(100);             // stabalise
+bool SendTestPacket(float volts) 
+{
+    digitalWrite(Vext,LOW); //POWER ON
+    delay(100);             // stabalise
 
-    uint16_t temp = 0;
-    uint16_t adc =  0;
-    uint16_t frq =  0;
+    float temp = 0;
+    float adc =  0;
+    //uint16_t frq =  0;
     
     bool success = ds.search();
 
     if (!success)
     {
         Serial.printf( "Tmp FAIL\n");
-        //turnOnRGB(COLOR_FAIL, 100);
-        //turnOffRGB();
-        //return false;
+        return false;
     }
     else
     {
-        temp = ds.performAdc(AT85_TEMP);
-        adc =  ds.performAdc(AT85_ADC3);
-        frq =  ds.performFreq();
+        temp = ds.performAdc(AT85_TEMP) / 10.0;
+        adc =  ds.performAdc(AT85_ADC3) / 1.0;
+        //frq =  ds.performFreq();
     }
 
-    //digitalWrite(Vext,HIGH); //POWER OFF
+    digitalWrite(Vext,HIGH); //POWER OFF
 
-    uint16_t volts = getBatteryVoltage();
-    Serial.printf( "Tmp %d ADC=%d Frq=%d V=%d\n", temp, adc, frq, volts);
-
-    CayenneLPP lpp(64);
+    CayenneLPP lpp(32);
     lpp.reset();
     lpp.addPresence(CH_ID_LO,getID() & 0x0000FFFF);     // id of this sensor
     lpp.addPresence(CH_ID_HI,(getID() >> 16 ) & 0x0000FFFF);     // id of this sensor
-    lpp.addAnalogInput(CH_Moist1,100.0);
-    lpp.addAnalogInput(CH_Volts, getBatteryVoltage()/1000.0);
-    //turnOnRGB(COLOR_SENT, 100);
+    lpp.addGenericSensor(CH_Moist1, adc);
+    lpp.addTemperature(CH_GndTemp,temp);
+    uint8_t cursor = lpp.addVoltage(CH_Volts, volts);
+
+    Serial.printf( "ATTINY 1-Wire success\n");
+    Serial.println( cursor );
+    Serial.println( adc,4 );
+    Serial.println( temp,4 );
+    Serial.println( volts,4 );
+    //Serial.printf( "Tmp= %g ADC= %g Batt= %g \n", temp, adc, volts);
+
     Radio.Send( lpp.getBuffer(), lpp.getSize() );    
     return true;
     
@@ -131,16 +136,30 @@ bool SendTestPacket() {
 
 void loop() 
 {
+    uint16_t volts;
     switch(state)
 	{
 		case TX:
-		    if ( SendTestPacket())
+            // Check battery voltage ok first
+            volts = getBatteryVoltage();
+            if (volts < BATTLOW)
             {
-                state= LOWPOWERTX;
+                onSleep(TIME_UNTIL_WAKEUP_LOWPOWER);
             }
             else
             {
-                onSleep();
+                if ( SendTestPacket(volts/1000.0))
+                {
+                    turnOnRGB(COLOR_SENDING, COLOR_DURATION);
+                    turnOffRGB();
+                    state= LOWPOWERTX;
+                }
+                else
+                {
+                    turnOnRGB(COLOR_FAIL_SENSOR, COLOR_DURATION);
+                    turnOffRGB();
+                    onSleep(TIME_UNTIL_WAKEUP_NORMAL);
+                }
             }
 		    break;
 		case LOWPOWERTX:
@@ -158,15 +177,17 @@ void loop()
 void OnTxDone( void )
 {
     Serial.printf( "OnTxDone\n");
-    //turnOffRGB();
-    onRadioSleep();
+    turnOnRGB(COLOR_SENT, COLOR_DURATION);
+    turnOffRGB();
+    onSleep(TIME_UNTIL_WAKEUP_NORMAL);
 }
 
 void OnTxTimeout( void )
 {
     Serial.printf( "OnTxTimeout\n");
-    //turnOffRGB();
-    onRadioSleep();
+    turnOnRGB(COLOR_FAIL_TX, COLOR_DURATION);
+    turnOffRGB();
+    onSleep(TIME_UNTIL_WAKEUP_NORMAL);
 }
 
 void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)
@@ -175,16 +196,11 @@ void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)
 	state=TX;
 }
 
-void onRadioSleep()
-{
-    Radio.Sleep();
-    onSleep();
-}
-
-void onSleep()
+void onSleep(uint32_t duration)
 {
     state = LOWPOWER;
-    TimerSetValue( &wakeUp, TIME_UNTIL_WAKEUP );
+    Radio.Sleep();
+    TimerSetValue( &wakeUp, duration );
     TimerStart( &wakeUp );
 }
 

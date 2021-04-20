@@ -59,7 +59,6 @@ enum MODEM_STATE modem_state=MODEM_INIT;
 #include <Preferences.h>
 #include <FS.h>
 #include <SPIFFS.h>
-#include <TBeamPower.h>
 #include <CayenneLPP.h>
 
 
@@ -111,8 +110,6 @@ bool haveReport=false;
 
 struct HubConfig config;
 
-TBeamPower power(PWRSDA,PWRSCL,BUSPWR, BATTERY_PIN);
-
 esp_timer_handle_t oneshot_timer;
 
 void setup() {
@@ -139,11 +136,6 @@ void setup() {
   SystemCheck();
 
   GetMyMacAddress();
-
-#ifdef TTGO_TBEAM2
-  float vBat = power.get_battery_voltage();
-  Serial.printf("Battery voltage %f\n", vBat);
-#endif
 
   startLoRa();
 
@@ -398,16 +390,14 @@ void readLoraData(int packetSize)
     LoRa.readBytes(buffer, packetSize);
     lpp.decode(buffer, packetSize, root);
     serializeJsonPretty(root, Serial);
-
         
     #ifdef HAS_GSM
         SendMQTTBinary(buffer, packetSize);
     #endif
-
+    free(buffer);
   }
   DisplayPage(currentPage);
 }
-
 void toggleWifi() {
   wifiMode = !wifiMode;
   if (wifiMode)
@@ -445,8 +435,6 @@ void setupWifiTimer() {
 
 String processor(const String& var)
 {
-  if(var == "vbatt")
-    return String(power.get_battery_voltage());
   if(var == "SSID")
     return config.ssid;
   if(var == "password")
@@ -644,6 +632,7 @@ void ModemCheck()
 void SendMQTTBinary(uint8_t *report, int packetSize)
 {
   char topic[32];
+  sprintf(topic, "bongo/%s/sensor", macStr);
   
   if (modem_state != MQ_CONNECTED)
     return;
