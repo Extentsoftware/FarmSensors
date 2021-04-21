@@ -12,4 +12,8 @@ enum SensorChannel
     CH_Moist2     = 9,
     CH_Moist3     = 10,
     CH_Moist4     = 11,
+    CH_SNR        = 12,
+    CH_RSSI       = 13,
+    CH_PFE        = 14,
+
 };

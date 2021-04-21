@@ -10,7 +10,7 @@ C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x
                               .pio\build\cubecell_board\src\main.cpp.o (getID)
 C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(cyfitter_cfg.o)
                               C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(ASR_Arduino.o) (systime)
-.pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+.pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                               .pio\build\cubecell_board\src\main.cpp.o (CayenneLPP::CayenneLPP(unsigned char))
 .pio\build\cubecell_board\liba3c\libLoRa.a(LoRaWan_APP.cpp.o)
                               .pio\build\cubecell_board\src\main.cpp.o (turnOnRGB)
@@ -35,7 +35,7 @@ C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x
 .pio\build\cubecell_board\libFrameworkArduino.a(Stream.cpp.o)
                               .pio\build\cubecell_board\libFrameworkArduino.a(HardwareSerial.cpp.o) (Stream::readBytes(char*, unsigned int))
 .pio\build\cubecell_board\libFrameworkArduino.a(WString.cpp.o)
-                              .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o) (String::~String())
+                              .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o) (String::~String())
 .pio\build\cubecell_board\libFrameworkArduino.a(irq.c.o)
                               C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(ASR_Arduino.o) (global_irq_StartEx)
 .pio\build\cubecell_board\libFrameworkArduino.a(stdlib_noniso.c.o)
@@ -195,7 +195,7 @@ c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(_arm_cmpdf2.o)
                               .pio\build\cubecell_board\libFrameworkArduino.a(Print.cpp.o) (__aeabi_dcmplt)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(_arm_cmpsf2.o)
-                              .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_fcmplt)
+                              .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_fcmplt)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(_aeabi_ldivmod.o)
                               .pio\build\cubecell_board\libFrameworkArduino.a(ADC_SAR_Seq.c.o) (__aeabi_ldivmod)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(_aeabi_uldivmod.o)
@@ -203,7 +203,7 @@ c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(_muldi3.o)
                               C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(lorawan_port.o) (__aeabi_lmul)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(_fixunssfsi.o)
-                              .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_f2uiz)
+                              .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_f2uiz)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(_fixunsdfsi.o)
                               C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(asr_timer.o) (__aeabi_d2uiz)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(_udivmoddi4.o)
@@ -211,7 +211,7 @@ c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(bpabi.o)
                               c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(_aeabi_ldivmod.o) (__gnu_ldivmod_helper)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(divsf3.o)
-                              .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_fdiv)
+                              .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_fdiv)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(eqsf2.o)
                               c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(_arm_cmpsf2.o) (__eqsf2)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(gesf2.o)
@@ -219,15 +219,15 @@ c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(lesf2.o)
                               c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(_arm_cmpsf2.o) (__lesf2)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(mulsf3.o)
-                              .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_fmul)
+                              .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_fmul)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(subsf3.o)
                               .pio\build\cubecell_board\libFrameworkArduino.a(RegionCommon.c.o) (__aeabi_fsub)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(fixsfsi.o)
-                              .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_f2iz)
+                              .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_f2iz)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(floatsisf.o)
-                              .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_i2f)
+                              .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_i2f)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(floatunsisf.o)
-                              .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_ui2f)
+                              .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o) (__aeabi_ui2f)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(adddf3.o)
                               .pio\build\cubecell_board\liba3c\libLoRa.a(LoRaWan_APP.cpp.o) (__aeabi_dadd)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/thumb/v6-m/nofp\libgcc.a(divdf3.o)
@@ -283,9 +283,9 @@ c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/lib/thumb/v6-m/nofp\libc_nano.a(lib_a-itoa.o)
                               .pio\build\cubecell_board\libFrameworkArduino.a(WString.cpp.o) (itoa)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/lib/thumb/v6-m/nofp\libc_nano.a(lib_a-malloc.o)
-                              .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o) (malloc)
+                              .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o) (malloc)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/lib/thumb/v6-m/nofp\libc_nano.a(lib_a-memcpy-stub.o)
-                              .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o) (memcpy)
+                              .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o) (memcpy)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/lib/thumb/v6-m/nofp\libc_nano.a(lib_a-memmove.o)
                               .pio\build\cubecell_board\libFrameworkArduino.a(WString.cpp.o) (memmove)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/lib/thumb/v6-m/nofp\libc_nano.a(lib_a-memset.o)
@@ -311,7 +311,7 @@ c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/lib/thumb/v6-m/nofp\libc_nano.a(lib_a-strchr.o)
                               .pio\build\cubecell_board\libFrameworkArduino.a(WString.cpp.o) (strchr)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/lib/thumb/v6-m/nofp\libc_nano.a(lib_a-strcmp.o)
-                              .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o) (strcmp)
+                              .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o) (strcmp)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/lib/thumb/v6-m/nofp\libc_nano.a(lib_a-strcpy.o)
                               .pio\build\cubecell_board\libFrameworkArduino.a(WString.cpp.o) (strcpy)
 c:/users/marcus/.platformio/packages/toolchain-gccarmnoneeabi/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/lib/thumb/v6-m/nofp\libc_nano.a(lib_a-strftime.o)
@@ -563,103 +563,103 @@ Discarded input sections
                 0x0000000000000000       0x1a C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(ASR_Arduino.o)
  .text          0x0000000000000000        0x0 C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(cyfitter_cfg.o)
  .data          0x0000000000000000        0x0 C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(cyfitter_cfg.o)
- .group         0x0000000000000000        0x8 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .group         0x0000000000000000        0x8 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .group         0x0000000000000000        0x8 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .group         0x0000000000000000        0x8 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .text          0x0000000000000000        0x0 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .data          0x0000000000000000        0x0 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
- .bss           0x0000000000000000        0x0 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0x8 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0x8 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0x8 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0x8 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .group         0x0000000000000000        0xc .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .text          0x0000000000000000        0x0 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .data          0x0000000000000000        0x0 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .bss           0x0000000000000000        0x0 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN18ArduinoJson6173_9111VariantSlot4nextEv
-                0x0000000000000000       0x10 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x10 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN18ArduinoJson6173_9114CollectionData10removeSlotEPNS_11VariantSlotE.part.0
-                0x0000000000000000       0x3c .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x3c .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN18ArduinoJson6173_9111safe_strcmpEPKcS1_
-                0x0000000000000000       0x22 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x22 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN18ArduinoJson6173_9115variantSetFloatEPNS_11VariantDataEf
-                0x0000000000000000       0x18 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x18 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN18ArduinoJson6173_9114CollectionData7addSlotEPNS_10MemoryPoolE
-                0x0000000000000000       0x36 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x36 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP4copyEPh
-                0x0000000000000000       0x12 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x12 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP8getErrorEv
-                0x0000000000000000        0xa .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xa .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .rodata.str1.1
-                0x0000000000000000      0x12a .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000      0x12a .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP11getTypeNameEh
-                0x0000000000000000      0x108 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000      0x108 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP9addColourEhhhh
-                0x0000000000000000       0x4e .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x4e .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP16addAccelerometerEhfff
-                0x0000000000000000       0xa4 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0xa4 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP12addGyrometerEhfff
-                0x0000000000000000       0xa4 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0xa4 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP6addGPSEhfff
-                0x0000000000000000       0xcc .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0xcc .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP8getValueEPhhmb
-                0x0000000000000000       0x5c .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x5c .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP10getValue32EPhh
-                0x0000000000000000       0x14 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x14 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZNK18ArduinoJson6173_9110VariantRef2toINS_9ObjectRefEEENS_9enable_ifIXsrNS_7is_sameIT_S2_EE5valueES2_E4typeEv
-                0x0000000000000000       0x22 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x22 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP15addDigitalInputEhm
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP16addDigitalOutputEhm
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP13addLuminosityEhm
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP12addFrequencyEhm
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP13addPercentageEhm
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP8addPowerEhm
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP11addUnixTimeEhm
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP9addSwitchEhm
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP16addConcentrationEhm
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP14addAnalogInputEhf
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP15addAnalogOutputEhf
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP19addRelativeHumidityEhf
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP10addCurrentEhf
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP11addAltitudeEhf
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP11addDistanceEhf
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP9addEnergyEhf
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP21addBarometricPressureEhf
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP12addDirectionEhf
-                0x0000000000000000        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN18ArduinoJson6173_9120objectGetOrAddMemberINS_21ConstRamStringAdapterEEEPNS_11VariantDataEPNS_14CollectionDataET_PNS_10MemoryPoolE
-                0x0000000000000000       0x4c .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x4c .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZNK18ArduinoJson6173_9115ObjectShortcutsINS_9ObjectRefEE18createNestedObjectIKcEES1_PT_
-                0x0000000000000000       0x20 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x20 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN18ArduinoJson6173_9110MemoryPool10saveStringINS_20ArduinoStringAdapterEEEPKcRKT_
-                0x0000000000000000       0x6e .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x6e .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP6decodeEPhhRN18ArduinoJson6173_918ArrayRefE
-                0x0000000000000000      0x33c .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000      0x33c .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN18ArduinoJson6173_9114CollectionData14getOrAddMemberINS_20ArduinoStringAdapterEEEPNS_11VariantDataET_PNS_10MemoryPoolE
-                0x0000000000000000       0x66 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x66 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZNK18ArduinoJson6173_9115ObjectShortcutsINS_9ObjectRefEE18createNestedObjectI6StringEES1_RKT_
-                0x0000000000000000       0x24 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000       0x24 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text._ZN10CayenneLPP9decodeTTNEPhhRN18ArduinoJson6173_919ObjectRefE
-                0x0000000000000000      0x314 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000000000      0x314 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .text          0x0000000000000000        0x0 .pio\build\cubecell_board\liba3c\libLoRa.a(LoRaWan_APP.cpp.o)
  .data          0x0000000000000000        0x5 .pio\build\cubecell_board\liba3c\libLoRa.a(LoRaWan_APP.cpp.o)
  .text._ZL11McpsConfirmP12sMcpsConfirm
@@ -3172,8 +3172,8 @@ LOAD .pio\build\cubecell_board\src\OneWire.cpp.o
 LOAD .pio\build\cubecell_board\src\main.cpp.o
 START GROUP
 LOAD C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a
-LOAD .pio\build\cubecell_board\lib7a3\libArduinoJson.a
-LOAD .pio\build\cubecell_board\lib7fd\libCayenneLPP.a
+LOAD .pio\build\cubecell_board\lib78c\libArduinoJson.a
+LOAD .pio\build\cubecell_board\lib36d\libCayenneLPP.a
 LOAD .pio\build\cubecell_board\lib37c\libOneWire.a
 LOAD .pio\build\cubecell_board\lib443\libRGB.a
 LOAD .pio\build\cubecell_board\lib793\libOLED.a
@@ -3501,51 +3501,51 @@ END GROUP
                 0x00000000000039e4       0x1c C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(cyfitter_cfg.o)
                 0x00000000000039e4                SetAnalogRoutingPumps
  .text._ZN10CayenneLPPC2Eh
-                0x0000000000003a00       0x18 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003a00       0x18 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003a00                CayenneLPP::CayenneLPP(unsigned char)
                 0x0000000000003a00                CayenneLPP::CayenneLPP(unsigned char)
  .text._ZN10CayenneLPPD2Ev
-                0x0000000000003a18        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003a18        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003a18                CayenneLPP::~CayenneLPP()
                 0x0000000000003a18                CayenneLPP::~CayenneLPP()
  .text._ZN10CayenneLPP5resetEv
-                0x0000000000003a26        0x6 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003a26        0x6 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003a26                CayenneLPP::reset()
  .text._ZN10CayenneLPP7getSizeEv
-                0x0000000000003a2c        0x4 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003a2c        0x4 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003a2c                CayenneLPP::getSize()
  .text._ZN10CayenneLPP9getBufferEv
-                0x0000000000003a30        0x4 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003a30        0x4 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003a30                CayenneLPP::getBuffer()
  .text._ZN10CayenneLPP6isTypeEh
-                0x0000000000003a34       0x38 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003a34       0x38 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003a34                CayenneLPP::isType(unsigned char)
  .text._ZN10CayenneLPP11getTypeSizeEh
-                0x0000000000003a6c       0x88 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003a6c       0x88 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003a6c                CayenneLPP::getTypeSize(unsigned char)
  .text._ZN10CayenneLPP17getTypeMultiplierEh
-                0x0000000000003af4       0x88 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003af4       0x88 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003af4                CayenneLPP::getTypeMultiplier(unsigned char)
  .text._ZN10CayenneLPP13getTypeSignedEh
-                0x0000000000003b7c       0x24 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003b7c       0x24 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003b7c                CayenneLPP::getTypeSigned(unsigned char)
  .text._ZN10CayenneLPP8addFieldImEEhhhT_
-                0x0000000000003ba0       0x74 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003ba0       0x74 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003ba0                unsigned char CayenneLPP::addField<unsigned long>(unsigned char, unsigned char, unsigned long)
  .text._ZN10CayenneLPP11addPresenceEhm
-                0x0000000000003c14        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003c14        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003c14                CayenneLPP::addPresence(unsigned char, unsigned long)
  .text._ZN10CayenneLPP8addFieldIfEEhhhT_
-                0x0000000000003c22       0xca .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003c22       0xca .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003c22                unsigned char CayenneLPP::addField<float>(unsigned char, unsigned char, float)
  .text._ZN10CayenneLPP16addGenericSensorEhf
-                0x0000000000003cec        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003cec        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003cec                CayenneLPP::addGenericSensor(unsigned char, float)
  .text._ZN10CayenneLPP14addTemperatureEhf
-                0x0000000000003cfa        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003cfa        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003cfa                CayenneLPP::addTemperature(unsigned char, float)
  .text._ZN10CayenneLPP10addVoltageEhf
-                0x0000000000003d08        0xe .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x0000000000003d08        0xe .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
                 0x0000000000003d08                CayenneLPP::addVoltage(unsigned char, float)
  *fill*         0x0000000000003d16        0x2 
  .text.turnOnRGB
@@ -5216,7 +5216,7 @@ END GROUP
  .comment       0x00000000000000d4       0x6f C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(asr_timer.o)
  .comment       0x00000000000000d4       0x6f C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(ASR_Arduino.o)
  .comment       0x00000000000000d4       0x6f C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(cyfitter_cfg.o)
- .comment       0x00000000000000d4       0x67 .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+ .comment       0x00000000000000d4       0x67 .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .comment       0x00000000000000d4       0x67 .pio\build\cubecell_board\liba3c\libLoRa.a(LoRaWan_APP.cpp.o)
  .comment       0x00000000000000d4       0x67 .pio\build\cubecell_board\libFrameworkArduino.a(HardwareSerial.cpp.o)
  .comment       0x00000000000000d4       0x67 .pio\build\cubecell_board\libFrameworkArduino.a(asr_board.c.o)
@@ -5308,7 +5308,7 @@ END GROUP
  .ARM.attributes
                 0x00000000000001b1       0x32 C:\Users\Marcus\.platformio\packages\framework-arduinoasrmicro650x\cores\asr650x\projects\CubeCellLib.a(cyfitter_cfg.o)
  .ARM.attributes
-                0x00000000000001e3       0x2c .pio\build\cubecell_board\lib7fd\libCayenneLPP.a(CayenneLPP.cpp.o)
+                0x00000000000001e3       0x2c .pio\build\cubecell_board\lib36d\libCayenneLPP.a(CayenneLPP.cpp.o)
  .ARM.attributes
                 0x000000000000020f       0x2c .pio\build\cubecell_board\liba3c\libLoRa.a(LoRaWan_APP.cpp.o)
  .ARM.attributes

@@ -42,8 +42,8 @@ char rxpacket[BUFFER_SIZE];
 #define TENSECS                                     10 * MICRO_TO_SECS
 #define THIRTYSECS                                  30 * MICRO_TO_SECS
 #define THIRTYMINS                                  30 * MICRO_TO_MIN
-#define TIME_UNTIL_WAKEUP_NORMAL                    5000
-#define TIME_UNTIL_WAKEUP_LOWPOWER                  10000
+#define TIME_UNTIL_WAKEUP_NORMAL                    60 * 1000
+#define TIME_UNTIL_WAKEUP_LOWPOWER                  3 * 60 * 60 * 1000
 
 static TimerEvent_t wakeUp;
 

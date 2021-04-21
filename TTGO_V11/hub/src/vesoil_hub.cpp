@@ -383,21 +383,29 @@ void readLoraData(int packetSize)
 
     haveReport = true;
     packetcount++; 
-    CayenneLPP lpp(64);
+    CayenneLPP lpp(packetSize + 20);
     DynamicJsonDocument jsonBuffer(4096);
     JsonArray root = jsonBuffer.to<JsonArray>();
-    uint8_t * buffer = (uint8_t *)malloc(packetSize);
-    LoRa.readBytes(buffer, packetSize);
-    lpp.decode(buffer, packetSize, root);
+
+    LoRa.readBytes(lpp._buffer, packetSize);
+
+    lpp._cursor = packetSize;
+
+    lpp.addGenericSensor(CH_SNR, snr);
+    lpp.addGenericSensor(CH_RSSI, rssi);
+    lpp.addGenericSensor(CH_PFE, (float)pfe);    
+
+    lpp.decode(lpp._buffer, lpp._cursor, root);
     serializeJsonPretty(root, Serial);
+
         
     #ifdef HAS_GSM
-        SendMQTTBinary(buffer, packetSize);
+        SendMQTTBinary(lpp._buffer, lpp._cursor);
     #endif
-    free(buffer);
   }
   DisplayPage(currentPage);
 }
+
 void toggleWifi() {
   wifiMode = !wifiMode;
   if (wifiMode)
