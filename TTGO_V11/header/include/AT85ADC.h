@@ -10,11 +10,17 @@
 #define AT85_ADC2 2
 #define AT85_ADC3 3
 #define AT85_TEMP 0x8F
+#define AT85_ADC_VCC 0x0c
 
 #define AT85_ADC_PIN1 AT85ADC0
 #define AT85_ADC_PIN7 AT85ADC1
 #define AT85_ADC_PIN3 AT85ADC2
 #define AT85_ADC_PIN2 AT85ADC3
+
+#define CMD_SetADCChannel   0x45
+#define CMD_ReadAdc			    0x47
+#define CMD_Readbuffer 		  0xBE
+#define CMD_StartFrqConv	  0x46
 
 class AT85ADC
 {
@@ -30,7 +36,7 @@ class AT85ADC
     void init(void);
     void init(uint8_t pin);
     bool search();
-    uint16_t performConversion(uint8_t cmd, uint8_t channel, uint32_t delayMs);
+    uint16_t performConversion(uint8_t channel, uint32_t delayMs);
     uint16_t performAdc(uint8_t channel);
     uint16_t performTemp();
     uint16_t performFreq();

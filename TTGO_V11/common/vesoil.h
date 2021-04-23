@@ -7,13 +7,14 @@ enum SensorChannel
     CH_AirTemp    = 4,
     CH_AirHum     = 5,
     CH_GndTemp    = 6,
-    CH_Volts      = 7,
-    CH_Moist1     = 8,
-    CH_Moist2     = 9,
-    CH_Moist3     = 10,
-    CH_Moist4     = 11,
-    CH_SNR        = 12,
-    CH_RSSI       = 13,
-    CH_PFE        = 14,
-
+    CH_VoltsR     = 7,
+    CH_VoltsS     = 8,
+    CH_VoltsH     = 9,
+    CH_Moist1     = 10,
+    CH_Moist2     = 11,
+    CH_Moist3     = 12,
+    CH_Moist4     = 13,
+    CH_SNR        = 14,
+    CH_RSSI       = 15,
+    CH_PFE        = 16
 };

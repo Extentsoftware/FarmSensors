@@ -11,7 +11,7 @@
 #include "vesoil.h"
 
 #define RF_FREQUENCY                                868E6           // Hz
-#define TX_OUTPUT_POWER                             20              // dBm
+#define TX_OUTPUT_POWER                             22              // dBm
 uint32_t _bandwidth                                 = 0;            // [0: 125 kHz,  4 = LORA_BW_041
 uint32_t  _spreadingFactor                          = LORA_SF12;        // [SF7..SF12] - 7
 uint8_t  _codingRate                                = LORA_CR_4_5;     // [1: 4/5,    - 1
@@ -27,23 +27,23 @@ uint8_t  _codingRate                                = LORA_CR_4_5;     // [1: 4/
 #define SYNCWORD                                    0
 
 #define BATTLOW                                     3000
-#define COLOR_SENDING                               0x020202   //color white
-#define COLOR_SENT                                  0x000200   //color green
-#define COLOR_FAIL_SENSOR                           0x020000   
-#define COLOR_FAIL_TX                               0x020002 
-#define COLOR_DURATION                              10
+#define COLOR_START                                 0x0000FF   //color blue
+#define COLOR_SENDING                               0xFFFFFF   //color white
+#define COLOR_SENT                                  0x00FF00   //color green
+#define COLOR_FAIL_SENSOR                           0xFF0000   // red 
+#define COLOR_FAIL_TX                               0xFF00FF
+#define COLOR_DURATION                              30
 
 char txpacket[BUFFER_SIZE];
 char rxpacket[BUFFER_SIZE];
 
-#define MICRO_TO_SECS                               1000
-#define MICRO_TO_MIN                                60 * MICRO_TO_SECS
-#define FIVESECS                                    05 * MICRO_TO_SECS
-#define TENSECS                                     10 * MICRO_TO_SECS
-#define THIRTYSECS                                  30 * MICRO_TO_SECS
-#define THIRTYMINS                                  30 * MICRO_TO_MIN
-#define TIME_UNTIL_WAKEUP_NORMAL                    60 * 1000
-#define TIME_UNTIL_WAKEUP_LOWPOWER                  3 * 60 * 60 * 1000
+#define SECONDS                                     1000
+#define MINUTES                                     60 * SECONDS
+#define HOURS                                       60 * MINUTES
+#define DAYS                                        24 * HOURS
+#define TIME_UNTIL_WAKEUP_TEST                      5 * SECONDS
+#define TIME_UNTIL_WAKEUP_NORMAL                    3 * HOURS
+#define TIME_UNTIL_WAKEUP_LOWPOWER                  1 * DAYS
 
 static TimerEvent_t wakeUp;
 
@@ -65,11 +65,29 @@ typedef enum
 States_t state;
 AT85ADC ds( GPIO0 );
 
+
+void onSleepNormal()
+{
+    pinMode(USER_KEY, INPUT);
+    onSleep( digitalRead(USER_KEY)==0 ? TIME_UNTIL_WAKEUP_TEST : TIME_UNTIL_WAKEUP_NORMAL);
+}
+
+void flash(uint32_t color,uint32_t time)
+{
+    pinMode(USER_KEY, INPUT);
+    if (digitalRead(USER_KEY)==0)
+    {    
+        turnOnRGB(color, time);
+        turnOffRGB();
+    }
+}
+
 void setup() {
     boardInitMcu( );
     Serial.begin(115200);
-    delay(1000);
-    
+    delay(100);
+    turnOnRGB(COLOR_START, 500);
+    turnOffRGB();    
     Serial.printf( "Started\n");
     state=TX;
     TimerInit( &wakeUp, onWakeUp );
@@ -87,15 +105,17 @@ void setup() {
 
     // setting the sync work breaks the transmission.
     // Radio.SetSyncWord(SYNCWORD); 
+    
 }
 
-bool SendTestPacket(float volts) 
+bool SendPacket(float volts) 
 {
     digitalWrite(Vext,LOW); //POWER ON
     delay(100);             // stabalise
 
     float temp = 0;
     float adc =  0;
+    float vcc =  0;
     //uint16_t frq =  0;
     
     bool success = ds.search();
@@ -103,12 +123,16 @@ bool SendTestPacket(float volts)
     if (!success)
     {
         Serial.printf( "Tmp FAIL\n");
-        return false;
     }
     else
     {
-        temp = ds.performAdc(AT85_TEMP) / 10.0;
-        adc =  ds.performAdc(AT85_ADC3) / 1.0;
+        uint16_t temp1l = ds.performTemp();
+        uint16_t adc1l =  ds.performAdc(AT85_ADC3);
+        uint16_t vccl =  ds.performAdc(AT85_ADC_VCC);
+        temp = temp1l / 1.0;
+        adc =  adc1l / 1.0;
+        vcc =  1.1 + (vccl / 1024.0);
+        Serial.printf( "ADC1=%d ADC2=%d ADC3=%d\n", temp1l,adc1l,vccl);
         //frq =  ds.performFreq();
     }
 
@@ -120,14 +144,8 @@ bool SendTestPacket(float volts)
     lpp.addPresence(CH_ID_HI,(getID() >> 16 ) & 0x0000FFFF);     // id of this sensor
     lpp.addGenericSensor(CH_Moist1, adc);
     lpp.addTemperature(CH_GndTemp,temp);
-    uint8_t cursor = lpp.addVoltage(CH_Volts, volts);
-
-    Serial.printf( "ATTINY 1-Wire success\n");
-    Serial.println( cursor );
-    Serial.println( adc,4 );
-    Serial.println( temp,4 );
-    Serial.println( volts,4 );
-    //Serial.printf( "Tmp= %g ADC= %g Batt= %g \n", temp, adc, volts);
+    lpp.addVoltage(CH_VoltsR,vcc);
+    uint8_t cursor = lpp.addVoltage(CH_VoltsS, volts);
 
     Radio.Send( lpp.getBuffer(), lpp.getSize() );    
     return true;
@@ -148,17 +166,16 @@ void loop()
             }
             else
             {
-                if ( SendTestPacket(volts/1000.0))
+                if ( SendPacket(volts/1000.0))
                 {
-                    turnOnRGB(COLOR_SENDING, COLOR_DURATION);
-                    turnOffRGB();
+                    
+                    flash(COLOR_SENDING, COLOR_DURATION);
                     state= LOWPOWERTX;
                 }
                 else
                 {
-                    turnOnRGB(COLOR_FAIL_SENSOR, COLOR_DURATION);
-                    turnOffRGB();
-                    onSleep(TIME_UNTIL_WAKEUP_NORMAL);
+                    flash(COLOR_FAIL_SENSOR, COLOR_DURATION);
+                    onSleepNormal();
                 }
             }
 		    break;
@@ -177,17 +194,15 @@ void loop()
 void OnTxDone( void )
 {
     Serial.printf( "OnTxDone\n");
-    turnOnRGB(COLOR_SENT, COLOR_DURATION);
-    turnOffRGB();
-    onSleep(TIME_UNTIL_WAKEUP_NORMAL);
+    flash(COLOR_SENT, COLOR_DURATION);
+    onSleepNormal();
 }
 
 void OnTxTimeout( void )
 {
     Serial.printf( "OnTxTimeout\n");
-    turnOnRGB(COLOR_FAIL_TX, COLOR_DURATION);
-    turnOffRGB();
-    onSleep(TIME_UNTIL_WAKEUP_NORMAL);
+    flash(COLOR_FAIL_TX, COLOR_DURATION);
+    onSleepNormal();
 }
 
 void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)

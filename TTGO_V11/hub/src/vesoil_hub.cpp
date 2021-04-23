@@ -1,3 +1,4 @@
+#undef HAS_GSM
 // https://github.com/me-no-dev/ESPAsyncWebServer#basic-response-with-http-code
 // https://github.com/cyberman54/ESP32-Paxcounter/blob/82fdfb9ca129f71973a1f912a04aa8c7c5232a87/src/main.cpp
 // https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/log.html
@@ -112,45 +113,6 @@ struct HubConfig config;
 
 esp_timer_handle_t oneshot_timer;
 
-void setup() {
-  
-  incomingMessage[0]='\0';
-
-  pinMode(BTN1, INPUT);        // Button 1
-  Serial.begin(115200);
-  while (!Serial);
-  Serial.println();
-  Serial.println("VESTRONG LaPoulton LoRa HUB");
-
-#ifdef HAS_OLED
-  InitOLED();
-#endif
-
-  Serial.println("get startup");
-  STARTUPMODE startup_mode = getStartupMode();
-  
-  Serial.println("get gonfig");
-  getConfig(startup_mode);
-
-  Serial.println("system check");
-  SystemCheck();
-
-  GetMyMacAddress();
-
-  startLoRa();
-
-  doSetupMQTT();
-
-  setupWifi();
-  
-  networkStage = "Lora";
-  networkStatus = "Ready";
-
-  DisplayPage(currentPage);
-
-  Serial.printf("End of setup\n");
-
-}
 
 void ShowNextPage()
 {
@@ -182,7 +144,7 @@ void DisplayPage(int page)
         case 0:
           display.drawString(C1, L1, networkStage);
           display.drawString(C2, L1, networkStatus);
-                    if (wifiMode)
+          if (wifiMode)
           {
             display.drawString(C1, L2, "On");
             display.drawString(C2, L2, address);
@@ -233,6 +195,13 @@ void InitOLED() {
 }
 
 void getConfig(STARTUPMODE startup_mode) {
+
+//////////////////// HACK /////////////////////
+    memcpy( &config, &default_config, sizeof(HubConfig));
+    return;
+
+
+
   preferences.begin(TAG, false);
 
   // if we have a stored config and we're not resetting, then load the config
@@ -243,6 +212,7 @@ void getConfig(STARTUPMODE startup_mode) {
   else
   {
     // we're resetting the config or there isn't one
+    Serial.println("Reset config");
     preferences.putBytes("config", &default_config, sizeof(HubConfig));
     preferences.putBool("configinit", true);
     memcpy( &config, &default_config, sizeof(HubConfig));
@@ -402,6 +372,7 @@ void readLoraData(int packetSize)
     #ifdef HAS_GSM
         SendMQTTBinary(lpp._buffer, lpp._cursor);
     #endif
+
   }
   DisplayPage(currentPage);
 }
@@ -652,6 +623,45 @@ void SendMQTTBinary(uint8_t *report, int packetSize)
 
   return;
 }
-
 #endif
 
+void setup() {
+  
+  incomingMessage[0]='\0';
+
+  pinMode(BTN1, INPUT);        // Button 1
+  Serial.begin(115200);
+  while (!Serial);
+  Serial.println();
+  Serial.println("VESTRONG LaPoulton LoRa HUB");
+
+#ifdef HAS_OLED
+  InitOLED();
+#endif
+
+  Serial.println("get startup");
+  STARTUPMODE startup_mode = getStartupMode();
+  
+  Serial.println("get gonfig");
+  getConfig(startup_mode);
+
+  Serial.println("system check");
+  SystemCheck();
+
+  GetMyMacAddress();
+
+  startLoRa();
+#ifdef HAS_GSM
+  doSetupMQTT();
+#endif  
+
+  setupWifi();
+  
+  networkStage = "Lora";
+  networkStatus = "Ready";
+
+  DisplayPage(currentPage);
+
+  Serial.printf("End of setup\n");
+
+}

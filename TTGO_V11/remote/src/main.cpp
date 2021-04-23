@@ -16,19 +16,22 @@ OneWireSlave ow;
 
 //  Valid Onewire commands
 #define CMD_Readbuffer 		0xBE
-#define CMD_Writebuffer 	0x4E
-#define CMD_Copybuffer 		0x48
-#define CMD_RecallMemory 	0xB8
-#define CMD_StartTmpConv    0x44
-#define CMD_StartAdcConv    0x45
+#define CMD_SetADCChannel   0x45
 #define CMD_StartFrqConv	0x46
+#define CMD_ReadAdc			0x47
+#define CMD_TEMP			0x48
+#define CMD_VCC  			0x49
+#define CMD_ADC1  			0x51
+#define CMD_ADC2  			0x52
+#define CMD_ADC3  			0x53
+
 
 uint8_t channel=0;
-uint8_t control[4] {0x00, 0x00, 0x00, 0x00};
-uint8_t scratchpad[2] {0x00, 0x00};
+static uint8_t scratchpad[2] {0x00, 0x00};
 uint8_t id[8] = { FAM, SERIAL_NUMBER, 0x00 };
 static volatile int counter=0;
 
+#if FREQ_ENABLE
 ISR(PCINT0_vect)
 {
 	++counter;
@@ -74,53 +77,78 @@ static void performCount()
 	// and start counting!
 	counter=0;
 }
+#endif
 
-static void performAdc()
+static void startAdc()
 {
 	scratchpad[0] = 0;
 	scratchpad[1] = 0;
   	ADMUX = channel;
   	ADCSRA = 
-		(1 << ADEN)  |     			// Enable ADC 
-		(1 << ADPS2) |     			// set prescaler to 128
+  		(1 << ADEN)  | 			// enable adc		
+		(1 << ADPS2) |  		// set prescaler to 128
 		(1 << ADPS1) |
 		(1 << ADPS0); 
-	ADCSRA |= (1 << ADSC);         	// start ADC measurement
-    while (ADCSRA & (1 << ADSC) ); 	// wait till conversion complete 
-	scratchpad[0] = ADCL;
-	scratchpad[1] = ADCH;
 }
 
-static void performAdcWithReset()
+static void startAdcWithReset()
 {
-	performAdc();
+	startAdc();
 	ow.reset();
+}
+
+static void readAdc()
+{ 	
+	scratchpad[0] = 0;
+	scratchpad[1] = 0;
+	
+	//for(int i=0;i<32;i++)
+	//{
+		ADCSRA |= (1 << ADSC);         	// start ADC measurement
+    	while (ADCSRA & (1 << ADSC) ); 	// wait till conversion complete 
+	//}	
+	scratchpad[0] = ADCL;
+	scratchpad[1] = ADCH & 0x03;
 }
 
 void onCommand(uint8_t cmd) {
   switch (cmd) {
+	case CMD_SetADCChannel:
+		channel=0;
+		ow.read(&channel, 1, &startAdcWithReset);
+		break;
+    case CMD_ReadAdc: 
+		readAdc();
+		ow.reset();
+		break;
     case CMD_Readbuffer: 
 		ow.write(&scratchpad[0], 2, &ow.reset);
 		break;
-    case CMD_Writebuffer: 
-    	ow.read(&control[0], 2, &ow.reset);
+    case CMD_TEMP: 
+		channel = 0x8F;
+		startAdc();
+		readAdc();
+		ow.write(&scratchpad[0], 2, &ow.reset);
 		break;
-	case CMD_StartTmpConv:
-		channel=0x8F;
-		performAdc();
-		ow.reset();
+    case CMD_VCC: 
+		channel = 0x0C;
+		startAdc();
+		readAdc();
+		ow.write(&scratchpad[0], 2, &ow.reset);
 		break;
-	case CMD_StartAdcConv:
-		channel=0;
-		ow.read(&channel, 1, &performAdcWithReset);
+    case CMD_ADC3: 
+		channel = 0x03;
+		startAdc();
+		readAdc();
+		ow.write(&scratchpad[0], 2, &ow.reset);
 		break;
+		
+#if FREQ_ENABLE
 	case CMD_StartFrqConv:
 		performCount();
 		ow.reset();
 		break;
-    case CMD_RecallMemory:
-		ow.reset();
-	 	break;
+#endif
   }
 };
 

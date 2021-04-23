@@ -44,42 +44,60 @@ bool AT85ADC::search()
   return true;
 }
 
-uint16_t AT85ADC::performConversion(uint8_t cmd, uint8_t channel, uint32_t delayMs) 
+uint16_t AT85ADC::performConversion(uint8_t channel, uint32_t delayMs) 
 {
   byte present = 0;
  
   ds.reset();
   ds.select(addr);
-  ds.write(cmd);   // start conversion, with parasite power on at the end
-  delay(1);        // maybe 750ms is enough, maybe not
-  if (channel!=0xFF)
-    ds.write(channel);
+  ds.write(CMD_SetADCChannel);      // set the adc channel (ADMUX on ATTINY85)
+  ds.write(channel);
 
-  delay(delayMs);                  // maybe 750ms is enough, maybe not
+  delay(delayMs);                   // for adc this should be maybe 10ms
+
+  present = ds.reset();
+  ds.select(addr);    
+  ds.write(CMD_ReadAdc);            // Read ADC
+
+  delay(1);                         // wait for adc read to complete
   
   present = ds.reset();
   ds.select(addr);    
-  ds.write(0xBE);               // Read Scratchpad
+  ds.write(CMD_Readbuffer);         // Read Scratchpad
+  data[0]=ds.read();
+  data[1]=ds.read();
 
-  for (byte i = 0; i < 2; i++) 
-  {    // we need 2 bytes
-    data[i] = ds.read();
-  }
   ds.depower();
   return (data[1] << 8) | data[0]; 
 }
 
 uint16_t AT85ADC::performTemp() 
 {
-  return performConversion(0x44, 0xFF, 800);
+  return performConversion(AT85_TEMP, 100);
 }
 
 uint16_t AT85ADC::performAdc(uint8_t channel) 
 {
-  return performConversion(0x45, channel, 800);
+  return performConversion(channel, 100);
 }
 
 uint16_t AT85ADC::performFreq() 
 {
-  return performConversion(0x46, 0xFF, 800);
+  byte present = 0;
+ 
+  ds.reset();
+  ds.select(addr);
+  ds.write(CMD_StartFrqConv);  
+  delay(1);                         // maybe 750ms is enough, maybe not
+
+  present = ds.reset();
+  ds.select(addr);    
+  ds.write(CMD_Readbuffer);         // Read Scratchpad
+
+  data[0]=ds.read();
+  data[1]=ds.read();
+
+  ds.depower();
+  Serial.printf( "0=%d 1=%d\n", data[0],data[1]);
+  return (data[1] << 8) | data[0]; 
 }

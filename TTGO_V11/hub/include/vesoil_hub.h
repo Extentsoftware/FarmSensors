@@ -8,7 +8,7 @@
 #define FREQUENCY 868E6
 #define BAND      125E3   
 #define SPREAD       12   
-#define CODERATE      6
+#define CODERATE      5
 #define SYNCWORD      0 
 #define PREAMBLE      8
 
@@ -126,5 +126,6 @@ void InitOLED();
 void DisplayPage(int page);
 void ShowNextPage();
 void ModemCheck();
+void setup();
 
 #endif
