@@ -1,0 +1,12 @@
+Reference, Quantity, Value, Footprint, Datasheet, Spice_Model, Spice_Netlist_Enabled, Spice_Primitive, Spice_Lib_File
+C1 ,1,"10p","Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder","~","660p","Y","C",""
+C2 ,1,"1n","Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder","~","660p","Y","C",""
+C3 ,1,"330p","Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder","~","660p","Y","C",""
+D1 ,1,"D","Diode_SMD:D_0805_2012Metric_Pad1.15x1.40mm_HandSolder","~","DI1N4004","Y","D","1N4004.mdl"
+J1 ,1,"Screw_Terminal_01x03","Connector_JST:JST_GH_BM03B-GHS-TBT_1x03-1MP_P1.25mm_Vertical","~","Screw_Terminal_01x03","N","J",""
+R1 ,1,"10k","Resistor_SMD:R_0805_2012Metric_Pad1.15x1.40mm_HandSolder","~","10k","Y","R",""
+R2 ,1,"1m","Resistor_SMD:R_0805_2012Metric_Pad1.15x1.40mm_HandSolder","~","1m","Y","R",""
+R3 ,1,"330","Resistor_SMD:R_0805_2012Metric_Pad1.15x1.40mm_HandSolder","~","330","Y","R",""
+R4 ,1,"4.7k","Resistor_SMD:R_0805_2012Metric_Pad1.15x1.40mm_HandSolder","~","1m","Y","R",""
+U1 ,1,"ATtiny85-20PU","Package_SO:SOIC-8_3.9x4.9mm_P1.27mm","http://ww1.microchip.com/downloads/en/DeviceDoc/atmel-2586-avr-8-bit-microcontroller-attiny25-attiny45-attiny85_datasheet.pdf","0","N","R",""
+U2 ,1,"TLC555CD","Package_SO:SOIC-8_3.9x4.9mm_P1.27mm","http://www.ti.com/lit/ds/symlink/tlc555.pdf"

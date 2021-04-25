@@ -81,6 +81,7 @@ SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
 SoftwareSerial SerialAT(AT_RX, AT_TX, false);
 TinyGsm modem(SerialAT);
 TinyGsmClient client(modem);
+WiFiClient espClient
 PubSubClient mqtt(client);
 GeoHash hasher(8);
 #endif
