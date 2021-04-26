@@ -76,8 +76,13 @@
 
 struct HubConfig
 {
-  char  ssid[16] = "VESTRONG_H";
-  char  password[16] = "";
+  // Wifi settings
+  char  ssid[16] = "VM7518894";
+  char  password[16] = "9scvfpkKcygt";
+  bool  softAPMode = false;
+  bool  wifiEnabled = true;
+
+  // LoRA settings
   long  frequency = FREQUENCY;  // LoRa transmit frequency
   long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
   long  preamble = PREAMBLE;
@@ -85,18 +90,16 @@ struct HubConfig
   int   spreadFactor = SPREAD;  // signal processing gain. higher values give greater range but take longer (more power) to transmit
   int   codingRate = CODERATE;  // extra info for CRC
   bool  enableCRC = true;       //
+
+  // MQTT Settings
   char  broker[42] = "bongomqtt.uksouth.cloudapp.azure.com";
 
-  char  apn[32]    = "TM"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
-  char  gprsUser[16] = "";    // GPRS User
-  char  gprsPass[16] = "";    // GPRS Password
-  
-  //char apn[32]    = "wap.vodafone.co.uk"; // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
-  //char gprsUser[16] = "wap";    // GPRS User
-  //char gprsPass[16] = "wap";    // GPRS Password
-  
-  float EmptyHeight =  220;     // ultrasound reads 2.2m when the tank is empty
-  float FullHeight  = 20;       // ultrasound reads 20cm when the tank is full
+  // GPRS Settings
+  bool  gprsEnabled = true;
+  char  apn[32]    = "TM";      // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
+  char  gprsUser[16] = "";      // GPRS User
+  char  gprsPass[16] = "";      // GPRS Password
+
 } default_config;
 
 enum STARTUPMODE
@@ -109,10 +112,6 @@ void GetMyMacAddress();
 int detectDebouncedBtnPush();
 void onReceive(int packetSize);
 void SystemCheck();
-void notFound(AsyncWebServerRequest *request);
-void setupWifi();
-void exitWifi();
-void toggleWifi();
 void readLoraData(int packetSize);
 void getConfig(STARTUPMODE startup_mode);
 STARTUPMODE getStartupMode();
