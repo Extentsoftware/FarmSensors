@@ -83,7 +83,7 @@ static void startAdc()
 {
 	scratchpad[0] = 0;
 	scratchpad[1] = 0;
-  	ADMUX = channel;
+  	ADMUX = channel; 
   	ADCSRA = 
   		(1 << ADEN)  | 			// enable adc		
 		(1 << ADPS2) |  		// set prescaler to 128

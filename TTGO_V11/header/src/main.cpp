@@ -42,7 +42,7 @@ char rxpacket[BUFFER_SIZE];
 #define HOURS                                       60 * MINUTES
 #define DAYS                                        24 * HOURS
 #define TIME_UNTIL_WAKEUP_TEST                      5 * SECONDS
-#define TIME_UNTIL_WAKEUP_NORMAL                    3 * HOURS
+#define TIME_UNTIL_WAKEUP_NORMAL                    1 * MINUTES
 #define TIME_UNTIL_WAKEUP_LOWPOWER                  1 * DAYS
 
 static TimerEvent_t wakeUp;
@@ -64,18 +64,23 @@ typedef enum
 
 States_t state;
 AT85ADC ds( GPIO0 );
+bool sense_success=false;
 
+bool isDebug()
+{
+    return digitalRead(USER_KEY)==1;
+}
 
 void onSleepNormal()
 {
     pinMode(USER_KEY, INPUT);
-    onSleep( digitalRead(USER_KEY)==0 ? TIME_UNTIL_WAKEUP_TEST : TIME_UNTIL_WAKEUP_NORMAL);
+    onSleep( isDebug() ? TIME_UNTIL_WAKEUP_TEST : TIME_UNTIL_WAKEUP_NORMAL);
 }
 
 void flash(uint32_t color,uint32_t time)
 {
     pinMode(USER_KEY, INPUT);
-    if (digitalRead(USER_KEY)==0)
+    if (isDebug())
     {    
         turnOnRGB(color, time);
         turnOffRGB();
@@ -85,7 +90,7 @@ void flash(uint32_t color,uint32_t time)
 void setup() {
     boardInitMcu( );
     Serial.begin(115200);
-    delay(100);
+    delay(500);
     turnOnRGB(COLOR_START, 500);
     turnOffRGB();    
     Serial.printf( "Started\n");
@@ -111,44 +116,60 @@ void setup() {
 bool SendPacket(float volts) 
 {
     digitalWrite(Vext,LOW); //POWER ON
-    delay(100);             // stabalise
+    delay(500);             // stabalise
 
-    float temp = 0;
-    float adc =  0;
-    float vcc =  0;
+    float temp = 0.0f;
+    float adc =  0.0f;
+    float vcc =  0.0f;
     //uint16_t frq =  0;
+    uint16_t temp1l ;
+    uint16_t adc1l;
+    uint16_t vccl;
     
-    bool success = ds.search();
+    sense_success = ds.search();
 
-    if (!success)
+    if (!sense_success)
     {
         Serial.printf( "Tmp FAIL\n");
     }
     else
     {
-        uint16_t temp1l = ds.performTemp();
-        uint16_t adc1l =  ds.performAdc(AT85_ADC3);
-        uint16_t vccl =  ds.performAdc(AT85_ADC_VCC);
+        temp1l = ds.performTemp();
+        adc1l =  ds.performAdc(AT85_ADC3);
+        vccl =  ds.performAdc(AT85_ADC_VCC);
         temp = temp1l / 1.0;
         adc =  adc1l / 1.0;
-        vcc =  1.1 + (vccl / 1024.0);
-        Serial.printf( "ADC1=%d ADC2=%d ADC3=%d\n", temp1l,adc1l,vccl);
+        vcc =  (1.1 * 1023.0) / vccl;
         //frq =  ds.performFreq();
+        sense_success = true;
     }
 
     digitalWrite(Vext,HIGH); //POWER OFF
 
-    CayenneLPP lpp(32);
+    CayenneLPP lpp(64);
     lpp.reset();
     lpp.addPresence(CH_ID_LO,getID() & 0x0000FFFF);     // id of this sensor
     lpp.addPresence(CH_ID_HI,(getID() >> 16 ) & 0x0000FFFF);     // id of this sensor
     lpp.addGenericSensor(CH_Moist1, adc);
     lpp.addTemperature(CH_GndTemp,temp);
     lpp.addVoltage(CH_VoltsR,vcc);
-    uint8_t cursor = lpp.addVoltage(CH_VoltsS, volts);
+    lpp.addVoltage(CH_VoltsS, volts);
+
+    Serial.printf( "\n vr ");
+    Serial.print( vcc);
+    Serial.printf( "\n Vs " );
+    Serial.print( volts);
+    Serial.printf( "\n Vcc1 " );
+    Serial.print( vccl );
+    Serial.printf( "\n moist ");
+    Serial.print( adc);
+    Serial.printf( "\n temp ");
+    Serial.print( temp);
+    Serial.printf( "\nTx Size=%d\n", lpp.getSize());
+
 
     Radio.Send( lpp.getBuffer(), lpp.getSize() );    
-    return true;
+    return sense_success;
     
 }
 
@@ -167,16 +188,14 @@ void loop()
             else
             {
                 if ( SendPacket(volts/1000.0))
-                {
-                    
+                {                    
                     flash(COLOR_SENDING, COLOR_DURATION);
-                    state= LOWPOWERTX;
                 }
                 else
                 {
                     flash(COLOR_FAIL_SENSOR, COLOR_DURATION);
-                    onSleepNormal();
                 }
+                state= LOWPOWERTX;
             }
 		    break;
 		case LOWPOWERTX:

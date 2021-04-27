@@ -492,6 +492,10 @@ void SendMQTTBinary(uint8_t *report, int packetSize)
       {
         Serial.printf("MQTT Wifi Fail\n");
       } 
+      else
+      {
+        Serial.printf("MQTT Sent Wifi %d bytes to %s\n", packetSize, topic);
+      }
       return;
   }
   
@@ -501,6 +505,10 @@ void SendMQTTBinary(uint8_t *report, int packetSize)
     {
       Serial.printf("MQTT GPRS Fail\n");
     }
+      else
+      {
+        Serial.printf("MQTT Sent GPRS %d bytes to %s\n", packetSize, topic);
+      }
     return;    
   }
 
