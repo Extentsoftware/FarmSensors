@@ -403,4 +403,42 @@ Text Label 5400 2900 0    50   ~ 0
 3.3V
 Text Label 7350 2650 0    50   ~ 0
 3.3V
+$Comp
+L Sensor_Temperature:DS18B20 U?
+U 1 1 6089BC18
+P 5600 1250
+F 0 "U?" V 5233 1250 50  0000 C CNN
+F 1 "DS18B20" V 5324 1250 50  0000 C CNN
+F 2 "Package_TO_SOT_THT:TO-92_Inline" H 4600 1000 50  0001 C CNN
+F 3 "http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf" H 5450 1500 50  0001 C CNN
+	1    5600 1250
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	5600 1550 5600 1650
+Wire Wire Line
+	5600 1650 4850 1650
+Connection ~ 4850 1650
+$Comp
+L power:+3.3V #PWR?
+U 1 1 6089FD5D
+P 5900 1250
+F 0 "#PWR?" H 5900 1100 50  0001 C CNN
+F 1 "+3.3V" H 5915 1423 50  0000 C CNN
+F 2 "" H 5900 1250 50  0001 C CNN
+F 3 "" H 5900 1250 50  0001 C CNN
+	1    5900 1250
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 608A0A1C
+P 5300 1250
+F 0 "#PWR?" H 5300 1000 50  0001 C CNN
+F 1 "GND" H 5305 1077 50  0000 C CNN
+F 2 "" H 5300 1250 50  0001 C CNN
+F 3 "" H 5300 1250 50  0001 C CNN
+	1    5300 1250
+	0    1    1    0   
+$EndComp
 $EndSCHEMATC

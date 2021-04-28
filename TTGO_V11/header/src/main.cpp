@@ -8,6 +8,7 @@
 #include "CubeCell_NeoPixel.h"
 #include "LoRaWan_APP.h"
 #include "AT85ADC.h"
+#include "DS18X20.h"
 #include "vesoil.h"
 
 #define RF_FREQUENCY                                868E6           // Hz
@@ -64,7 +65,9 @@ typedef enum
 
 States_t state;
 AT85ADC ds( GPIO0 );
-bool sense_success=false;
+DS18X20 dallas( GPIO0 ); 
+bool sense_m_success=false;
+bool sense_t_success=false;
 
 bool isDebug()
 {
@@ -113,35 +116,43 @@ void setup() {
     
 }
 
-bool SendPacket(float volts) 
+void SendPacket(float volts) 
 {
     digitalWrite(Vext,LOW); //POWER ON
-    delay(500);             // stabalise
+    delay(250);             // stabalise
 
     float temp = 0.0f;
     float adc =  0.0f;
     float vcc =  0.0f;
-    //uint16_t frq =  0;
-    uint16_t temp1l ;
+
     uint16_t adc1l;
     uint16_t vccl;
     
-    sense_success = ds.search();
+    sense_m_success = ds.search();
 
-    if (!sense_success)
+    if (!sense_m_success)
     {
-        Serial.printf( "Tmp FAIL\n");
+        Serial.printf( "Moist FAIL\n");
     }
     else
     {
-        temp1l = ds.performTemp();
         adc1l =  ds.performAdc(AT85_ADC3);
         vccl =  ds.performAdc(AT85_ADC_VCC);
-        temp = temp1l / 1.0;
         adc =  adc1l / 1.0;
         vcc =  (1.1 * 1023.0) / vccl;
-        //frq =  ds.performFreq();
-        sense_success = true;
+        sense_m_success = true;
+    }
+
+    sense_t_success |= dallas.search();
+
+    if (!sense_t_success)
+    {
+        Serial.printf( "Temp FAIL\n");
+    }
+    else
+    {
+        temp = dallas.getTemp();
+        sense_t_success = true;
     }
 
     digitalWrite(Vext,HIGH); //POWER OFF
@@ -155,22 +166,18 @@ bool SendPacket(float volts)
     lpp.addVoltage(CH_VoltsR,vcc);
     lpp.addVoltage(CH_VoltsS, volts);
 
-    Serial.printf( "\n vr ");
+    Serial.printf( "vr ");
     Serial.print( vcc);
-    Serial.printf( "\n Vs " );
+    Serial.printf( " Vs " );
     Serial.print( volts);
-    Serial.printf( "\n Vcc1 " );
-    Serial.print( vccl );
-    Serial.printf( "\n moist ");
+    Serial.printf( " moist ");
     Serial.print( adc);
-    Serial.printf( "\n temp ");
+    Serial.printf( " temp ");
     Serial.print( temp);
-    Serial.printf( "\nTx Size=%d\n", lpp.getSize());
+    Serial.printf( " Tx Size=%d .. ", lpp.getSize());
 
 
     Radio.Send( lpp.getBuffer(), lpp.getSize() );    
-    return sense_success;
-    
 }
 
 void loop() 
@@ -187,7 +194,9 @@ void loop()
             }
             else
             {
-                if ( SendPacket(volts/1000.0))
+                SendPacket(volts/1000.0);
+
+                if ( !(sense_m_success && sense_t_success) )
                 {                    
                     flash(COLOR_SENDING, COLOR_DURATION);
                 }
@@ -212,14 +221,14 @@ void loop()
 
 void OnTxDone( void )
 {
-    Serial.printf( "OnTxDone\n");
+    Serial.printf( " TX OK\n");
     flash(COLOR_SENT, COLOR_DURATION);
     onSleepNormal();
 }
 
 void OnTxTimeout( void )
 {
-    Serial.printf( "OnTxTimeout\n");
+    Serial.printf( " TX Failed\n");
     flash(COLOR_FAIL_TX, COLOR_DURATION);
     onSleepNormal();
 }

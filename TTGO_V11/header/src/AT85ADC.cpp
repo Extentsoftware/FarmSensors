@@ -22,8 +22,10 @@ bool AT85ADC::search()
   float celsius, fahrenheit;
   
   ds.reset_search();
+  ds.target_search(0x91);  
   
   if ( !ds.search(addr, true)) {
+    Serial.println("search - nothing found");
     delay(200);
     ds.reset_search();
     return false;
