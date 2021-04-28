@@ -43,7 +43,7 @@ char rxpacket[BUFFER_SIZE];
 #define HOURS                                       60 * MINUTES
 #define DAYS                                        24 * HOURS
 #define TIME_UNTIL_WAKEUP_TEST                      5 * SECONDS
-#define TIME_UNTIL_WAKEUP_NORMAL                    1 * MINUTES
+#define TIME_UNTIL_WAKEUP_NORMAL                    1 * HOURS
 #define TIME_UNTIL_WAKEUP_LOWPOWER                  1 * DAYS
 
 static TimerEvent_t wakeUp;
@@ -71,7 +71,7 @@ bool sense_t_success=false;
 
 bool isDebug()
 {
-    return digitalRead(USER_KEY)==1;
+    return digitalRead(USER_KEY)==0;
 }
 
 void onSleepNormal()
@@ -143,7 +143,7 @@ void SendPacket(float volts)
         sense_m_success = true;
     }
 
-    sense_t_success |= dallas.search();
+    sense_t_success = dallas.search();
 
     if (!sense_t_success)
     {
@@ -196,7 +196,7 @@ void loop()
             {
                 SendPacket(volts/1000.0);
 
-                if ( !(sense_m_success && sense_t_success) )
+                if ( sense_m_success && sense_t_success )
                 {                    
                     flash(COLOR_SENDING, COLOR_DURATION);
                 }
