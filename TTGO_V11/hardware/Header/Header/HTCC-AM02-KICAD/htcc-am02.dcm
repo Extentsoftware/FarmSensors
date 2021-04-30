@@ -1,0 +1,8 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP HTCC-AM02
+D Heltec CubeCell AM02
+K ASR6502, AM02, HELTEC
+$ENDCMP
+#
+#End Doc Library

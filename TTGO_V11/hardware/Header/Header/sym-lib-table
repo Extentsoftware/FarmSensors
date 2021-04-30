@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name htcc)(type Legacy)(uri E:/data/Bongo/FarmSensors/TTGO_V11/hardware/Header/Header/HTCC-AM02-KICAD/htcc-am02.lib)(options "")(descr ""))
+)

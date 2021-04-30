@@ -406,7 +406,7 @@ U 1 1 6089C6CE
 P 5450 1350
 F 0 "U3" V 5083 1350 50  0000 C CNN
 F 1 "DS18B20" V 5174 1350 50  0000 C CNN
-F 2 "Package_TO_SOT_THT:TO-92_Inline" H 4450 1100 50  0001 C CNN
+F 2 "Package_TO_SOT_THT:TO-92_Inline_Wide" H 4450 1100 50  0001 C CNN
 F 3 "http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf" H 5300 1600 50  0001 C CNN
 	1    5450 1350
 	0    1    1    0   
