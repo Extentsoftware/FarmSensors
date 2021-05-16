@@ -118,15 +118,28 @@ void setup() {
 
 void SendPacket(float volts) 
 {
-    digitalWrite(Vext,LOW); //POWER ON
-    delay(250);             // stabalise
-
     float temp = 0.0f;
     float adc =  0.0f;
     float vcc =  0.0f;
 
     uint16_t adc1l;
     uint16_t vccl;
+
+    digitalWrite(Vext,LOW); //POWER ON
+    delay(250);             // stabalise
+
+    sense_t_success = dallas.search();
+
+    if (!sense_t_success)
+    {
+        Serial.printf( "Temp FAIL\n");
+    }
+    else
+    {
+        temp = dallas.getTemp();
+        sense_t_success = true;
+    }
+
     
     sense_m_success = ds.search();
 
@@ -143,17 +156,7 @@ void SendPacket(float volts)
         sense_m_success = true;
     }
 
-    sense_t_success = dallas.search();
 
-    if (!sense_t_success)
-    {
-        Serial.printf( "Temp FAIL\n");
-    }
-    else
-    {
-        temp = dallas.getTemp();
-        sense_t_success = true;
-    }
 
     digitalWrite(Vext,HIGH); //POWER OFF
 

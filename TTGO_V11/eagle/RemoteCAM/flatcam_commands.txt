@@ -7,23 +7,22 @@ open_gerber GerberFiles/copper_bottom.gbr
 open_gerber GerberFiles/profile.gbr
 open_excellon DrillFiles/drill_1_16.xln
 
-#mirror copper_bottom.gbr -axis X -dist 18
-#mirror drill_1_16.xln -axis X -dist 18
-#mirror profile.gbr -axis X -dist 18
+isolate copper_bottom.gbr -dia 1.0 -passes 1 -overlap 0.05 -combine 1 -outname board-10-iso
+cncjob board-10-iso -z_cut -0.08 -z_move 2 -feedrate 20 -tooldia 1.0 -spindlespeed 1000 -outname board-10-cnc
+write_gcode board-10-cnc board-10.nc
 
-isolate copper_bottom.gbr -dia 0.4 -passes 3 -overlap 0.05 -combine 1 -outname board-04-iso
+isolate copper_bottom.gbr -dia 0.4 -passes 1 -overlap 0.05 -combine 1 -outname board-04-iso
 cncjob board-04-iso -z_cut -0.08 -z_move 2 -feedrate 20 -tooldia 0.4 -spindlespeed 1000 -outname board-04-cnc
 write_gcode board-04-cnc board-04.nc
 
-millholes drill_1_16.xln -tools 3 -tooldia 1.9 -outname mill-20-obj
-cncjob mill-20-obj -z_cut -2.0 -z_move 1 -feedrate 20 -tooldia 1.9 -spindlespeed 1000 -outname mill-20-cnc
-write_gcode mill-20-cnc mill-20.nc
 
+drillcncjob drill_1_16.xln -drillz -1.8 -travelz 2 -feedrate 50 -tools 4 -outname drill-07-obj
+drillcncjob drill_1_16.xln -drillz -1.8 -travelz 2 -feedrate 50 -tools 3 -outname drill-08-obj
+drillcncjob drill_1_16.xln -drillz -1.8 -travelz 2 -feedrate 50 -tools 2 -outname drill-12-obj
 
-millholes drill_1_16.xln -tools 2,3,4,5 -tooldia 0.8 -outname mill-10-obj
-cncjob mill-10-obj -z_cut -1.8 -z_move 1.5 -feedrate 20 -tooldia 1.0 -spindlespeed 1000 -outname mill-10-cnc
-write_gcode mill-10-cnc mill-10.nc
-
+write_gcode drill-07-obj drill-07.nc
+write_gcode drill-08-obj drill-08.nc
+write_gcode drill-12-obj drill-12.nc
 
 cutout profile.gbr -dia 0.7 -margin 1.5 -gapsize 0.5 -gaps 4 
 cncjob profile.gbr_cutout -z_cut -2 -z_move 2 -feedrate 20 -tooldia 1.0 -spindlespeed 1000 -multidepth True -depthperpass 0.5 -outname cutout-07-cnc

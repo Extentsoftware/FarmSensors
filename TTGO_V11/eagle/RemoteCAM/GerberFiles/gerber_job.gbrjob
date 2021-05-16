@@ -1,7 +1,7 @@
 {
     "Header": {
         "Comment": "All values are metric (mm)",
-        "CreationDate": "2021-05-13T19:34:43Z",
+        "CreationDate": "2021-05-16T17:55:42Z",
         "GenerationSoftware": {
             "Application": "EAGLE",
             "Vendor": "Autodesk",
@@ -13,11 +13,11 @@
         "BoardThickness": 1.57,
         "LayerNumber": 2,
         "Name": {
-            "ProjectId": "PCB v16"
+            "ProjectId": "PCB v33"
         },
         "Owner": "marcus poulton <marcus.poulton@gmail.com>",
         "Size": {
-            "X": 99.04,
+            "X": 99.802,
             "Y": 19.99
         }
     }
