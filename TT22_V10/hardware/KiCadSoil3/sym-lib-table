@@ -1,3 +1,0 @@
-(sym_lib_table
-  (lib (name KiCadSoil3-rescue)(type Legacy)(uri ${KIPRJMOD}/KiCadSoil3-rescue.lib)(options "")(descr ""))
-)
