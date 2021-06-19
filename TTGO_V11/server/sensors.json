@@ -1,0 +1,26 @@
+{
+    "farmos":{
+        "enabled": true,
+        "address":"https://Bongo.azurefd.net/farm/sensor/listener/"
+    },
+    "sensors":{
+        "246f289e6f98" : {
+            "name": "hub#1",
+            "geohash": "ksrm5u89z0rh",
+            "farmos_privatekey": "f5dbf8ec23210301455d3a5a37be675b",
+            "farmos_publickey": "0a104c3f96578e22c38474a894c75a6c"
+        },
+        "807d3ad43a54" : {
+            "name": "theta",
+            "geohash": null,
+            "farmos_privatekey": "ebbdb16b6e87ddc2314cd55bc970a358",
+            "farmos_publickey": "311ca5b09ede5883bf9272a2e26bd7bf"
+        },
+        "807d3ad43a10":{
+            "name": "beta",
+            "geohash": null,
+            "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",
+            "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
+        }
+    }
+}

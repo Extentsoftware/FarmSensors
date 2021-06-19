@@ -1,0 +1,7 @@
+ATTINY        
+1 RESET  ---------       22
+4 GND    --------- GND  
+5 MOSI   --------- MOSI  23
+6 MISO   --------- MISO  19
+7 SCL    --------- CLK   18
+8 5V     --------- 5V

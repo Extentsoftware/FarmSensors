@@ -1,0 +1,200 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: influxdb
+  labels:
+      environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: influxdb
+  template:
+    metadata:
+      labels:
+        app: influxdb
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": linux
+      containers:
+      - name: influxdb
+        image: influxdb:1.7
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 8086
+          name: influxdb
+        env:
+        - name: INFLUXDB_USER
+          value: "root"          
+        - name: INFLUXDB_USER_PASSWORD
+          value: "root"          
+        - name: INFLUXDB_DB
+          value: "home_db"          
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: influxdb
+  labels:
+      environment: dev
+spec:
+  ports:
+  - port: 8086
+  selector:
+    app: influxdb
+---    
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mqttbridge
+  labels:
+      environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mqttbridge
+  template:
+    metadata:
+      labels:
+        app: mqttbridge
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": linux
+      containers:
+      - name: mqttbridge
+        image: gluteusmaximus/mqttbridge
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        env:
+        - name: INFLUXDB_ADDRESS
+          value: "influxdb"
+        - name: MOSQUITTO_ADDRESS
+          value: "mosquitto"
+---    
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto
+  labels:
+      environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": linux
+      containers:
+      - name: mosquitto
+        image: eclipse-mosquitto:1.6
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 1883
+          name: mosquitto
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.kubernetes.io/azure-dns-label-name: bongomqtt
+    service.beta.kubernetes.io/azure-load-balancer-resource-group: MC_Bongo_Bongo_uksouth
+  name: mosquitto
+  labels:
+    environment: devs
+spec:
+  loadBalancerIP: 20.49.137.76
+  type: LoadBalancer
+  ports:
+  - port: 1883
+    protocol: TCP
+    targetPort: 1883
+  selector:
+    app: mosquitto
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  labels:
+      environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": linux
+      volumes:
+      - name: mqttdisk
+        azureDisk:
+          diskName: AKSStorage
+          diskURI: "/subscriptions/73a97781-98ea-4939-aa9d-f4c6233b011e/resourcegroups/MC_Bongo_Bongo_uksouth/providers/Microsoft.Compute/disks/AKSStorage"
+          cachingMode: ReadWrite
+          fsType: ext4
+          readOnly: false
+          kind: Managed
+      securityContext:
+          fsGroup: 472
+      containers:
+      - name: grafana
+        image: grafana/grafana:5.4.3
+        volumeMounts:
+        - name: mqttdisk
+          mountPath: "/var/lib/grafana"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 3000
+          name: grafana
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  labels:
+      environment: dev
+  annotations:
+    service.beta.kubernetes.io/azure-dns-label-name: bongo
+    service.beta.kubernetes.io/azure-load-balancer-resource-group: MC_Bongo_Bongo_uksouth
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: grafana
+  loadBalancerIP: 20.49.146.32
+  type: LoadBalancer

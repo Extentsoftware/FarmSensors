@@ -90,7 +90,7 @@ char macStr[18];                      // my mac address
 char incomingMessage[128];            // incoming mqtt
 int  incomingCount=0;
 int packetcount=0;
-bool wifiEnabled=false;
+bool wifiConnected=false;
 int buttonState = HIGH;               // the current reading from the input pin
 unsigned long lastButtonTime = 0;     // the last time the output pin was toggled
 unsigned long debounceDelay = 50;     // the debounce time; increase if the output flickers
@@ -136,7 +136,7 @@ void DisplayPage(int page)
         case 0:
           display.drawString(C1, L1, networkStage);
           display.drawString(C2, L1, networkStatus);
-          if (wifiEnabled)
+          if (wifiConnected)
           {
             display.drawString(C1, L2, "On");
             display.drawString(C2, L2, address);
@@ -536,7 +536,8 @@ bool isWifiConnected() {
 }
 
 void loop() {
-  if (!isWifiConnected())
+  wifiConnected = isWifiConnected();
+  if (!wifiConnected)
   {
     ModemCheck();
   }

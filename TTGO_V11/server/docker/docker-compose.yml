@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:1.6
+    container_name: mosquitto
+    ports:
+      - 2883:1883
+    volumes:
+      #- ./01-mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ${DATA_DIR}/mosquitto/data:/mosquitto/data
+      - ${DATA_DIR}/mosquitto/log:/mosquitto/log
+    restart: always
+
+  influxdb:
+    image: influxdb:1.7
+    environment:
+        - INFLUXDB_USER=root
+        - INFLUXDB_USER_PASSWORD=root
+        - INFLUXDB_DB=home_db
+    container_name: influxdb
+    ports:
+      - 8086:8086
+    volumes:
+      - ${DATA_DIR}/influxdb2:/var/lib/influxdb
+    restart: always
+
+  grafana:
+    image: grafana/grafana:5.4.3
+    container_name: grafana
+    depends_on:
+      - influxdb
+    ports:
+      - 3000:3000
+    volumes:
+      - ${DATA_DIR}/grafana:/var/lib/grafana
+    restart: always
+
+  mqttbridge:
+    build: ./02-bridge
+    image: gluteusmaximus/mqttbridge
+    container_name: mqttbridge
+    depends_on:
+      - mosquitto
+      - influxdb
+    restart: always
