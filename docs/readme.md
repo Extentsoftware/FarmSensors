@@ -1,6 +1,6 @@
 # Vesoil Farm Monitoring
 
-Plant health is, in part, dependent on good soil condition which includes correct moisture and nutriants. Our initial project is for remote sensing of soil moisture, ground temperature, air temperature and humidity, based on the TTGO T-Beam board. You need at least one sensor board and one hub for a working system. The sensor board transmits using [LoRa](https://en.wikipedia.org/wiki/LoRa) (long range radio) on 868Mhz to the hub. The frequency can be changed if desired.
+Plant health is, in part, dependent on good soil condition which includes correct moisture and nutriants. Our initial project is for remote sensing of soil moisture, ground temperature, air temperature and humidity, based on the Heltec  board. You need at least one sensor board and one hub for a working system. The sensor board transmits using [LoRa](https://en.wikipedia.org/wiki/LoRa) (long range radio) on 868Mhz to the hub. The frequency can be changed if desired.
 
 The devices are designed to run on a small Macadamia plantation in Zimbabwe, and will therefore run off solar energy as sunlight is generally not a problem in this part of the world. Unfortunately, internet access is restricted on this remote farm so samples must be captured and stored until they can be retrieved. We use [farmOS](https://farmos.org) in this project to retreive the samples from the device and then sync them with the FarmOS database when internet access is availalable.
 
