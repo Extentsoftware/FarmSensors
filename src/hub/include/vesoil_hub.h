@@ -77,8 +77,8 @@
 struct HubConfig
 {
   // Wifi settings
-  char  ssid[16] = "VM7518894";
-  char  password[16] = "9scvfpkKcygt";
+  char  ssid[16] = "${ssid}";
+  char  password[16] = "${password}";
   bool  softAPMode = false;
   bool  wifiEnabled = true;
 
@@ -92,7 +92,7 @@ struct HubConfig
   bool  enableCRC = true;       //
 
   // MQTT Settings
-  char  broker[42] = "bongomqtt.uksouth.cloudapp.azure.com";
+  char  broker[42] = "${broker}";
 
   // GPRS Settings
   bool  gprsEnabled = true;
