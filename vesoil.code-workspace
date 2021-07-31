@@ -5,16 +5,16 @@
 			"path": "docs"
 		},
 		{
-			"path": "TT22_V10\\hub"
+			"path": "src\\hub"
 		},
 		{
-			"path": "TT22_V10\\sensorI2C"
+			"path": "src\\header"
 		},
 		{
-			"path": "TT22_V10\\Cubecell Sensor"
+			"path": "src\\remote"
 		},
 		{
-			"path": "TT22_V10\\common"
+			"path": "src\\attinyprogrammer"
 		}
 	],
 	"settings": {

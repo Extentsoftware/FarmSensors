@@ -36,6 +36,9 @@
 // 7: Programming - In communication with the slave
 //
 
+// using TTGO
+// http://www.lilygo.cn/prod_view.aspx?TypeId=50003&Id=1142&FId=t3:50003:3
+
 #include "Arduino.h"
 #undef SERIAL
 
@@ -740,6 +743,8 @@ void setup() {
   DisplayText("Ready");
 
   SERIAL.begin(BAUDRATE);
+
+  Serial.println("Ready");
 
   pinMode(LED_PMODE, OUTPUT);
   pulse(LED_PMODE, 2);

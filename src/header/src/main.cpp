@@ -2,6 +2,7 @@
 // https://heltec-automation-docs.readthedocs.io/en/latest/cubecell/capsule-sensor/htcc-ac01/sensor_pinout_diagram.html
 
 #include <Arduino.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <CayenneLPP.h>
@@ -14,8 +15,8 @@
 #define RF_FREQUENCY                                868E6           // Hz
 #define TX_OUTPUT_POWER                             22              // dBm
 uint32_t _bandwidth                                 = 0;            // [0: 125 kHz,  4 = LORA_BW_041
-uint32_t  _spreadingFactor                          = LORA_SF12;        // [SF7..SF12] - 7
-uint8_t  _codingRate                                = LORA_CR_4_5;     // [1: 4/5,    - 1
+uint32_t  _spreadingFactor                          = 12;           // SF_12 [SF7..SF12] - 7
+uint8_t  _codingRate                                = 1;            // LORA_CR_4_5; [1: 4/5,    - 1
 #define LORA_PREAMBLE_LENGTH                        8               // Same for Tx and Rx
 #define LORA_SYMBOL_TIMEOUT                         0               // Symbols
 #define LORA_FIX_LENGTH_PAYLOAD_ON                  false
@@ -44,7 +45,7 @@ char rxpacket[BUFFER_SIZE];
 #define DAYS                                        24 * HOURS
 #define TIME_UNTIL_WAKEUP_TEST                      5 * SECONDS
 #define TIME_UNTIL_WAKEUP_NORMAL                    1 * HOURS
-#define TIME_UNTIL_WAKEUP_LOWPOWER                  1 * DAYS
+#define TIME_UNTIL_WAKEUP_LOWPOWER                  60 * SECONDS // 1 * DAYS
 
 static TimerEvent_t wakeUp;
 
@@ -191,6 +192,7 @@ void loop()
 		case TX:
             // Check battery voltage ok first
             volts = getBatteryVoltage();
+            Serial.printf( "Battery %d\n", volts);
             if (volts < BATTLOW)
             {
                 onSleep(TIME_UNTIL_WAKEUP_LOWPOWER);

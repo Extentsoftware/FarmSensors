@@ -444,6 +444,9 @@ void mqttWiFiConnect()
   boolean mqttConnected = mqttWifi.connect(macStr);
   if (mqttConnected)
   {
+    networkStage = "MQTT";
+    networkStatus = "Connected";
+    DisplayPage(currentPage);
     Serial.printf("MQTT Connected over WiFi\n");
     sprintf(topic, "bongo/%s/hub", macStr);
     mqttWifi.subscribe(topic);  
@@ -526,11 +529,20 @@ bool isWifiConnected() {
   {
     if (!mqttWifi.connected())
     {
+      networkStage = "MQTT";
+      networkStatus = "Connecting";
+      DisplayPage(currentPage);
       Serial.printf("MQTT Connecting to %s over WiFi\n", config.broker);
       mqttWiFiConnect();
     }
     mqttWifi.loop();
   }
+
+  if (lastWifiStatus != wifiStatus)
+  {
+      DisplayPage(currentPage);
+  }
+
   lastWifiStatus = wifiStatus;
   return mqttWifi.connected();
 }
