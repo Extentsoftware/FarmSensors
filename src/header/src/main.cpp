@@ -69,6 +69,7 @@ AT85ADC ds( GPIO0 );
 DS18X20 dallas( GPIO0 ); 
 bool sense_m_success=false;
 bool sense_t_success=false;
+bool sense_b_success=false;
 
 bool isDebug()
 {
@@ -94,7 +95,7 @@ void flash(uint32_t color,uint32_t time)
 void setup() {
     boardInitMcu( );
     Serial.begin(115200);
-    delay(500);
+    delay(2000);
     turnOnRGB(COLOR_START, 500);
     turnOffRGB();    
     Serial.printf( "Started\n");
@@ -114,6 +115,7 @@ void setup() {
 
     // setting the sync work breaks the transmission.
     // Radio.SetSyncWord(SYNCWORD); 
+    digitalWrite(Vext,LOW); //POWER ON
     
 }
 
@@ -123,14 +125,13 @@ void SendPacket(float volts)
     float adc =  0.0f;
     float vcc =  0.0f;
 
-    uint16_t adc1l;
-    uint16_t vccl;
+    uint16_t adc1l=0;
+    uint16_t vccl=0;
 
-    digitalWrite(Vext,LOW); //POWER ON
-    delay(250);             // stabalise
+    //digitalWrite(Vext,LOW); //POWER ON
+    delay(1000);             // stabalise
 
     sense_t_success = dallas.search();
-
     if (!sense_t_success)
     {
         Serial.printf( "Temp FAIL\n");
@@ -140,40 +141,47 @@ void SendPacket(float volts)
         temp = dallas.getTemp();
         sense_t_success = true;
     }
-
     
     sense_m_success = ds.search();
-
     if (!sense_m_success)
     {
         Serial.printf( "Moist FAIL\n");
     }
     else
     {
-        adc1l =  ds.performAdc(AT85_ADC3);
         vccl =  ds.performAdc(AT85_ADC_VCC);
-        adc =  adc1l / 1.0;
         vcc =  (1.1 * 1023.0) / vccl;
-        sense_m_success = true;
+        sense_b_success = true;
+
+        adc1l =  ds.performAdc(AT85_ADC3);
+        adc =  adc1l / 1.0;
+        sense_m_success = adc1l < 1024;
     }
 
-
-
-    digitalWrite(Vext,HIGH); //POWER OFF
+    // digitalWrite(Vext,HIGH); //POWER OFF
 
     CayenneLPP lpp(64);
     lpp.reset();
     lpp.addPresence(CH_ID_LO,getID() & 0x0000FFFF);     // id of this sensor
     lpp.addPresence(CH_ID_HI,(getID() >> 16 ) & 0x0000FFFF);     // id of this sensor
-    lpp.addGenericSensor(CH_Moist1, adc);
-    lpp.addTemperature(CH_GndTemp,temp);
-    lpp.addVoltage(CH_VoltsR,vcc);
+    
+    if (sense_m_success)
+        lpp.addGenericSensor(CH_Moist1, adc);
+
+    if (sense_t_success)
+        lpp.addTemperature(CH_GndTemp,temp);
+
+    if (sense_b_success)
+        lpp.addVoltage(CH_VoltsR,vcc);
+
     lpp.addVoltage(CH_VoltsS, volts);
 
     Serial.printf( "vr ");
     Serial.print( vcc);
     Serial.printf( " Vs " );
     Serial.print( volts);
+    Serial.printf( " moistl ");
+    Serial.print( adc1l );
     Serial.printf( " moist ");
     Serial.print( adc);
     Serial.printf( " temp ");

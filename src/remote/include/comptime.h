@@ -16,4 +16,5 @@
 #define MM (((__TIME__[3] - '0') * 16) + __TIME__[4] - '0')
 #define SS (((__TIME__[6] - '0') * 16) + __TIME__[7] - '0')
 
-#define SERIAL_NUMBER YY, MMM, DD, TT, MM, SS
+//#define SERIAL_NUMBER YY, MMM, DD, TT, MM, SS
+#define SERIAL_NUMBER 01, 02, 03, 04, 05, 06

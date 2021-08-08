@@ -102,11 +102,9 @@ static void readAdc()
 	scratchpad[0] = 0;
 	scratchpad[1] = 0;
 	
-	//for(int i=0;i<32;i++)
-	//{
-		ADCSRA |= (1 << ADSC);         	// start ADC measurement
-    	while (ADCSRA & (1 << ADSC) ); 	// wait till conversion complete 
-	//}	
+	ADCSRA |= (1 << ADSC);         	// start ADC measurement
+    while (ADCSRA & (1 << ADSC) ); 	// wait till conversion complete 
+
 	scratchpad[0] = ADCL;
 	scratchpad[1] = ADCH & 0x03;
 }

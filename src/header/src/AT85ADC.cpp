@@ -20,6 +20,7 @@ bool AT85ADC::search()
 {
   byte type_s;  
   float celsius, fahrenheit;
+  memset( addr, 0, sizeof(addr));
   
   ds.reset_search();
   ds.target_search(0x91);  
@@ -30,6 +31,8 @@ bool AT85ADC::search()
     ds.reset_search();
     return false;
   }
+
+  Serial.printf("%d %d %d %d %d %d %d %d \n", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
 
   if (OneWire::crc8(addr, 7) != addr[7]) {
       return false;
