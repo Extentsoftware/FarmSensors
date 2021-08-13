@@ -44,7 +44,8 @@ char rxpacket[BUFFER_SIZE];
 #define HOURS                                       60 * MINUTES
 #define DAYS                                        24 * HOURS
 #define TIME_UNTIL_WAKEUP_TEST                      5 * SECONDS
-#define TIME_UNTIL_WAKEUP_NORMAL                    1 * HOURS
+//#define TIME_UNTIL_WAKEUP_NORMAL                    1 * HOURS
+#define TIME_UNTIL_WAKEUP_NORMAL                    5 * SECONDS
 #define TIME_UNTIL_WAKEUP_LOWPOWER                  60 * SECONDS // 1 * DAYS
 
 static TimerEvent_t wakeUp;
@@ -96,8 +97,8 @@ void setup() {
     boardInitMcu( );
     Serial.begin(115200);
     delay(2000);
-    turnOnRGB(COLOR_START, 500);
-    turnOffRGB();    
+    //turnOnRGB(COLOR_START, 500);
+    //turnOffRGB();    
     Serial.printf( "Started\n");
     state=TX;
     TimerInit( &wakeUp, onWakeUp );
@@ -128,20 +129,9 @@ void SendPacket(float volts)
     uint16_t adc1l=0;
     uint16_t vccl=0;
 
-    //digitalWrite(Vext,LOW); //POWER ON
-    delay(1000);             // stabalise
+    digitalWrite(Vext,LOW); //POWER ON
+    delay(200);             // stabalise
 
-    sense_t_success = dallas.search();
-    if (!sense_t_success)
-    {
-        Serial.printf( "Temp FAIL\n");
-    }
-    else
-    {
-        temp = dallas.getTemp();
-        sense_t_success = true;
-    }
-    
     sense_m_success = ds.search();
     if (!sense_m_success)
     {
@@ -149,16 +139,37 @@ void SendPacket(float volts)
     }
     else
     {
-        vccl =  ds.performAdc(AT85_ADC_VCC);
-        vcc =  (1.1 * 1023.0) / vccl;
-        sense_b_success = true;
+        // vccl =  ds.performAdc(AT85_ADC_VCC);
+        // vcc =  (1.1 * 1023.0) / vccl;
+        // sense_b_success = true;
 
         adc1l =  ds.performAdc(AT85_ADC3);
         adc =  adc1l / 1.0;
         sense_m_success = adc1l < 1024;
+
+        // F0 Search
+        // 33 read rom
+        // 55 match rom 
+        // CC skip rom
+        // EC alarm
+        // 44  4E  BE 48 B8 B4
+
+        // BE 
+        // 45-53 
     }
 
-    // digitalWrite(Vext,HIGH); //POWER OFF
+    // sense_t_success = dallas.search();
+    // if (!sense_t_success)
+    // {
+    //     Serial.printf( "Temp FAIL\n");
+    // }
+    // else
+    // {
+    //     temp = dallas.getTemp();
+    //     sense_t_success = true;
+    // }
+
+    digitalWrite(Vext,HIGH); //POWER OFF
 
     CayenneLPP lpp(64);
     lpp.reset();
