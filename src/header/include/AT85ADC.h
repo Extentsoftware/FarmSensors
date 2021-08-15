@@ -17,10 +17,10 @@
 #define AT85_ADC_PIN3 AT85ADC2
 #define AT85_ADC_PIN2 AT85ADC3
 
-#define CMD_SetADCChannel   0x45
-#define CMD_ReadAdc			    0x47
-#define CMD_Readbuffer 		  0xBE
-#define CMD_StartFrqConv	  0x46
+#define CMD_Readbuffer 		  0xC0
+#define CMD_SetADCChannel   0xC3
+#define CMD_StartFrqConv	  0xC5
+#define CMD_ReadAdc			    0xC7
 
 class AT85ADC
 {
