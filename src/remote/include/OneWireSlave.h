@@ -31,23 +31,17 @@
 #define OWT_MIN_RESET 51
 #define OWT_RESET_PRESENCE 4
 #define OWT_PRESENCE 20 
-#define OWT_READLINE 3 //for fast master, 4 for slow master and long lines
-#define OWT_LOWTIME 3 //for fast master, 4 for slow master and long lines 
-#define OWM_SLEEP 0  //Waiting for next reset pulse
-#define OWM_RESET 1  //Reset pulse received 
-#define OWM_PRESENCE 2  //sending presence pulse
-#define OWM_READ_COMMAND 3 //read 8 bit of command
-#define OWM_SEARCH_ROM 4  //SEARCH_ROM algorithms
-#define OWM_MATCH_ROM 5  //test number
-#define OWM_READ_SCRATCHPAD 6
-#define OWM_WRITE_SCRATCHPAD 7
-#define OWM_CHK_RESET 8  //waiting of rising edge from reset pulse
-#define OWM_READ_PIO 9
-#define OWM_WRITE_PIO 10
-#define OWM_READ_MEMORY 11
-#define OWM_WRITE_MEMORY 12
-#define OWM_READ 13 //  read from master
-#define OWM_WRITE 14  //  write to master
+#define OWT_READLINE 4      // 3 for fast master, 4 for slow master and long lines
+#define OWT_LOWTIME 4       //3 for fast master, 4 for slow master and long lines 
+#define OWM_SLEEP 0         //Waiting for next reset pulse
+#define OWM_RESET 1         //Reset pulse received 
+#define OWM_PRESENCE 2      //sending presence pulse
+#define OWM_READ_COMMAND 3  //read 8 bit of command
+#define OWM_SEARCH_ROM 4    //SEARCH_ROM algorithms
+#define OWM_MATCH_ROM 5     //test number
+#define OWM_CHK_RESET 8     //waiting of rising edge from reset pulse
+#define OWM_READ 13         //  read from master
+#define OWM_WRITE 14        //  write to master
 
 //Write a bit after next falling edge from master
 //its for sending a zero as soon as possible

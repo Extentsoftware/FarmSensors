@@ -81,6 +81,7 @@ static void startAdc()
 		(1 << ADPS2) |  		// set prescaler to 128
 		(1 << ADPS1) |
 		(1 << ADPS0); 
+	ADCSRA |= (1 << ADSC);      // start ADC measurement
 }
 
 static void startAdcWithReset()
@@ -94,7 +95,6 @@ static void readAdc()
 	scratchpad[0] = 0;
 	scratchpad[1] = 0;
 	
-	ADCSRA |= (1 << ADSC);         	// start ADC measurement
     while (ADCSRA & (1 << ADSC) )
 	{
 		

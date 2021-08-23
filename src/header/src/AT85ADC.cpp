@@ -54,21 +54,16 @@ uint16_t AT85ADC::performConversion(uint8_t channel, uint32_t delayMs)
   byte present = 0;
  
   ds.reset();
-  ds.select(addr);
-  ds.write(CMD_SetADCChannel);      // set the adc channel (ADMUX on ATTINY85)
-  ds.write(channel);
-
-  delay(delayMs);                   // for adc this should be maybe 10ms
-
+  ds.select(addr);    
+  ds.write(CMD_SetADCChannel, 1);       // set the adc channel (ADMUX on ATTINY85)
+  ds.write(channel, 1);                 // and start conversion
+  delay(delayMs);                       // for adc this should be maybe 10ms
   present = ds.reset();
   ds.select(addr);    
-  ds.write(CMD_ReadAdc);            // Read ADC
-
-  delay(1);                         // wait for adc read to complete
-  
+  ds.write(CMD_ReadAdc, 1);            // Read ADC
   present = ds.reset();
   ds.select(addr);    
-  ds.write(CMD_Readbuffer);         // Read Scratchpad
+  ds.write(CMD_Readbuffer, 1);         // Read Scratchpad
   data[0]=ds.read();
   data[1]=ds.read();
 
@@ -78,12 +73,12 @@ uint16_t AT85ADC::performConversion(uint8_t channel, uint32_t delayMs)
 
 uint16_t AT85ADC::performTemp() 
 {
-  return performConversion(AT85_TEMP, 100);
+  return performConversion(AT85_TEMP, 1000);
 }
 
 uint16_t AT85ADC::performAdc(uint8_t channel) 
 {
-  return performConversion(channel, 100);
+  return performConversion(channel, 1000);
 }
 
 uint16_t AT85ADC::performFreq() 

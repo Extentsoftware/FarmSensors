@@ -129,8 +129,8 @@ void SendPacket(float volts)
     uint16_t adc1l=0;
     uint16_t vccl=0;
 
-    digitalWrite(Vext,LOW); //POWER ON
-    delay(200);             // stabalise
+    digitalWrite(Vext,LOW); // POWER ON
+    delay(200);             // stabilise
 
     sense_m_success = ds.search();
     if (!sense_m_success)
