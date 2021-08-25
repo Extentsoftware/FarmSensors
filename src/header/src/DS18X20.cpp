@@ -50,11 +50,8 @@ float DS18X20::getTemp()
   ds.select(addr);    
   ds.write(0xBE);         // Read Scratchpad
 
-
-
   for ( int i = 0; i < 9; i++) {           // we need 9 bytes
     data[i] = ds.read();
-    Serial.printf( "%d\n", data[i]);
   }
 
   // Convert the data to actual temperature

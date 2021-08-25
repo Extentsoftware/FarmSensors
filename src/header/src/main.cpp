@@ -139,35 +139,25 @@ void SendPacket(float volts)
     }
     else
     {
-        // vccl =  ds.performAdc(AT85_ADC_VCC);
-        // vcc =  (1.1 * 1023.0) / vccl;
-        // sense_b_success = true;
+        vccl =  ds.performAdc(AT85_ADC_VCC);
+        vcc =  (1.1 * 1023.0) / vccl;
+        sense_b_success = true;
 
         adc1l =  ds.performAdc(AT85_ADC3);
         adc =  adc1l / 1.0;
         sense_m_success = adc1l < 1024;
-
-        // F0 Search
-        // 33 read rom
-        // 55 match rom 
-        // CC skip rom
-        // EC alarm
-        // 44  4E  BE 48 B8 B4
-
-        // BE 
-        // 45-53 
     }
 
-    // sense_t_success = dallas.search();
-    // if (!sense_t_success)
-    // {
-    //     Serial.printf( "Temp FAIL\n");
-    // }
-    // else
-    // {
-    //     temp = dallas.getTemp();
-    //     sense_t_success = true;
-    // }
+    sense_t_success = dallas.search();
+    if (!sense_t_success)
+    {
+        Serial.printf( "Temp FAIL\n");
+    }
+    else
+    {
+        temp = dallas.getTemp();
+        sense_t_success = true;
+    }
 
     digitalWrite(Vext,HIGH); //POWER OFF
 

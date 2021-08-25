@@ -20,33 +20,27 @@ bool AT85ADC::search()
 {
   byte type_s;  
   float celsius, fahrenheit;
-  memset( addr, 0, sizeof(addr));
   
-  ds.reset_search();
-  ds.target_search(0x91);  
   
-  if ( !ds.search(addr, true)) {
-    Serial.println("search - nothing found");
-    delay(200);
+  for (int j=0; j<4; j++)
+  {
+    memset( addr, 0, sizeof(addr)); 
     ds.reset_search();
-    return false;
+  
+    for (int i=0; i<4; i++)
+    {
+        bool found = ds.search(addr, true);
+        if (found && addr[0]==0x91 && OneWire::crc8(addr, 7) == addr[7])
+        {
+          Serial.printf("AT85 %d %d %d %d %d %d %d %d \n", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
+          return true;
+        }
+    }
   }
 
-  Serial.printf("%d %d %d %d %d %d %d %d \n", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
-
-  if (OneWire::crc8(addr, 7) != addr[7]) {
-      return false;
-  }
-
-    // the first ROM byte indicates which chip
-  switch (addr[0]) {
-    case 0x91:
-      type_s = 0;
-      break;
-    default:
-      return false;
-  } 
-  return true;
+  Serial.printf("AT85 not found \n");
+  ds.reset_search();
+  return false;
 }
 
 uint16_t AT85ADC::performConversion(uint8_t channel, uint32_t delayMs) 
@@ -73,12 +67,19 @@ uint16_t AT85ADC::performConversion(uint8_t channel, uint32_t delayMs)
 
 uint16_t AT85ADC::performTemp() 
 {
-  return performConversion(AT85_TEMP, 1000);
+  return performAdc(AT85_TEMP);
 }
 
 uint16_t AT85ADC::performAdc(uint8_t channel) 
 {
-  return performConversion(channel, 1000);
+  uint16_t result=0;
+  int tries=8;
+  do
+  {
+    result = performConversion(channel, 100);
+    --tries;
+  } while ((result==0 || result==65535) && tries>0);
+  return result;
 }
 
 uint16_t AT85ADC::performFreq() 
