@@ -52,14 +52,16 @@ uint16_t AT85ADC::performConversion(uint8_t channel, uint32_t delayMs)
   ds.write(CMD_SetADCChannel, 1);       // set the adc channel (ADMUX on ATTINY85)
   ds.write(channel, 1);                 // and start conversion
   delay(delayMs);                       // for adc this should be maybe 10ms
-  present = ds.reset();
-  ds.select(addr);    
-  ds.write(CMD_ReadAdc, 1);            // Read ADC
+  //present = ds.reset();
+  //ds.select(addr);    
+  //ds.write(CMD_ReadAdc, 1);            // Read ADC
   present = ds.reset();
   ds.select(addr);    
   ds.write(CMD_Readbuffer, 1);         // Read Scratchpad
   data[0]=ds.read();
   data[1]=ds.read();
+
+  data[1] &= 0x03;
 
   ds.depower();
   return (data[1] << 8) | data[0]; 
@@ -76,9 +78,9 @@ uint16_t AT85ADC::performAdc(uint8_t channel)
   int tries=8;
   do
   {
-    result = performConversion(channel, 100);
+    result = performConversion(channel, 200);
     --tries;
-  } while ((result==0 || result==65535) && tries>0);
+  } while ((result==0 || result==65535 || result==1023) && tries>0);
   return result;
 }
 

@@ -84,12 +84,8 @@ static void startAdc()
 	ADCSRA |= (1 << ADSC);      // start ADC measurement
 }
 
-static void startAdcWithReset()
-{
-	startAdc();
-	ow.reset();
-}
 
+// block until adc complete
 static void readAdc()
 { 	
 	scratchpad[0] = 0;
@@ -101,7 +97,14 @@ static void readAdc()
 	}; 	// wait till conversion complete 
 
 	scratchpad[0] = ADCL;
-	scratchpad[1] = ADCH & 0x03;
+	scratchpad[1] = ADCH; 
+}
+
+static void startAdcWithReset()
+{
+	startAdc();
+	ow.reset();
+	readAdc();
 }
 
 void onCommand(uint8_t cmd) {
