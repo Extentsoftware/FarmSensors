@@ -21,7 +21,6 @@ bool AT85ADC::search()
   byte type_s;  
   float celsius, fahrenheit;
   
-  
   for (int j=0; j<4; j++)
   {
     memset( addr, 0, sizeof(addr)); 
@@ -52,9 +51,6 @@ uint16_t AT85ADC::performConversion(uint8_t channel, uint32_t delayMs)
   ds.write(CMD_SetADCChannel, 1);       // set the adc channel (ADMUX on ATTINY85)
   ds.write(channel, 1);                 // and start conversion
   delay(delayMs);                       // for adc this should be maybe 10ms
-  //present = ds.reset();
-  //ds.select(addr);    
-  //ds.write(CMD_ReadAdc, 1);            // Read ADC
   present = ds.reset();
   ds.select(addr);    
   ds.write(CMD_Readbuffer, 1);         // Read Scratchpad
@@ -78,8 +74,9 @@ uint16_t AT85ADC::performAdc(uint8_t channel)
   int tries=8;
   do
   {
-    result = performConversion(channel, 200);
+    result = performConversion(channel, 10);
     --tries;
+    Serial.printf("AT85 try %d %d %d\n", channel, tries, result);
   } while ((result==0 || result==65535 || result==1023) && tries>0);
   return result;
 }

@@ -17,7 +17,6 @@ OneWireSlave ow;
 //  Valid Onewire commands
 #define CMD_Readbuffer 		0xC0
 #define CMD_SetADCChannel   0xC3
-#define CMD_StartFrqConv	0xC5
 #define CMD_ReadAdc			0xC7
 
 uint8_t channel=0;
@@ -25,6 +24,8 @@ static uint8_t scratchpad[2] {0x00, 0x00};
 uint8_t id[8] = { FAM, SERIAL_NUMBER, 0x00 };
 static volatile int counter=0;
 
+#ifdef FREQ
+#define CMD_StartFrqConv	0xC5
 ISR(PCINT0_vect)
 {
 	++counter;
@@ -70,6 +71,7 @@ static void performCount()
 	// and start counting!
 	counter=0;
 }
+#endif
 
 static void startAdc()
 {
@@ -100,6 +102,49 @@ static void readAdc()
 	scratchpad[1] = ADCH; 
 }
 
+static void readAdcAvg()
+{ 	
+	uint16_t min=65535;
+	uint16_t max=0;
+	uint16_t samples[6];
+	uint32_t sum=0;
+	uint8_t index_min, index_max;
+	for(uint8_t i=0;i<6;i++)
+	{	
+		ADCSRA |= (1 << ADSC);      // start ADC measurement
+	    while (ADCSRA & (1 << ADSC) )	{}; 	// wait till conversion complete 
+		samples[i] = ADCL + (((uint16_t)ADCH) << 8);
+	} 
+
+	for(uint8_t i=0;i<6;i++)
+	{
+		if (min>samples[i])
+		{
+			index_min = i;
+			min = samples[i];
+		}
+	}
+
+	for(uint8_t i=0;i<6;i++)
+	{
+		if (max<samples[i])
+		{
+			index_max = i;
+			max = samples[i];
+		}
+	}
+
+	// sum all except min and max
+	for(uint8_t i=0;i<6;i++)
+	{
+		if (i!=index_max && i!=index_min)
+			sum += samples[i];
+	}
+	sum  = sum >> 2; // divide by four to get average
+	scratchpad[0] = sum & 0xff;
+	scratchpad[1] = (sum >> 8) & 0xff;
+}
+
 static void startAdcWithReset()
 {
 	startAdc();
@@ -120,10 +165,12 @@ void onCommand(uint8_t cmd) {
     case CMD_Readbuffer: 
 		ow.write(&scratchpad[0], 2, &ow.reset);
 		break;
+#ifdef FREQ
 	case CMD_StartFrqConv:
 		performCount();
 		ow.reset();
 		break;
+#endif
   }
 };
 

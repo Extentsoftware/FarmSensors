@@ -96,9 +96,9 @@ void flash(uint32_t color,uint32_t time)
 void setup() {
     boardInitMcu( );
     Serial.begin(115200);
-    delay(2000);
+    delay(500);
     //turnOnRGB(COLOR_START, 500);
-    //turnOffRGB();    
+    turnOffRGB();    
     Serial.printf( "Started\n");
     state=TX;
     TimerInit( &wakeUp, onWakeUp );
@@ -116,7 +116,7 @@ void setup() {
 
     // setting the sync work breaks the transmission.
     // Radio.SetSyncWord(SYNCWORD); 
-    digitalWrite(Vext,LOW); //POWER ON
+    digitalWrite(Vext,HIGH); //POWER ON
     
 }
 
@@ -130,7 +130,7 @@ void SendPacket(float volts)
     uint16_t vccl=0;
 
     digitalWrite(Vext,LOW); // POWER ON
-    delay(200);             // stabilise
+    delay(10);             // stabilise
 
     sense_m_success = ds.search();
     if (!sense_m_success)
@@ -139,13 +139,13 @@ void SendPacket(float volts)
     }
     else
     {
-        vccl =  ds.performAdc(AT85_ADC_VCC);
-        vcc =  (1.1 * 1023.0) / vccl;
-        sense_b_success = true;
-
         adc1l =  ds.performAdc(AT85_ADC3);
         adc =  adc1l / 1.0;
         sense_m_success = adc1l < 1024;
+        
+        vccl =  ds.performAdc(AT85_ADC_VCC);
+        vcc =  (1.1 * 1023.0) / vccl;
+        sense_b_success = true;
     }
 
     sense_t_success = dallas.search();
@@ -156,7 +156,7 @@ void SendPacket(float volts)
     else
     {
         temp = dallas.getTemp();
-        sense_t_success = true;
+        sense_t_success = (temp>-200);
     }
 
     digitalWrite(Vext,HIGH); //POWER OFF
