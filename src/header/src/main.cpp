@@ -116,7 +116,7 @@ void setup() {
 
     // setting the sync work breaks the transmission.
     // Radio.SetSyncWord(SYNCWORD); 
-    digitalWrite(Vext,HIGH); //POWER ON
+    digitalWrite(Vext,HIGH); //POWER OFF
     
 }
 

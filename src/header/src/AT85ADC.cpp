@@ -68,17 +68,59 @@ uint16_t AT85ADC::performTemp()
   return performAdc(AT85_TEMP);
 }
 
+uint16_t AT85ADC::average(uint16_t samples[])
+{ 	
+	uint16_t min=65535;
+	uint16_t max=0;
+	uint32_t sum=0;
+	uint8_t index_min, index_max;
+
+	for(uint8_t i=0;i<6;i++)
+	{
+		if (min>samples[i])
+		{
+			index_min = i;
+			min = samples[i];
+		}
+	}
+
+	for(uint8_t i=0;i<6;i++)
+	{
+		if (max<samples[i])
+		{
+			index_max = i;
+			max = samples[i];
+		}
+	}
+
+	// sum all except min and max
+	for(uint8_t i=0;i<6;i++)
+	{
+		if (i!=index_max && i!=index_min)
+			sum += samples[i];
+	}
+	sum  = sum >> 2; // divide by four to get average
+  return sum;
+}
+
+
 uint16_t AT85ADC::performAdc(uint8_t channel) 
 {
   uint16_t result=0;
-  int tries=8;
+  uint16_t samples[6];
+  int sample=0;
   do
   {
-    result = performConversion(channel, 10);
-    --tries;
-    Serial.printf("AT85 try %d %d %d\n", channel, tries, result);
-  } while ((result==0 || result==65535 || result==1023) && tries>0);
-  return result;
+    int tries=8;
+    do
+    {
+      result = performConversion(channel, 1);
+      --tries;
+      Serial.printf("AT85 chan %d try %d result %d sample %d\n", channel, tries, result, sample);
+    } while ((result==0 || result==65535 || result==1023) && tries>0);
+    samples[sample++] = result;
+  } while (sample<6);
+  return average(samples);
 }
 
 uint16_t AT85ADC::performFreq() 

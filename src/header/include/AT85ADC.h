@@ -40,5 +40,6 @@ class AT85ADC
     uint16_t performAdc(uint8_t channel);
     uint16_t performTemp();
     uint16_t performFreq();
+    uint16_t average(uint16_t samples[]);
 };
 #endif
