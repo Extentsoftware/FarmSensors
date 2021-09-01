@@ -42,9 +42,9 @@ class AT85ADC
     uint16_t performConversion(uint8_t channel, uint32_t delayMs);
     void performContConversion(uint8_t channel, uint32_t delayMs);
     uint16_t performAvgConversion(uint8_t channel, uint32_t delayMs);
-    uint16_t performAdc(uint8_t channel);
-    uint16_t performTemp();
+    uint16_t performAdc(uint8_t channel, uint8_t delay);
     uint16_t performFreq();
     uint16_t average(uint16_t samples[]);
+    uint16_t readscratchpad(); 
 };
 #endif

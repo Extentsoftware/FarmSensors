@@ -42,46 +42,58 @@ bool AT85ADC::search()
   return false;
 }
 
+uint16_t AT85ADC::readscratchpad() 
+{
+  uint16_t result=0;
+  byte present = 0; 
+  for (uint8_t i=0; i<8; i++)
+  {
+    present = ds.reset();
+    ds.select(addr);    
+    ds.write(CMD_ReadScratchpad, 1);      // Read Scratchpad
+    data[0]=ds.read();
+    data[1]=ds.read();
+    result = (data[1] << 8) | data[0];
+    if (result==65535)
+      result = 0;
+    if (result!=0)
+      break;
+  }
+  ds.depower();
+  Serial.printf( "SCRATCH=%d \n", result);
+  return result;
+}
+
 uint16_t AT85ADC::performConversion(uint8_t channel, uint32_t delayMs) 
 {
+  Serial.printf( "ADC C#%d .. ",channel);
+  uint16_t result=0;
   byte present = 0; 
   ds.reset();
   ds.select(addr);    
   ds.write(CMD_ADCLowNoise, 1);         // set the adc channel (ADMUX on ATTINY85)
   ds.write(channel, 1);                 // and start conversion
   delay(delayMs);                       // for adc this should be maybe 10ms
-  present = ds.reset();
-  ds.select(addr);    
-  ds.write(CMD_ReadScratchpad, 1);      // Read Scratchpad
-  data[0]=ds.read();
-  data[1]=ds.read();
-
-  data[1] &= 0x03;
-
-  ds.depower();
-  return (data[1] << 8) | data[0]; 
+  return readscratchpad();
 }
 
 uint16_t AT85ADC::performAvgConversion(uint8_t channel, uint32_t delayMs)
 {
-  byte present = 0; 
+  Serial.printf( "AVG chn %d .. ", channel);
+  byte present = 0;
+ 
+  ds.reset();
+  ds.select(addr);    
+  ds.write(CMD_ADCContinous, 1);        // set the adc channel (ADMUX on ATTINY85)
+  ds.write(channel, 1);                 // and start conversion
+  delay(delayMs);                       // for adc this should be maybe 10ms
+
   ds.reset();
   ds.select(addr);    
   ds.write(CMD_ReadAvg, 1);             // set the adc channel (ADMUX on ATTINY85)
   ds.write(channel, 1);                 // and start conversion
   delay(delayMs);                       // for adc this should be maybe 10ms
-  present = ds.reset();
-  ds.select(addr);    
-  ds.write(CMD_ReadScratchpad, 1);      // Read Scratchpad
-  data[0]=ds.read();
-  data[1]=ds.read();
-  ds.depower();
-
-  uint16_t result =  (data[1] << 8) | data[0];
-  Serial.printf( "AVG %d \n", result);
-
-  return result; 
-
+  return readscratchpad();
 }
 
 void AT85ADC::performContConversion(uint8_t channel, uint32_t delayMs) 
@@ -93,29 +105,28 @@ void AT85ADC::performContConversion(uint8_t channel, uint32_t delayMs)
   ds.write(CMD_ADCContinous, 1);        // set the adc channel (ADMUX on ATTINY85)
   ds.write(channel, 1);                 // and start conversion
   delay(delayMs);                       // for adc this should be maybe 10ms
-  present = ds.reset();
-  ds.select(addr);    
-  ds.write(CMD_Readbuffer, 1);          // Read entire
-  uint16_t buffer[18];
-  for (uint8_t i=0; i< 18; i++)
-  {
-    data[0]=ds.read();
-    data[1]=ds.read();
-    buffer[i] = (data[1] << 8) | data[0]; 
-  }
 
-  for (uint8_t i=0; i< 18; i++)
+  for (uint8_t j=0; j<4; j++)
   {
-    Serial.printf( "CONT 0=%d 1=%d\n", i, buffer[i]);
-  }
+    present = ds.reset();
+    ds.select(addr);    
+    ds.write(CMD_Readbuffer, 1);          // Read entire
+    uint16_t buffer[18];
+    for (uint8_t i=0; i< 18; i++)
+    {
+      data[0]=ds.read();
+      data[1]=ds.read();
+      buffer[i] = (data[1] << 8) | data[0]; 
+    }
 
+    Serial.printf( "BUF ");
+    for (uint8_t i=0; i< 18; i++)
+    {
+      Serial.printf( "%d ", buffer[i]);
+    }
+    Serial.printf( "\n ");
+  }
   ds.depower();  
-}
-
-
-uint16_t AT85ADC::performTemp() 
-{
-  return performAdc(AT85_TEMP);
 }
 
 uint16_t AT85ADC::average(uint16_t samples[])
@@ -154,23 +165,17 @@ uint16_t AT85ADC::average(uint16_t samples[])
 }
 
 
-uint16_t AT85ADC::performAdc(uint8_t channel) 
+uint16_t AT85ADC::performAdc(uint8_t channel, uint8_t delay) 
 {
   uint16_t result=0;
-  uint16_t samples[6];
-  int sample=0;
+  int tries=8;
+  result = performConversion(channel, delay);
   do
   {
-    int tries=8;
-    do
-    {
-      result = performConversion(channel, 1);
-      --tries;
-      Serial.printf("AT85 chan %d try %d result %d sample %d\n", channel, tries, result, sample);
-    } while ((result==0 || result==65535 || result==1023) && tries>0);
-    samples[sample++] = result;
-  } while (sample<6);
-  return average(samples);
+    result = performConversion(channel, delay);
+    --tries;
+  } while (result==0 && tries>0);
+  return result;
 }
 
 uint16_t AT85ADC::performFreq() 

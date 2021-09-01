@@ -130,7 +130,7 @@ void SendPacket(float volts)
     uint16_t vccl=0;
 
     digitalWrite(Vext,LOW); // POWER ON
-    delay(10);             // stabilise
+    delay(100);             // stabilise
 
     sense_m_success = ds.search();
     if (!sense_m_success)
@@ -139,15 +139,13 @@ void SendPacket(float volts)
     }
     else
     {
-        ds.performAvgConversion(AT85_ADC3, 100);
-        ds.performContConversion(AT85_ADC3, 100);
-        adc1l =  ds.performAdc(AT85_ADC3);
+        adc1l =  ds.performAdc(AT85_ADC3, 200);
         adc =  adc1l / 1.0;
-        sense_m_success = adc1l < 1024;
+        sense_m_success = adc1l > 0;
         
-        vccl =  ds.performAdc(AT85_ADC_VCC);
+        vccl =  ds.performAdc(AT85_ADC_VCC, 200);
         vcc =  (1.1 * 1023.0) / vccl;
-        sense_b_success = true;
+        sense_b_success = vccl > 0;
     }
 
     sense_t_success = dallas.search();
