@@ -17,10 +17,13 @@
 #define AT85_ADC_PIN3 AT85ADC2
 #define AT85_ADC_PIN2 AT85ADC3
 
-#define CMD_Readbuffer 		  0xC0
-#define CMD_SetADCChannel   0xC3
-#define CMD_StartFrqConv	  0xC5
-#define CMD_ReadAdc			    0xC7
+#define CMD_Readbuffer 		  0xC0	// read the ADC buffer
+#define CMD_ReadAvg 		    0xC1	// computer average into scratchpad and return it
+#define CMD_ReadScratchpad  0xC2	// read the scratchpad
+#define CMD_ADCSingle		    0xC3	// start standard single ADC
+#define CMD_ADCLowNoise		  0xC4	// start single interrupt-driven low-noise ADC
+#define CMD_ADCContinous	  0xC5	// start continous interrupt-driven ADC, filling the buffer
+#define CMD_StartFrqConv	  0xC6	// start frequency conversion
 
 class AT85ADC
 {

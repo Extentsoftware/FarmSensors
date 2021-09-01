@@ -9,23 +9,33 @@
 
 // initialize oneWireSlave object
 #include <OneWireSlave.h>
+#include <avr/sleep.h>
+
 OneWireSlave ow;
 
 // Device include file must have the functions void setup() and void loop()
 #define FAM 0x91
 
 //  Valid Onewire commands
-#define CMD_Readbuffer 		0xC0
-#define CMD_SetADCChannel   0xC3
-#define CMD_ReadAdc			0xC7
+#define CMD_Readbuffer 		  0xC0	// read the ADC buffer
+#define CMD_ReadAvg 		  0xC1	// computer average into scratchpad and return it
+#define CMD_ReadScratchpad    0xC2	// read the scratchpad
+#define CMD_ADCSingle		  0xC3	// start standard single ADC
+#define CMD_ADCLowNoise		  0xC4	// start single interrupt-driven low-noise ADC
+#define CMD_ADCContinous	  0xC5	// start continous interrupt-driven ADC, filling the buffer
+#define CMD_StartFrqConv	  0xC6	// start frequency conversion
 
+#define BUFFER_SIZE_SHIFT	5
+#define BUFFER_SIZE			(1 << BUFFER_SIZE_SHIFT) + 2
+
+uint16_t adc_results[BUFFER_SIZE];
 uint8_t channel=0;
-static uint8_t scratchpad[2] {0x00, 0x00};
+static uint16_t scratchpad;
 uint8_t id[8] = { FAM, SERIAL_NUMBER, 0x00 };
 static volatile int counter=0;
+volatile uint8_t adc_results_index = 0;
+volatile uint8_t adc_conversion_done = 0;
 
-#ifdef FREQ
-#define CMD_StartFrqConv	0xC5
 ISR(PCINT0_vect)
 {
 	++counter;
@@ -42,8 +52,7 @@ ISR(TIM1_OVF_vect)
 	PCMSK = (0<<PCINT5) | (0<<PCINT4) | (0<<PCINT3) | (0<<PCINT2) | (0<<PCINT1) | (0<<PCINT0);
 	GIFR &= ~(1<<PCIF);
 
-	scratchpad[0] = counter & 0xFF;
-	scratchpad[1] = counter >> 8;
+	scratchpad = counter;
 }
 
 static void performCount()
@@ -71,18 +80,53 @@ static void performCount()
 	// and start counting!
 	counter=0;
 }
-#endif
 
-static void startAdc()
+ISR(ADC_vect)
+{  
+ 	scratchpad = ADC;
+	adc_results[adc_results_index++] = scratchpad;
+	if (adc_results_index >= BUFFER_SIZE)
+	{
+		adc_results_index = 0;
+		adc_conversion_done = 1;
+		/* Disable ADC and clear interrupt flag. we are done */
+		ADCSRA = 0;
+		ADCSRA = (1 << ADIF);
+	}
+} 
+
+static void clearAdcBuffer()
 {
-	scratchpad[0] = 0;
-	scratchpad[1] = 0;
+	for (uint8_t i = 0; i < BUFFER_SIZE; i++) {
+		adc_results[i] = 0;
+	}
+	adc_conversion_done = 0;
+	scratchpad = 0;
+}
+
+static void startAdc(bool withInterrupt, bool continuous)
+{
+	if (continuous)
+		withInterrupt = true;
+
+	clearAdcBuffer();
   	ADMUX = channel; 
   	ADCSRA = 
   		(1 << ADEN)  | 			// enable adc		
 		(1 << ADPS2) |  		// set prescaler to 128
 		(1 << ADPS1) |
 		(1 << ADPS0); 
+	
+	if (withInterrupt)
+		ADCSRA |= (1 << ADIE);  
+
+	if (continuous)
+	{
+		ADCSRB = 0;				 // Trigger source free-running
+		ADCSRA |= (1 << ADATE);  // Auto Trigger Enable
+	}
+
+	DIDR0 = 1 << ADC3D;			// disable digital input on the ADC3 (Pin2)
 	ADCSRA |= (1 << ADSC);      // start ADC measurement
 }
 
@@ -90,91 +134,107 @@ static void startAdc()
 // block until adc complete
 static void readAdc()
 { 	
-	scratchpad[0] = 0;
-	scratchpad[1] = 0;
-	
-    while (ADCSRA & (1 << ADSC) )
-	{
-		
-	}; 	// wait till conversion complete 
-
-	scratchpad[0] = ADCL;
-	scratchpad[1] = ADCH; 
+    while (ADCSRA & (1 << ADSC) ) {}; // wait till conversion complete 
+	scratchpad = ADC;
 }
 
-static void readAdcAvg()
+// Compute scratchpad as an average of the adc buffer
+static void computeAdcAvg()
 { 	
 	uint16_t min=65535;
 	uint16_t max=0;
-	uint16_t samples[6];
 	uint32_t sum=0;
 	uint8_t index_min, index_max;
-	for(uint8_t i=0;i<6;i++)
-	{	
-		ADCSRA |= (1 << ADSC);      // start ADC measurement
-	    while (ADCSRA & (1 << ADSC) )	{}; 	// wait till conversion complete 
-		samples[i] = ADCL + (((uint16_t)ADCH) << 8);
-	} 
 
-	for(uint8_t i=0;i<6;i++)
+	for(uint8_t i=0; i<BUFFER_SIZE; i++)
 	{
-		if (min>samples[i])
+		if (min > adc_results[i])
 		{
 			index_min = i;
-			min = samples[i];
+			min = adc_results[i];
 		}
 	}
 
-	for(uint8_t i=0;i<6;i++)
+	for(uint8_t i=0; i<BUFFER_SIZE; i++)
 	{
-		if (max<samples[i])
+		if (max < adc_results[i])
 		{
 			index_max = i;
-			max = samples[i];
+			max = adc_results[i];
 		}
 	}
 
 	// sum all except min and max
-	for(uint8_t i=0;i<6;i++)
+	for(uint8_t i=0; i<BUFFER_SIZE; i++)
 	{
 		if (i!=index_max && i!=index_min)
-			sum += samples[i];
+			sum += adc_results[i];
 	}
-	sum  = sum >> 2; // divide by four to get average
-	scratchpad[0] = sum & 0xff;
-	scratchpad[1] = (sum >> 8) & 0xff;
+	scratchpad = sum >> BUFFER_SIZE_SHIFT; // divide to get average
 }
 
 static void startAdcWithReset()
 {
-	startAdc();
+	startAdc(false, false);
 	ow.reset();
 	readAdc();
 }
 
+static void startLowNoiseAdc()
+{
+	startAdc(true, false);
+	ow.reset();
+    sleep_cpu();
+}
+
+static void startContinousAdc()
+{
+	startAdc(true, true);
+	ow.reset();
+}
+
 void onCommand(uint8_t cmd) {
   switch (cmd) {
-	case CMD_SetADCChannel:
+	case CMD_ADCSingle:
 		channel=0;
 		ow.read(&channel, 1, &startAdcWithReset);
 		break;
-    case CMD_ReadAdc: 
-		readAdc();
-		ow.reset();
+
+    case CMD_ADCLowNoise: 
+		channel=0;
+		ow.read(&channel, 1, &startLowNoiseAdc);
 		break;
-    case CMD_Readbuffer: 
-		ow.write(&scratchpad[0], 2, &ow.reset);
+
+    case CMD_ADCContinous: 
+		channel=0;
+		ow.read(&channel, 1, &startContinousAdc);
 		break;
-#ifdef FREQ
+	
+    case CMD_ReadAvg: 
+		computeAdcAvg();
+		ow.write((uint8_t*)&scratchpad, 2, &ow.reset);
+		break;
+
+    case CMD_ReadScratchpad: 
+		ow.write((uint8_t*)&scratchpad, 2, &ow.reset);
+		break;
+    
+	case CMD_Readbuffer: 
+		ow.write((uint8_t*)&adc_results, sizeof(adc_results), &ow.reset);
+		break;
+
 	case CMD_StartFrqConv:
 		performCount();
 		ow.reset();
 		break;
-#endif
   }
 };
 
 int main() {
+	set_sleep_mode(SLEEP_MODE_ADC);	
+	sleep_enable();
+	sei();
+
 	TIMSK &= ~(1<<TOIE1);  // stop running interrupt
   	ow.begin(&onCommand, id);
 	while (1) {}
