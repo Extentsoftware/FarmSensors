@@ -139,6 +139,8 @@ void SendPacket(float volts)
     }
     else
     {
+        ds.performAvgConversion(AT85_ADC3, 100);
+        ds.performContConversion(AT85_ADC3, 100);
         adc1l =  ds.performAdc(AT85_ADC3);
         adc =  adc1l / 1.0;
         sense_m_success = adc1l < 1024;

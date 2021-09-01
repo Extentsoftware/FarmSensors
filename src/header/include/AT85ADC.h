@@ -40,6 +40,8 @@ class AT85ADC
     void init(uint8_t pin);
     bool search();
     uint16_t performConversion(uint8_t channel, uint32_t delayMs);
+    void performContConversion(uint8_t channel, uint32_t delayMs);
+    uint16_t performAvgConversion(uint8_t channel, uint32_t delayMs);
     uint16_t performAdc(uint8_t channel);
     uint16_t performTemp();
     uint16_t performFreq();

@@ -44,8 +44,7 @@ bool AT85ADC::search()
 
 uint16_t AT85ADC::performConversion(uint8_t channel, uint32_t delayMs) 
 {
-  byte present = 0;
- 
+  byte present = 0; 
   ds.reset();
   ds.select(addr);    
   ds.write(CMD_ADCLowNoise, 1);         // set the adc channel (ADMUX on ATTINY85)
@@ -53,7 +52,7 @@ uint16_t AT85ADC::performConversion(uint8_t channel, uint32_t delayMs)
   delay(delayMs);                       // for adc this should be maybe 10ms
   present = ds.reset();
   ds.select(addr);    
-  ds.write(CMD_Readbuffer, 1);          // Read Scratchpad
+  ds.write(CMD_ReadScratchpad, 1);      // Read Scratchpad
   data[0]=ds.read();
   data[1]=ds.read();
 
@@ -62,6 +61,57 @@ uint16_t AT85ADC::performConversion(uint8_t channel, uint32_t delayMs)
   ds.depower();
   return (data[1] << 8) | data[0]; 
 }
+
+uint16_t AT85ADC::performAvgConversion(uint8_t channel, uint32_t delayMs)
+{
+  byte present = 0; 
+  ds.reset();
+  ds.select(addr);    
+  ds.write(CMD_ReadAvg, 1);             // set the adc channel (ADMUX on ATTINY85)
+  ds.write(channel, 1);                 // and start conversion
+  delay(delayMs);                       // for adc this should be maybe 10ms
+  present = ds.reset();
+  ds.select(addr);    
+  ds.write(CMD_ReadScratchpad, 1);      // Read Scratchpad
+  data[0]=ds.read();
+  data[1]=ds.read();
+  ds.depower();
+
+  uint16_t result =  (data[1] << 8) | data[0];
+  Serial.printf( "AVG %d \n", result);
+
+  return result; 
+
+}
+
+void AT85ADC::performContConversion(uint8_t channel, uint32_t delayMs) 
+{
+  byte present = 0;
+ 
+  ds.reset();
+  ds.select(addr);    
+  ds.write(CMD_ADCContinous, 1);        // set the adc channel (ADMUX on ATTINY85)
+  ds.write(channel, 1);                 // and start conversion
+  delay(delayMs);                       // for adc this should be maybe 10ms
+  present = ds.reset();
+  ds.select(addr);    
+  ds.write(CMD_Readbuffer, 1);          // Read entire
+  uint16_t buffer[18];
+  for (uint8_t i=0; i< 18; i++)
+  {
+    data[0]=ds.read();
+    data[1]=ds.read();
+    buffer[i] = (data[1] << 8) | data[0]; 
+  }
+
+  for (uint8_t i=0; i< 18; i++)
+  {
+    Serial.printf( "CONT 0=%d 1=%d\n", i, buffer[i]);
+  }
+
+  ds.depower();  
+}
+
 
 uint16_t AT85ADC::performTemp() 
 {
