@@ -1,4 +1,3 @@
 influxdb
 paho-mqtt
 requests
-#hexlify

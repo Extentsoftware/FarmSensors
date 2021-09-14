@@ -12,6 +12,8 @@ from cayennelpp.lpp_frame import LppFrame
 import paho.mqtt.client as mqtt
 from influxdb import InfluxDBClient
 import requests 
+import geohash
+
 
 INFLUXDB_ADDRESS = os.environ.get('INFLUXDB_ADDRESS')
 #INFLUXDB_ADDRESS = 'localhost'
@@ -30,13 +32,6 @@ MQTT_REGEX = 'bongo/([^/]+)/([^/]+)'
 MQTT_CLIENT_ID = 'MQTTInfluxDBBridgeA'
 
 influxdb_client = InfluxDBClient(INFLUXDB_ADDRESS, INFLUXDB_PORT, INFLUXDB_USER, INFLUXDB_PASSWORD, None)
-
-def get_sensor_geohash(sensor):
-    if sensor in CONFIG["sensors"]:
-        sensor_config = CONFIG["sensors"][sensor]
-        if "geohash" in sensor_config:
-            return sensor_config["geohash"]
-    return None
 
 def send_to_farmos(sensor, data):
     if CONFIG["farmos"]["enabled"]:
@@ -73,6 +68,7 @@ def add_reading(frame, json_body, channel, name, index:int=0):
     try:
         value = get_by_channel(frame, channel, index)
         json_body[0]['fields'][name] = value
+        return value
     except Exception as e:
         print(f"channel {channel} not found")
 
@@ -112,9 +108,11 @@ def process_message(topic, payload:bytes):
         add_reading(frame, json, 8, "voltsS" )
         add_reading(frame, json, 3, "distance" )
         add_reading(frame, json, 2, "latitude", 0 )
-        add_reading(frame, json, 2, "longitude", 1 )
-        add_reading(frame, json, 2, "altitude", 2 )
+        lat = add_reading(frame, json, 2, "longitude", 1 )
+        lng = add_reading(frame, json, 2, "altitude", 2 )
 
+        if lat is not None and lng is not None:
+            json[0]['fields']["geohash"] =  geohash.encode(lat, lng)
 
         print(json)
 
@@ -156,10 +154,10 @@ def getSensorValue(frame, type, channel):
 
 
 if __name__ == '__main__':
-    print('MQTT to InfluxDB bridge v1.11')
+    print('MQTT to InfluxDB bridge v1.12')
     
     # for testing
-    payload = b'\x00f\x80\x01f:\x02\x88\x07\xd6\x08\x00\x03\xfd\x00}\x14\x08t\x00\x00\x0ed\x00\x00\x00\x0b\x0fd\x00\x00\x009\x10d\x00\x00\x05\x1d'
-    process_message("topic", payload)
+    #payload = b'\x00f\x80\x01f:\x02\x88\x07\xd6\x08\x00\x03\xfd\x00}\x14\x08t\x00\x00\x0ed\x00\x00\x00\x0b\x0fd\x00\x00\x009\x10d\x00\x00\x05\x1d'
+    #process_message("topic", payload)
 
     main()
