@@ -16,6 +16,11 @@ kubectl get deployments --namespace dev
 cd chart
 helm install mqttmonitor mqttmonitor --namespace dev
 ```
+the subsequently, but delete the old pod
+
+```
+helm upgrade mqttmonitor mqttmonitor --namespace dev
+```
 
 ## Deploy as separate pods
 ```

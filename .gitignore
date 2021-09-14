@@ -7,3 +7,4 @@
 **/.pio/*
 vesoil.code-workspace
 .env
+**/venv/*
