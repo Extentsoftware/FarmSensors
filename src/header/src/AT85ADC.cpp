@@ -21,12 +21,12 @@ bool AT85ADC::search()
   byte type_s;  
   float celsius, fahrenheit;
   
-  for (int j=0; j<4; j++)
+  for (int j=0; j<8; j++)
   {
     memset( addr, 0, sizeof(addr)); 
     ds.reset_search();
   
-    for (int i=0; i<4; i++)
+    for (int i=0; i<8; i++)
     {
         bool found = ds.search(addr, true);
         if (found && addr[0]==0x91 && OneWire::crc8(addr, 7) == addr[7])

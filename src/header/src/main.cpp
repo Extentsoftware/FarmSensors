@@ -44,8 +44,8 @@ char rxpacket[BUFFER_SIZE];
 #define HOURS                                       60 * MINUTES
 #define DAYS                                        24 * HOURS
 #define TIME_UNTIL_WAKEUP_TEST                      5 * SECONDS
-//#define TIME_UNTIL_WAKEUP_NORMAL                    1 * HOURS
-#define TIME_UNTIL_WAKEUP_NORMAL                    5 * SECONDS
+#define TIME_UNTIL_WAKEUP_NORMAL                    1 * HOURS
+//#define TIME_UNTIL_WAKEUP_NORMAL                    5 * SECONDS
 #define TIME_UNTIL_WAKEUP_LOWPOWER                  60 * SECONDS // 1 * DAYS
 
 static TimerEvent_t wakeUp;
