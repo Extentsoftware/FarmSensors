@@ -183,8 +183,6 @@ void SendPacket(float volts)
     Serial.print( vcc);
     Serial.printf( " Vs " );
     Serial.print( volts);
-    Serial.printf( " moistl ");
-    Serial.print( adc1l );
     Serial.printf( " moist ");
     Serial.print( adc);
     Serial.printf( " temp ");
