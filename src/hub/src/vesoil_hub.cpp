@@ -24,7 +24,7 @@ static const char * TAG = "Hub";
 #define GSM_PIN ""
 
 const char * Msg_Quality = "Db ";
-const char * Msg_Network = "Network";
+const char * Msg_Network = "Radio";
 const char * Msg_GPRS    = "GPRS";
 const char * Msg_MQTT    = "MQTT";
 
@@ -72,13 +72,15 @@ SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
 
 SmartWifi wifiManager;
 WiFiClient espClient;
-int lastWifiStatus=0;
+int lastWifiStatus=-1;
+int lastMqttConnected=-1;
 PubSubClient mqttWifi(espClient);
 
 SoftwareSerial SerialAT(AT_RX, AT_TX, false);
 TinyGsm modem(SerialAT);
 TinyGsmClient client(modem);
 PubSubClient mqttGPRS(client);
+
 GeoHash hasher(8);
 
 AsyncWebServer server(80);
@@ -96,8 +98,11 @@ unsigned long lastButtonTime = 0;     // the last time the output pin was toggle
 unsigned long debounceDelay = 50;     // the debounce time; increase if the output flickers
 unsigned long btnLongDelay = 1000;    // the debounce time; increase if the output flickers
 String address;                       // current ipaddress
-String networkStage;
-String networkStatus;
+
+String gsmStage;
+String gsmStatus;
+String wifiStatus;
+
 int currentPage=0;
 uint8_t *report;
 bool haveReport=false;
@@ -110,7 +115,7 @@ void ShowNextPage()
 {
     currentPage++;
 
-    if (currentPage==2)
+    if (currentPage==5)
       currentPage=0;
 
     DisplayPage(currentPage);
@@ -122,7 +127,10 @@ void ShowNextPage()
 #define L4 36
 #define L5 48
 #define C1 0
-#define C2 64
+#define C2 32
+#define C3 64
+
+#ifdef HAS_DISPLAY
 
 void DisplayPage(int page)
 {
@@ -134,33 +142,57 @@ void DisplayPage(int page)
     {
         // status
         case 0:
-          display.drawString(C1, L1, networkStage);
-          display.drawString(C2, L1, networkStatus);
+          display.drawString(C1, L1, "GSM");
+          display.drawString(C2, L1, gsmStage);
+          display.drawString(C3, L1, gsmStatus);
+
+          display.drawString(C1, L2, "WiFi");
+          display.drawString(C2, L2, wifiStatus);
+
+          display.drawString(C1, L3, "LORA");
+          display.drawString(C2, L3, "Pkts");
+          display.drawString(C3, L3, String(packetcount,DEC));
+          break;
+        case 1:
+          display.drawString(0, 0, "Wifi Status");
+          display.drawString(C2, L2, address);
           if (wifiConnected)
           {
             display.drawString(C1, L2, "On");
-            display.drawString(C2, L2, address);
           }
           else
           {
             display.drawString(C1, L2, "Off");
           }
-          display.drawString(C1, L3, String("rssi ") + String(rssi, 2));
-          display.drawString(C2, L3, String("snr  ") + String(snr, 2));
-          display.drawString(C1, L4, String("pfe  ") + String(pfe, DEC));
-          display.drawString(C2, L4, String("pkts  ") + String(packetcount,DEC));
-
-          display.drawString(C1, L5, String("Gsm dB: ") + String(modem.getSignalQuality(), DEC));
-          break;
-        case 1:
-          display.drawString(0, 0, "Wifi Status");
           break;
         case 2:
-          display.drawString(0, 0, "Signal");
-          display.drawString(0, 16, String("rssi ") + String(rssi, 2));
-          display.drawString(64, 16, String("snr  ") + String(snr, 2));
-          display.drawString(0, 32, String("pfe  ") + String(pfe, DEC));
-          display.drawString(64, 48, String("pkts  ") + String(packetcount,DEC));
+          display.drawString(C1, L1, "Gsm Status");
+          display.drawString(C1, L2, "dB");
+          //display.drawString(C2, L2, String(modem.getSignalQuality(), DEC));
+          break;
+        case 3:
+          display.drawString(C1, L1, "LoRa Status");
+          display.drawString(C1, L2, "rssi");
+          display.drawString(C2, L2, String(rssi, 2));
+          display.drawString(C1, L2, "snr");
+          display.drawString(C2, L2, String(snr, 2));
+          display.drawString(C1, L3, "pfe");
+          display.drawString(C2, L3, String(pfe, DEC));
+          display.drawString(C1, L4, "pkts");
+          display.drawString(C2, L4, String(packetcount,DEC));
+          break;
+        case 4:
+          display.drawString(C1, L1, "LoRa Settings");
+          display.drawString(C1, L2, "Freq");
+          display.drawString(C2, L2, String(config.frequency, DEC));
+          display.drawString(C1, L2, "Code");
+          display.drawString(C2, L2, String(config.codingRate, DEC));
+          display.drawString(C1, L3, "Spread");
+          display.drawString(C2, L3, String(config.spreadFactor, DEC));
+          display.drawString(C1, L4, "Bwidth");
+          display.drawString(C2, L4, String(config.bandwidth,DEC));
+          display.drawString(C1, L4, "CRC");
+          display.drawString(C2, L4, String(config.enableCRC,DEC));
           break;
         default:
           break;
@@ -182,14 +214,13 @@ void InitOLED() {
   display.drawString(0, 0, "Starting..");
   
 }
+#endif
 
 void getConfig(STARTUPMODE startup_mode) {
 
 //////////////////// HACK /////////////////////
     memcpy( &config, &default_config, sizeof(HubConfig));
     return;
-
-
 
   preferences.begin(TAG, false);
 
@@ -264,6 +295,8 @@ int detectDebouncedBtnPush() {
   return 0;
 }
 
+#ifdef HAS_LORA
+
 void startLoRa() {
 
   Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth);
@@ -329,6 +362,15 @@ void readLoraData(int packetSize)
   DisplayPage(currentPage);
 }
 
+#endif
+
+void mqttCallback(char* topic, byte* payload, unsigned int len) {
+  //snprintf(incomingMessage, sizeof(incomingMessage), "%s",(char *) payload);
+  incomingCount++;
+  snprintf(incomingMessage, sizeof(incomingMessage), "#%d %s",incomingCount, (char *) payload);
+  DisplayPage(currentPage);
+}
+
 void GetMyMacAddress()
 {
   uint8_t array[6];
@@ -336,12 +378,19 @@ void GetMyMacAddress()
   snprintf(macStr, sizeof(macStr), "%02x%02x%02x%02x%02x%02x", array[0], array[1], array[2], array[3], array[4], array[5]);
 }
 
+#ifdef HAS_GSM
+void doSetupGprsMQTT()
+{
+  mqttGPRS.setServer(config.broker, 1883);
+  mqttGPRS.setCallback(mqttCallback);
+}
+
 
 void doModemStartGPRS()
 {  
   Serial.println("Modem Start");
-  networkStage = "Modem";
-  networkStatus = "Starting";
+  gsmStage = "Modem";
+  gsmStatus = "Starting";
   DisplayPage(currentPage);
   delay(1000);
   Serial.println("modem init");
@@ -351,7 +400,7 @@ void doModemStartGPRS()
   modem.restart();  
   String modemInfo = modem.getModemInfo();
   delay(1000);  
-  networkStatus = "Started";
+  gsmStage = "Radio";
   modem_state=MODEM_NOT_CONNECTED;
 }
 
@@ -363,15 +412,20 @@ void doModemStart()
 
 void waitForNetwork() 
 {
-  networkStage = "Network";
   SimStatus simStatus = modem.getSimStatus();
   RegStatus regStatus = modem.getRegistrationStatus();
-  networkStatus = String("Sim: ") + String(simStatus, DEC) + String(" Reg: ") + String(regStatus, DEC);
-  DisplayPage(currentPage);
+  String thisgsmStatus = String("Sim: ") + String(simStatus, DEC) + String(" Reg: ") + String(regStatus, DEC);
+
+  if (gsmStatus != thisgsmStatus)
+  {
+    gsmStatus = thisgsmStatus;
+    DisplayPage(currentPage);    
+  }
+
   if (modem.isNetworkConnected()) 
   { 
-    networkStage = Msg_Network;
-    networkStatus = Msg_Connected;
+    gsmStage = Msg_Network;
+    gsmStatus = Msg_Connected;
     DisplayPage(currentPage);
     modem_state=MODEM_CONNECTED;
   }
@@ -381,13 +435,13 @@ void doGPRSConnect()
 {
   Serial.println("GPRS Connect");
 
-  networkStage = Msg_GPRS;
-  networkStatus = Msg_Connecting;
+  gsmStage = Msg_GPRS;
+  gsmStatus = Msg_Connecting;
   DisplayPage(currentPage);
     
   bool connected = modem.gprsConnect(config.apn, config.gprsUser, config.gprsPass);    
 
-  networkStatus = (char*)(connected ? Msg_Connected : Msg_Failed);
+  gsmStatus = (char*)(connected ? Msg_Connected : Msg_Failed);
   DisplayPage(currentPage);
 
   if (connected) 
@@ -396,37 +450,23 @@ void doGPRSConnect()
   }
 }
 
-void mqttCallback(char* topic, byte* payload, unsigned int len) {
-  //snprintf(incomingMessage, sizeof(incomingMessage), "%s",(char *) payload);
-  incomingCount++;
-  snprintf(incomingMessage, sizeof(incomingMessage), "#%d %s",incomingCount, (char *) payload);
-  DisplayPage(currentPage);
-}
-
-void doSetupMQTT()
-{
-  // MQTT Broker setup
-  mqttGPRS.setServer(config.broker, 1883);
-  mqttGPRS.setCallback(mqttCallback);
-}
-
 void mqttGPRSConnect()
 {
   char topic[32];
 
   if (!mqttGPRS.connected())
   {
-    networkStage = Msg_MQTT;
-    networkStatus = Msg_Connecting;
+    gsmStage = Msg_MQTT;
+    gsmStatus = Msg_Connecting;
     DisplayPage(currentPage);
     boolean mqttConnected = mqttGPRS.connect(macStr);
     if (!mqttConnected)
     {
-      networkStatus = Msg_FailedToConnect;
+      gsmStatus = Msg_FailedToConnect;
     }
     else
     {
-      networkStatus = Msg_Connected;
+      gsmStatus = Msg_Connected;
       sprintf(topic, "bongo/%s/hub", macStr);
       mqttGPRS.subscribe(topic);  
       mqttGPRS.publish(topic, "{\"state\":\"connected\"}", true);
@@ -435,24 +475,6 @@ void mqttGPRSConnect()
   }
 }  
 
-void mqttWiFiConnect()
-{
-  char topic[32];
-
-  DisplayPage(currentPage);  
-  mqttWifi.setServer(config.broker,1883);
-  boolean mqttConnected = mqttWifi.connect(macStr);
-  if (mqttConnected)
-  {
-    networkStage = "MQTT";
-    networkStatus = "Connected";
-    DisplayPage(currentPage);
-    Serial.printf("MQTT Connected over WiFi\n");
-    sprintf(topic, "bongo/%s/hub", macStr);
-    mqttWifi.subscribe(topic);  
-    mqttWifi.publish(topic, "{\"state\":\"connected\"}", true);
-  }
-}  
 
 void mqttGPRSPoll()
 {
@@ -483,6 +505,86 @@ void ModemCheck()
       break;      
   }
 }
+
+
+#endif
+
+#ifdef HAS_WIFI
+
+void doSetupWifiMQTT()
+{
+  mqttWifi.setCallback(mqttCallback);
+  mqttWifi.setServer(config.broker,1883);
+
+}
+
+void mqttWiFiConnect()
+{
+  char topic[32];
+
+  boolean mqttConnected = mqttWifi.connect(macStr);
+  if (mqttConnected)
+  {
+    Serial.printf("MQTT Connected over WiFi\n");
+    sprintf(topic, "bongo/%s/hub", macStr);
+    mqttWifi.subscribe(topic);  
+    mqttWifi.publish(topic, "{\"state\":\"connected\"}", true);
+  }
+}  
+
+bool isWifiConnected() {
+  
+  wifiManager.loop();
+
+  enum SmartWifi::Status status = wifiManager.getStatus();
+
+  if ( status == SmartWifi::Status::CONNECTED )
+  {
+    int mqttConnected = mqttWifi.connected() ? 1:0;
+    if (lastMqttConnected != mqttConnected)
+    {
+        wifiStatus = mqttConnected==1?"MQTT Connected":"MQTT Disconnected";
+        DisplayPage(currentPage);
+    }
+
+    if (mqttConnected==0)
+    {
+        mqttWiFiConnect();
+    }
+
+    mqttWifi.loop();
+
+    lastMqttConnected = mqttConnected;
+  }
+  else
+  {
+    if (lastWifiStatus != status)
+    {
+        switch (status) {
+          case SmartWifi::Status::CONNECTED:  // WL_IDLE_STATUS     = 0,
+            wifiStatus = "Connected";
+            break;
+          case SmartWifi::Status::CONNECTING :  // WL_IDLE_STATUS     = 0,
+            wifiStatus = "Connecting";
+            break;
+          case SmartWifi::Status::IN_SMART_CONFIG :  // WL_IDLE_STATUS     = 0,
+            wifiStatus = "Smart Config";
+            break;
+          case SmartWifi::Status::INIT :  // WL_IDLE_STATUS     = 0,
+            wifiStatus = "Init";
+            break;
+      }
+      DisplayPage(currentPage);
+    }
+  }
+
+  lastWifiStatus = status;
+  return mqttWifi.connected();
+}
+
+
+#endif
+
 
 void SendMQTTBinary(uint8_t *report, int packetSize)
 {
@@ -519,40 +621,11 @@ void SendMQTTBinary(uint8_t *report, int packetSize)
   return;
 }
 
-bool isWifiConnected() {
-  
-  wifiManager.loop();
-
-  int wifiStatus = wifiManager.getWifiStatus();
-
-  if ( wifiStatus == WL_CONNECTED )
-  {
-    if (!mqttWifi.connected())
-    {
-      networkStage = "MQTT";
-      networkStatus = "Connecting";
-      DisplayPage(currentPage);
-      Serial.printf("MQTT Connecting to %s over WiFi\n", config.broker);
-      mqttWiFiConnect();
-    }
-    mqttWifi.loop();
-  }
-
-  if (lastWifiStatus != wifiStatus)
-  {
-      DisplayPage(currentPage);
-  }
-
-  lastWifiStatus = wifiStatus;
-  return mqttWifi.connected();
-}
-
 void loop() {
+
+  ModemCheck();
+  
   wifiConnected = isWifiConnected();
-  if (!wifiConnected)
-  {
-    ModemCheck();
-  }
 
   int packetSize = LoRa.parsePacket();
   readLoraData(packetSize);
@@ -588,7 +661,7 @@ void setup() {
   Serial.println("get startup");
   STARTUPMODE startup_mode = getStartupMode();
   
-  Serial.println("get gonfig");
+  Serial.println("get config");
   getConfig(startup_mode);
 
   Serial.println("system check");
@@ -598,10 +671,11 @@ void setup() {
 
   startLoRa();
 
-  doSetupMQTT();
+  doSetupWifiMQTT();
+  doSetupGprsMQTT();
   
-  networkStage = "Lora";
-  networkStatus = "Ready";
+  gsmStage = "Booting";
+  gsmStatus = "";
 
   DisplayPage(currentPage);
 

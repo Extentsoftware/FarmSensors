@@ -1,6 +1,11 @@
 #ifndef __VESOIL_HUB__
 #define __VESOIL_HUB__
 
+#define HAS_WIFI
+#define HAS_GSM
+#define HAS_DISPLAY
+#define HAS_LORA
+
 #define ERR_LOWPOWER  0x15  // 00010101
 #define INFO_WIFI     0x33  // 00110011
 #define INFO_NORMAL   0xAA  // 10101010

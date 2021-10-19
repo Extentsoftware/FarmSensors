@@ -149,10 +149,12 @@ void smartDelay(unsigned long ms) {
   do
   {
     while (Serial1.available())
-      gps.encode(Serial1.read());
+    {
+      char c = Serial1.read();
+      gps.encode(c);
+    }
   } while (millis() - start < ms);
 }
-
 
 void startGPS() {
   power.power_GPS(true);

@@ -1,2 +1,2 @@
-helm install mqttmonitor mqttmonitor --namespace dev
+helm upgrade mqttmonitor mqttmonitor --namespace dev
 pause

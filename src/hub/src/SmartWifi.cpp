@@ -116,6 +116,10 @@ bool SmartWifi::isSmartConfigComplete() {
     return complete;
 }
 
+SmartWifi::Status SmartWifi::getStatus() {
+    return status;
+}
+
 int SmartWifi::getWifiStatus() {
   int WiFiStatus = WiFi.status();
   if (LastWFstatus != WiFiStatus)

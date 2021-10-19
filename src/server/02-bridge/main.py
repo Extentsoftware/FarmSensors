@@ -113,6 +113,7 @@ def process_message(topic, payload:bytes):
 
         if lat is not None and lng is not None:
             json[0]['fields']["geohash"] =  geohash.encode(lat, lng)
+            json[0]['tags']["location"] =  True
 
         print(json)
 

@@ -16,6 +16,13 @@ public:
     SmartWifi();
     void loop();
     int getWifiStatus();
+    enum Status {
+        INIT,
+        IN_SMART_CONFIG,
+        CONNECTING,
+        CONNECTED,
+    };
+    enum Status getStatus();
 
 private: 
 
@@ -30,14 +37,6 @@ private:
     int LastWFstatus = 0;
     bool doneSmartConfig = false;
     Preferences preferences;  // declare class object
-
-    enum Status {
-        INIT,
-        IN_SMART_CONFIG,
-        CONNECTING,
-        CONNECTED,
-    };
-
     Status status = Status::INIT;
 
 };
