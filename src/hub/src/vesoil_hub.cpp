@@ -115,7 +115,7 @@ void ShowNextPage()
 {
     currentPage++;
 
-    if (currentPage==5)
+    if (currentPage==6)
       currentPage=0;
 
     DisplayPage(currentPage);
@@ -193,6 +193,9 @@ void DisplayPage(int page)
           display.drawString(C2, L4, String(config.bandwidth,DEC));
           display.drawString(C1, L4, "CRC");
           display.drawString(C2, L4, String(config.enableCRC,DEC));
+          break;
+        case 5:
+          // screen saver
           break;
         default:
           break;
