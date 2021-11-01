@@ -48,8 +48,6 @@ def send_to_farmos(sensor, data):
                 print(sensor, " not configure for farmos" )
         else:
             print(sensor, " does not exist in sensor config file" )
-    else:
-        print( "FarmOS disabled" )
 
 def on_connect(client, userdata, flags, rc):
     """ The callback for when the client receives a CONNACK response from the server."""
@@ -70,7 +68,7 @@ def add_reading(frame, json_body, channel, name, index:int=0):
         json_body[0]['fields'][name] = value
         return value
     except Exception as e:
-        print(f"channel {channel} not found")
+        pass
 
 def process_message(topic, payload:bytes):
     try:
@@ -86,11 +84,12 @@ def process_message(topic, payload:bytes):
         id1 = get_by_channel(frame,0)
         id2 = get_by_channel(frame,1)
         sensor = int(id1) + (int(id2) << 16)
+        sensor_hex = hex(sensor)[2:]
         json = [
                     {
                         "measurement": measurement,
                         "tags": {
-                            "sensor": sensor,
+                            "sensor": sensor_hex,
                         },
                         "time": str(now), 
                         "fields": 
@@ -159,6 +158,8 @@ if __name__ == '__main__':
     
     # for testing
     #payload = b'\x00f\x80\x01f:\x02\x88\x07\xd6\x08\x00\x03\xfd\x00}\x14\x08t\x00\x00\x0ed\x00\x00\x00\x0b\x0fd\x00\x00\x009\x10d\x00\x00\x05\x1d'
+    #payload = b'\x00f\x14\x01f\x83\nd\x00\x00\x03\x1b\x06g\x00\x97\x07t\x01L\x08t\x01\x8e\x0ed\x00\x00\x00\t\x0fd\x00\x00\x003\x10d\x00\x00Cl'
+    #payload = b'\x00d\x00\x00:\x14\x01d\x00\x00Y\x83\nd\x00\x00\x03\x1d\x06g\x00\x9f\x07t\x01K\x08t\x01\xa3\x0ed\x00\x00\x00\t\x0fd\x00\x00\x002\x10d\x00\x00C\x1c'
     #process_message("topic", payload)
 
     main()

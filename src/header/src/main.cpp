@@ -164,9 +164,15 @@ void SendPacket(float volts)
     CayenneLPP lpp(64);
     lpp.reset();
     uint64_t id = getID();
+    uint32_t l = id & 0x0000FFFF;
+    uint32_t h = (id >> 16 ) & 0x0000FFFF;
+    
     Serial.printf("ID = %lx\n", id);
-    lpp.addPresence(CH_ID_LO,id & 0x0000FFFF);     // id of this sensor
-    lpp.addPresence(CH_ID_HI,(id >> 16 ) & 0x0000FFFF);     // id of this sensor
+    Serial.printf("ID = (%lu)\n", id);
+    Serial.printf("ID = (%u)\n", l);
+    Serial.printf("ID = (%u)\n", h);
+    lpp.addGenericSensor(CH_ID_LO,l);     // id of this sensor
+    lpp.addGenericSensor(CH_ID_HI,h);     // id of this sensor
     
     if (sense_m_success)
         lpp.addGenericSensor(CH_Moist1, adc);

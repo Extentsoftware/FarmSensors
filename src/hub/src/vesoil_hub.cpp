@@ -48,7 +48,7 @@ enum MODEM_STATE modem_state=MODEM_INIT;
 
 #define APP_VERSION 1
 
-#include <ESPAsyncWebServer.h>
+//#include <ESPAsyncWebServer.h>
 #include <vesoil.h>
 #include <SmartWifi.h>
 #include <SPI.h>
@@ -62,7 +62,7 @@ enum MODEM_STATE modem_state=MODEM_INIT;
 #include <PubSubClient.h>
 #include <geohash.h>
 #include <SoftwareSerial.h>
-
+#include <IotWebConf.h>
 #include "vesoil_hub.h"
 
 #ifdef HAS_OLED
@@ -70,7 +70,15 @@ enum MODEM_STATE modem_state=MODEM_INIT;
 SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
 #endif
 
-SmartWifi wifiManager;
+
+
+const char thingName[] = "";                     // -- Initial name of the Thing. Used e.g. as SSID of the own Access Point.
+const char wifiInitialApPassword[] = "LoraHub";  // -- Initial password to connect to the Thing, when it creates an own Access Point.
+DNSServer dnsServer;
+WebServer server(80);
+IotWebConf iotWebConf(thingName, &dnsServer, &server, wifiInitialApPassword);
+
+
 WiFiClient espClient;
 int lastWifiStatus=-1;
 int lastMqttConnected=-1;
@@ -83,7 +91,7 @@ PubSubClient mqttGPRS(client);
 
 GeoHash hasher(8);
 
-AsyncWebServer server(80);
+//AsyncWebServer server(80);
 Preferences preferences;
 float snr = 0;                        // signal noise ratio
 float rssi = 0;                       // Received Signal Strength Indicator
@@ -395,14 +403,14 @@ void doModemStartGPRS()
   gsmStage = "Modem";
   gsmStatus = "Starting";
   DisplayPage(currentPage);
-  delay(1000);
+  //delay(1000);
   Serial.println("modem init");
 
   TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,9600);
   Serial.println("modem restart");
   modem.restart();  
   String modemInfo = modem.getModemInfo();
-  delay(1000);  
+  //delay(1000);  
   gsmStage = "Radio";
   modem_state=MODEM_NOT_CONNECTED;
 }
@@ -469,7 +477,6 @@ void mqttGPRSConnect()
     }
     else
     {
-      gsmStatus = Msg_Connected;
       sprintf(topic, "bongo/%s/hub", macStr);
       mqttGPRS.subscribe(topic);  
       mqttGPRS.publish(topic, "{\"state\":\"connected\"}", true);
@@ -483,7 +490,7 @@ void mqttGPRSPoll()
 {
   bool gprsConnected = modem.isGprsConnected();
   if (!gprsConnected)
-    modem_state=MODEM_CONNECTED;
+    modem_state=MODEM_NOT_CONNECTED;
   mqttGPRS.loop();
 }
 
@@ -504,6 +511,7 @@ void ModemCheck()
       mqttGPRSConnect();
       break;      
     case MQ_CONNECTED:
+      gsmStatus = Msg_Connected;
       mqttGPRSPoll();
       break;      
   }
@@ -536,12 +544,11 @@ void mqttWiFiConnect()
 }  
 
 bool isWifiConnected() {
-  
-  wifiManager.loop();
 
-  enum SmartWifi::Status status = wifiManager.getStatus();
+  iotWebConf.doLoop();
+  int WiFiStatus = WiFi.status();
 
-  if ( status == SmartWifi::Status::CONNECTED )
+  if (WiFiStatus == WL_CONNECTED)
   {
     int mqttConnected = mqttWifi.connected() ? 1:0;
     if (lastMqttConnected != mqttConnected)
@@ -561,27 +568,36 @@ bool isWifiConnected() {
   }
   else
   {
-    if (lastWifiStatus != status)
+    if (lastWifiStatus != WiFiStatus)
     {
-        switch (status) {
-          case SmartWifi::Status::CONNECTED:  // WL_IDLE_STATUS     = 0,
+        switch (WiFiStatus) {
+          case WL_CONNECTED:
             wifiStatus = "Connected";
             break;
-          case SmartWifi::Status::CONNECTING :  // WL_IDLE_STATUS     = 0,
-            wifiStatus = "Connecting";
+          case WL_IDLE_STATUS:
+            wifiStatus = "Idle";
             break;
-          case SmartWifi::Status::IN_SMART_CONFIG :  // WL_IDLE_STATUS     = 0,
-            wifiStatus = "Smart Config";
+          case WL_NO_SSID_AVAIL:
+            wifiStatus = "No SSID";
             break;
-          case SmartWifi::Status::INIT :  // WL_IDLE_STATUS     = 0,
-            wifiStatus = "Init";
+          case WL_SCAN_COMPLETED:
+            wifiStatus = "Scan done";
+            break;
+          case WL_CONNECT_FAILED:
+            wifiStatus = "Connect failed";
+            break;
+          case WL_CONNECTION_LOST:
+            wifiStatus = "Connect lost";
+            break;
+          case WL_DISCONNECTED:
+            wifiStatus = "Disconnected";
             break;
       }
       DisplayPage(currentPage);
     }
   }
 
-  lastWifiStatus = status;
+  lastWifiStatus = WiFiStatus;
   return mqttWifi.connected();
 }
 
@@ -647,6 +663,31 @@ void SystemCheck() {
   Serial.printf("HEAP  size  %u free  %u\n", ESP.getHeapSize(), ESP.getFreeHeap());
 }
 
+void handleRoot()
+{
+  // -- Let IotWebConf test and handle captive portal requests.
+  if (iotWebConf.handleCaptivePortal())
+  {
+    // -- Captive portal request were already served.
+    return;
+  }
+  String s = "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>";
+  s += "<title>IotWebConf 02 Status and Reset</title></head><body>";
+  s += "Go to <a href='config'>configure page</a> to change settings.";
+  s += "</body></html>\n";
+
+  server.send(200, "text/html", s);
+}
+
+void setupWifi() {
+  iotWebConf.init();
+
+  // -- Set up required URL handlers on the web server.
+  server.on("/", handleRoot);
+  server.on("/config", []{ iotWebConf.handleConfig(); });
+  server.onNotFound([](){ iotWebConf.handleNotFound(); });
+}
+
 void setup() {
   
   incomingMessage[0]='\0';
@@ -669,6 +710,8 @@ void setup() {
 
   Serial.println("system check");
   SystemCheck();
+
+  setupWifi();
 
   GetMyMacAddress();
 
