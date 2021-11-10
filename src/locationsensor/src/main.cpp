@@ -43,6 +43,8 @@ bool waitForGps() {
 
 void SendPacket() 
 {
+    power.print_status();
+    
     if (!waitForGps())
       return;
 

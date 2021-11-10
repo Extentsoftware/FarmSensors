@@ -21,6 +21,22 @@ void setupSerial() {
   Serial.println("VESTRONG LaPoulton Ultrasound Sensor");
 }
 
+GPSLOCK GpsStatus() {
+
+    // check whethe we have  gps sig
+    if (gps.location.lat()!=0 && gps.location.isValid() )
+    {
+        power.flashlight(1);    
+        return LOCK_OK;          
+    }
+    else
+    {
+        Serial.printf("waiting for GPS try: Age:%u  valid: %d   %d\n", gps.location.age(), gps.location.isValid(), gps.time.isValid());
+        return LOCK_WINDOW;
+    }
+}
+
+
 float GetDistance() {
     // Define inputs and outputs
   pinMode(TRIGPIN, OUTPUT);
@@ -37,7 +53,7 @@ float GetDistance() {
   return duration / 58.0;
 }
 
-void SendPacket() 
+void SendPacket(float distance) 
 {
     uint8_t chipid[]={0,0,0,0,0,0,0,0};
     esp_efuse_mac_get_default(&chipid[0]);
@@ -45,7 +61,7 @@ void SendPacket()
     uint32_t chipid_h = chipid[4] + (chipid[5]<<8) + (chipid[6]<<16) + (chipid[7]<<24);
 
     float volts = power.get_battery_voltage();
-    float distance =GetDistance();
+    
 
     CayenneLPP lpp(64);
     lpp.reset();
@@ -62,12 +78,25 @@ void SendPacket()
     Serial.print( distance );
     Serial.printf( " Tx Size=%d .. \n", lpp.getSize());
 
+    if (GpsStatus() == LOCK_OK)
+    {
+      Serial.printf( " lat ");
+      Serial.print( (float)gps.location.lat() );
+      Serial.printf( " lng ");
+      Serial.print( (float)gps.location.lng() );
+      Serial.printf( " alt ");
+      Serial.print( gps.altitude.feet() );
+      lpp.addGPS(CH_GPS, (float)gps.location.lat(), (float)gps.location.lng(), gps.altitude.feet());
+    }
+
+    Serial.printf( " Tx Size=%d .. \n", lpp.getSize());
+
     power.led_onoff(true);
     LoRa.beginPacket();
     LoRa.write( (const uint8_t *)lpp.getBuffer(), lpp.getSize());
     LoRa.endPacket();
     power.led_onoff(false);
-    }
+}
 
 void setup() {
   // Begin Serial communication at a baudrate of 9600:
@@ -78,14 +107,16 @@ void setup() {
   power.power_peripherals(true);
 
   startLoRa();
+  startGPS();
 }
 
 void loop() {
-  SendPacket();
-
-  delay(10000);
+  smartDelay(1000 * 60);
+  float distance =GetDistance();
+  Serial.printf( " %f \n", distance);
+  SendPacket(distance);
+  power.deep_sleep(60*4);
 }
-
 
 void stopLoRa()
 {
@@ -163,27 +194,4 @@ void stopGPS() {
   delay(600); //give some time to restart //TODO wait for ack
   Serial1.write(RXM_PMREQ, sizeof(RXM_PMREQ));
   power.power_GPS(false);
-}
-
-GPSLOCK getGpsLock() {
-  for (int i=0; i<config.gps_timeout; i++)
-  {
-    
-    Serial.printf("waiting for GPS try: %d  Age:%u  valid: %d   %d\n", i, gps.location.age(), gps.location.isValid(), gps.time.isValid());
-
-    // check whethe we have  gps sig
-    if (gps.location.lat()!=0 && gps.location.isValid() )
-    {
-      // in the report window?
-      if (gps.time.hour() >=config.fromHour && gps.time.hour() < config.toHour)
-        return LOCK_OK;          
-      else
-        return LOCK_WINDOW;
-    }
-
-    power.flashlight(1);    
-
-    smartDelay(1000);
-  }
-  return LOCK_FAIL;
 }

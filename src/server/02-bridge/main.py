@@ -106,12 +106,13 @@ def process_message(topic, payload:bytes):
         add_reading(frame, json, 7, "voltsR" )
         add_reading(frame, json, 8, "voltsS" )
         add_reading(frame, json, 3, "distance" )
-        add_reading(frame, json, 2, "latitude", 0 )
-        lat = add_reading(frame, json, 2, "longitude", 1 )
-        lng = add_reading(frame, json, 2, "altitude", 2 )
+        lat = add_reading(frame, json, 2, "longitude", 0 )
+        lng = add_reading(frame, json, 2, "latitude", 1 )
+        alt = add_reading(frame, json, 2, "altitude", 2 )
 
         if lat is not None and lng is not None:
             json[0]['fields']["geohash"] =  geohash.encode(lat, lng)
+            json[0]['fields']["alt"] =  alt
             json[0]['tags']["location"] =  True
 
         print(json)
