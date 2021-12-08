@@ -101,7 +101,8 @@ struct HubConfig
 
   // GPRS Settings
   bool  gprsEnabled = true;
-  char  apn[32]    = "TM";      // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
+  //char  apn[32]    = "TM";      // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
+  char  apn[32]    = "econet.net";      // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
   char  gprsUser[16] = "";      // GPRS User
   char  gprsPass[16] = "";      // GPRS Password
 

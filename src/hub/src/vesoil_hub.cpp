@@ -409,8 +409,8 @@ void doModemStartGPRS()
   TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,9600);
   Serial.println("modem restart");
   modem.restart();  
-  String modemInfo = modem.getModemInfo();
-  //delay(1000);  
+  delay(1000);  
+  
   gsmStage = "Radio";
   modem_state=MODEM_NOT_CONNECTED;
 }
@@ -426,6 +426,10 @@ void waitForNetwork()
   SimStatus simStatus = modem.getSimStatus();
   RegStatus regStatus = modem.getRegistrationStatus();
   String thisgsmStatus = String("Sim: ") + String(simStatus, DEC) + String(" Reg: ") + String(regStatus, DEC);
+  String modemInfo = modem.getModemInfo();
+  Serial.printf("Siq Qual %s\n", String(modem.getSignalQuality(), DEC));
+  Serial.printf("Model Info %s\n", modemInfo);
+  Serial.printf("IMEI %s\n", modem.getIMEI());
 
   if (gsmStatus != thisgsmStatus)
   {
