@@ -5,6 +5,36 @@
 #define TRIGPIN      13
 #define ECHOPIN      2
 
+#ifdef TTGO_TBEAM_0_7
+
+#define BATTERY_PIN  35   // battery level measurement pin, here is the voltage divider connected
+#define BUSPWR       TBP_NO_PIN    // GPIO04 -- sensor bus power control
+#define PWRSDA       TBP_NO_PIN
+#define PWRSCL       TBP_NO_PIN
+#
+#define SCK          5    // GPIO5  -- SX1278's SCK
+#define MISO         19   // GPIO19 -- SX1278's MISO
+#define MOSI         27   // GPIO27 -- SX1278's MOSI
+#define SS           18   // GPIO18 -- SX1278's CS
+#define RST          23   // SX1278's RESET
+#define DI0          26   // SX1278's IRQ(Interrupt Request)
+
+#define FREQUENCY 868E6
+#define BAND      125E3   
+#define SPREAD       12   
+#define CODERATE      5
+#define SYNCWORD      0
+#define PREAMBLE      8
+#define TXPOWER      20   // max transmit power
+#define MINBATVOLTS 2.7   // minimum voltage on battery - if lower, device goes to deep sleep to recharge
+
+#define GPSRX        12
+#define GPSTX        15   
+#define GPSBAUD      9600
+
+#endif
+
+#ifdef TTGO_TBEAM_V8
 
 #define BATTERY_PIN  35   // battery level measurement pin, here is the voltage divider connected
 //#define BATTERY_PIN  -1   // battery level measurement pin, here is the voltage divider connected
@@ -33,6 +63,9 @@
 #define GPSRX        34   
 #define GPSTX        12   
 #define GPSBAUD      9600
+
+#endif
+
 
 struct SensorConfig
 {

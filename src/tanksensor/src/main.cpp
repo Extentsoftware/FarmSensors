@@ -9,7 +9,7 @@
 #include <main.h>
 #include "vesoil.h"
 
-TBeamPower power( PWRSDA, PWRSCL, BATTERY_PIN, BUSPWR);
+TBeamPower power(PWRSDA, PWRSCL, BATTERY_PIN, BUSPWR, LED_BUILTIN);
 
 TinyGPSPlus gps;                            
 struct SensorConfig config;
@@ -35,7 +35,6 @@ GPSLOCK GpsStatus() {
         return LOCK_WINDOW;
     }
 }
-
 
 float GetDistance() {
     // Define inputs and outputs
@@ -110,8 +109,30 @@ void setup() {
   startGPS();
 }
 
+bool waitForGps()
+{
+  for (int i = 0; i < config.gps_timeout; i++)
+  {
+
+    Serial.printf("waiting for GPS try: %d  Age:%u  valid: %d   %d\n", i, gps.location.age(), gps.location.isValid(), gps.time.isValid());
+
+    // check whethe we have  gps sig
+    if (gps.location.lat() != 0 && gps.location.isValid())
+    {
+      power.led_onoff(true);
+      return true;
+    }
+
+    power.flashlight(1);
+
+    smartDelay(1000);
+  }
+  power.led_onoff(false);
+  return false;
+}
+
 void loop() {
-  smartDelay(1000 * 60);
+  waitForGps();
   float distance =GetDistance();
   Serial.printf( " %f \n", distance);
   SendPacket(distance);
@@ -163,12 +184,17 @@ void startLoRa() {
   }  
 }
 
-void smartDelay(unsigned long ms) {
+void smartDelay(unsigned long ms)
+{
   unsigned long start = millis();
   do
   {
     while (Serial1.available())
-      gps.encode(Serial1.read());
+    {
+      char c = Serial1.read();
+      Serial.print(c);
+      gps.encode(c);
+    }
   } while (millis() - start < ms);
 }
 

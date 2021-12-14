@@ -15,6 +15,12 @@
 		},
 		{
 			"path": "src\\attinyprogrammer"
+		},
+		{
+			"path": "src\\locationsensor"
+		},
+		{
+			"path": "src\\tanksensor"
 		}
 	],
 	"settings": {

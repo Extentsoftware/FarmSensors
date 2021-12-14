@@ -85,11 +85,22 @@ def process_message(topic, payload:bytes):
         id2 = get_by_channel(frame,1)
         sensor = int(id1) + (int(id2) << 16)
         sensor_hex = hex(sensor)[2:]
+        name = sensor_hex
+        geohash_code = None
+
+        if sensor_hex in CONFIG["sensors"]:
+            sensor_config = CONFIG["sensors"][sensor_hex]
+            if "name" in sensor_config:
+                name = sensor_config["name"]
+            if "geohash" in sensor_config:
+                geohash_code = sensor_config["geohash"]
+
         json = [
                     {
                         "measurement": measurement,
                         "tags": {
                             "sensor": sensor_hex,
+                            "name": name,
                         },
                         "time": str(now), 
                         "fields": 
@@ -111,8 +122,14 @@ def process_message(topic, payload:bytes):
         alt = add_reading(frame, json, 2, "altitude", 2 )
 
         if lat is not None and lng is not None:
-            json[0]['fields']["geohash"] =  geohash.encode(lat, lng)
+            geohash_code =  geohash.encode(lat, lng)
+            json[0]['tags']["location"] =  True
+
+        if alt is not None:
             json[0]['fields']["alt"] =  alt
+
+        if geohash_code is not None:
+            json[0]['fields']["geohash"] =  geohash_code
             json[0]['tags']["location"] =  True
 
         print(json)
@@ -143,7 +160,6 @@ def _read_config():
         CONFIG = json.load(json_file)
 
 def main():
-    _read_config()
     _init_influxdb_database()
     _init_mqtt()
 
@@ -155,7 +171,8 @@ def getSensorValue(frame, type, channel):
 
 
 if __name__ == '__main__':
-    print('MQTT to InfluxDB bridge v1.12')
+    print('MQTT to InfluxDB bridge v1.13')
+    _read_config()
     
     # for testing
     #payload = b'\x00f\x80\x01f:\x02\x88\x07\xd6\x08\x00\x03\xfd\x00}\x14\x08t\x00\x00\x0ed\x00\x00\x00\x0b\x0fd\x00\x00\x009\x10d\x00\x00\x05\x1d'
