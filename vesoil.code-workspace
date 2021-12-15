@@ -21,6 +21,9 @@
 		},
 		{
 			"path": "src\\tanksensor"
+		},
+		{
+			"path": "src\\server"
 		}
 	],
 	"settings": {
