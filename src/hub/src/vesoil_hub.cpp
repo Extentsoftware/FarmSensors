@@ -72,11 +72,12 @@ SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
 
 
 
-const char thingName[] = "";                     // -- Initial name of the Thing. Used e.g. as SSID of the own Access Point.
-const char wifiInitialApPassword[] = "LoraHub";  // -- Initial password to connect to the Thing, when it creates an own Access Point.
+const char thingName[] = "Hub";               // -- Initial name of the Thing. Used e.g. as SSID of the own Access Point.
+const char wifiInitialApPassword[] = "";      // -- Initial password to connect to the Thing, when it creates an own Access Point.
+const char configVersion[] = "1.1";
 DNSServer dnsServer;
 WebServer server(80);
-IotWebConf iotWebConf(thingName, &dnsServer, &server, wifiInitialApPassword);
+IotWebConf iotWebConf(thingName, &dnsServer, &server, wifiInitialApPassword, configVersion);
 
 
 WiFiClient espClient;
@@ -550,6 +551,8 @@ void mqttWiFiConnect()
 bool isWifiConnected() {
 
   iotWebConf.doLoop();
+  mqttWifi.loop();
+
   int WiFiStatus = WiFi.status();
 
   if (WiFiStatus == WL_CONNECTED)
@@ -565,8 +568,6 @@ bool isWifiConnected() {
     {
         mqttWiFiConnect();
     }
-
-    mqttWifi.loop();
 
     lastMqttConnected = mqttConnected;
   }
@@ -646,8 +647,10 @@ void SendMQTTBinary(uint8_t *report, int packetSize)
 
 void loop() {
 
-  ModemCheck();
-  
+#ifdef HAS_GSM
+    ModemCheck();
+#endif
+
   wifiConnected = isWifiConnected();
 
   int packetSize = LoRa.parsePacket();
@@ -684,6 +687,7 @@ void handleRoot()
 }
 
 void setupWifi() {
+  iotWebConf.setStatusPin(LED_BUILTIN);
   iotWebConf.init();
 
   // -- Set up required URL handlers on the web server.
@@ -722,8 +726,11 @@ void setup() {
   startLoRa();
 
   doSetupWifiMQTT();
-  doSetupGprsMQTT();
   
+  #ifdef HAS_GSM
+  doSetupGprsMQTT();
+  #endif
+
   gsmStage = "Booting";
   gsmStatus = "";
 

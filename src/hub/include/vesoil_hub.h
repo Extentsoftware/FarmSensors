@@ -1,11 +1,6 @@
 #ifndef __VESOIL_HUB__
 #define __VESOIL_HUB__
 
-#define HAS_WIFI
-#define HAS_GSM
-#define HAS_DISPLAY
-#define HAS_LORA
-
 #define ERR_LOWPOWER  0x15  // 00010101
 #define INFO_WIFI     0x33  // 00110011
 #define INFO_NORMAL   0xAA  // 10101010
@@ -32,6 +27,7 @@
 #define OLED_RST      16
 #define OLED_ADDR     0x3C
 
+#define DEF        21
 #define PWRSDA        21
 #define PWRSCL        22
 #define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected

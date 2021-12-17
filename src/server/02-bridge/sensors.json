@@ -3,82 +3,102 @@
         "enabled": false,
         "address":"https://Bongo.azurefd.net/farm/sensor/listener/"
     },
+    "hubs":{
+        "14e71f3f" : {
+            "name": "14e71f3f",
+            "geohash": null,
+            "group": "Bongo"
+        }
+    },
     "sensors":{
         "14e71f3f" : {
             "name": "14e71f3f",
             "geohash": null,
+            "group": "Bongo",
             "farmos_privatekey": "f5dbf8ec23210301455d3a5a37be675b",
             "farmos_publickey": "0a104c3f96578e22c38474a894c75a6c"
         },
         "14e72834" : {
             "name": "B2-S1A",
             "geohash": "ksrm7b0402hv",
+            "group": "Bongo",
             "farmos_privatekey": "f5dbf8ec23210301455d3a5a37be675b",
             "farmos_publickey": "0a104c3f96578e22c38474a894c75a6c"
         },
         "14e72c27" : {
             "name": "14e72c27",
             "geohash": null,
+            "group": "Bongo",
             "farmos_privatekey": "f5dbf8ec23210301455d3a5a37be675b",
             "farmos_publickey": "0a104c3f96578e22c38474a894c75a6c"
         },
         "14e73338" : {
             "name": "14e73338",
             "geohash": null,
+            "group": "Bongo",
             "farmos_privatekey": "f5dbf8ec23210301455d3a5a37be675b",
             "farmos_publickey": "0a104c3f96578e22c38474a894c75a6c"
         },
         "59830934" : {
             "name": "B2-S6",
             "geohash": null,
+            "group": "Bongo",
             "farmos_privatekey": "ebbdb16b6e87ddc2314cd55bc970a358",
             "farmos_publickey": "311ca5b09ede5883bf9272a2e26bd7bf"
         },
         "59830b10":{
             "name": "B2-S3",
             "geohash": null,
+            "group": "Bongo",
             "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",
             "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
         },
         "59830b2d":{
             "name": "59830b2d",
             "geohash": null,
+            "group": "Bongo",
             "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",
             "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
         },
         "59830c18":{
             "name": "59830c18",
             "geohash": null,
+            "group": "Bongo",
             "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",
             "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
         },
         "59830e21":{
             "name": "B2-S5",
             "geohash": null,
+            "group": "Bongo",
             "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",
             "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
         },
         "59830f12":{
             "name": "59830f12",
             "geohash": null,
+            "group": "Bongo",
             "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",
             "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
         },
         "59833910":{
             "name": "B2-S2",
             "geohash": "ksrhyut8jz3m",
+            "group": "Bongo",
             "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",
             "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
         },
         "59833a14":{
             "name": "59833a14",
             "geohash": null,
+            "group": "Bongo",
             "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",
             "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
         },
         "59833b24":{
             "name": "B2-S7",
             "geohash": null,
+            "group": "Bongo",
             "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",
             "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
         }
