@@ -428,9 +428,9 @@ void waitForNetwork()
   RegStatus regStatus = modem.getRegistrationStatus();
   String thisgsmStatus = String("Sim: ") + String(simStatus, DEC) + String(" Reg: ") + String(regStatus, DEC);
   String modemInfo = modem.getModemInfo();
-  Serial.printf("Siq Qual %s\n", String(modem.getSignalQuality(), DEC));
-  Serial.printf("Model Info %s\n", modemInfo);
-  Serial.printf("IMEI %s\n", modem.getIMEI());
+  Serial.printf("Siq Qual %s\n", String(modem.getSignalQuality(), DEC).c_str());
+  Serial.printf("Model Info %s\n", modemInfo.c_str());
+  Serial.printf("IMEI %s\n", modem.getIMEI().c_str());
 
   if (gsmStatus != thisgsmStatus)
   {

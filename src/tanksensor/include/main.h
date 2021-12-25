@@ -34,7 +34,7 @@
 
 #endif
 
-#ifdef TTGO_TBEAM_V8
+#ifdef TTGO_TBEAM_1_1
 
 #define BATTERY_PIN  35   // battery level measurement pin, here is the voltage divider connected
 //#define BATTERY_PIN  -1   // battery level measurement pin, here is the voltage divider connected
