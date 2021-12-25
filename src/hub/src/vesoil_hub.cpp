@@ -428,9 +428,10 @@ void waitForNetwork()
   RegStatus regStatus = modem.getRegistrationStatus();
   String thisgsmStatus = String("Sim: ") + String(simStatus, DEC) + String(" Reg: ") + String(regStatus, DEC);
   String modemInfo = modem.getModemInfo();
-  Serial.printf("Siq Qual %s\n", String(modem.getSignalQuality(), DEC).c_str());
-  Serial.printf("Model Info %s\n", modemInfo.c_str());
-  Serial.printf("IMEI %s\n", modem.getIMEI().c_str());
+  Serial.printf("%s\n", thisgsmStatus.c_str());
+  //Serial.printf("Siq Qual %s\n", String(modem.getSignalQuality(), DEC).c_str());
+  //Serial.printf("Model Info %s\n", modemInfo.c_str());
+  //Serial.printf("IMEI %s\n", modem.getIMEI().c_str());
 
   if (gsmStatus != thisgsmStatus)
   {
@@ -703,6 +704,7 @@ void setup() {
   pinMode(BTN1, INPUT);        // Button 1
   Serial.begin(115200);
   while (!Serial);
+  delay(2000); 
   Serial.println();
   Serial.println("VESTRONG LaPoulton LoRa HUB");
 
