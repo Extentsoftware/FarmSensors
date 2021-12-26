@@ -27,7 +27,7 @@
 #define OLED_RST      16
 #define OLED_ADDR     0x3C
 
-#define DEF        21
+#define DEF           21
 #define PWRSDA        21
 #define PWRSCL        22
 #define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected
