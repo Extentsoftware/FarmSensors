@@ -33,9 +33,6 @@
 #define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected
 #define BUSPWR        4       // GPIO04 -- sensor bus power control
 
-#define AT_RX        13
-#define AT_TX        12
-
 #undef  HASPSRAM
 
 #define BTN1          0 
@@ -119,14 +116,10 @@ void getConfig(STARTUPMODE startup_mode);
 STARTUPMODE getStartupMode();
 void flashlight(char code);
 void startLoRa();
-void doModemStart();
-bool doNetworkConnect();
-void doSetupMQTT();
 void SendMQTTBinary(uint8_t *report, int packetSize);
 void InitOLED();
 void DisplayPage(int page);
 void ShowNextPage();
-void ModemCheck();
 void setup();
 
 #endif

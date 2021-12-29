@@ -33,7 +33,13 @@
 		},
 		"files.associations": {
 			"functional": "cpp",
-			"*.tpp": "cpp"
+			"*.tpp": "cpp",
+			"netfwd": "cpp",
+			"optional": "cpp",
+			"new": "cpp",
+			"streambuf": "cpp",
+			"typeinfo": "cpp",
+			"atomic": "cpp"
 		}
 	}
 }

@@ -12,44 +12,9 @@
 static const char * TAG = "Hub";
 
 #define SerialMon Serial
-
-
-#define TINY_GSM_MODEM_SIM800
-#define TINY_GSM_RX_BUFFER   1024
-#define TINY_GSM_DEBUG SerialMon
-#define GSM_AUTOBAUD_MIN 9600
-#define GSM_AUTOBAUD_MAX 115200
-#define TINY_GSM_USE_GPRS true
-#define TINY_GSM_USE_WIFI false
-#define GSM_PIN ""
-
-const char * Msg_Quality = "Db ";
-const char * Msg_Network = "Radio";
-const char * Msg_GPRS    = "GPRS";
-const char * Msg_MQTT    = "MQTT";
-
-const char * Msg_Failed     = "Failed";
-const char * Msg_Connected  = "Connected";
-const char * Msg_Connecting = "Connecting";
-const char * Msg_FailedToConnect = "Failed Connection";
-char gpsjson[32];
-
-enum MODEM_STATE
-{
-    MODEM_INIT,
-    MODEM_NOT_CONNECTED,
-    MODEM_CONNECTED,
-    GPRS_CONNECTED,
-    MQ_CONNECTED,
-};
-
-enum MODEM_STATE modem_state=MODEM_INIT;
-
 #define APP_VERSION 1
 
-//#include <ESPAsyncWebServer.h>
 #include <vesoil.h>
-#include <SmartWifi.h>
 #include <SPI.h>
 #include <Wire.h>  
 #include <LoRa.h>
@@ -57,19 +22,15 @@ enum MODEM_STATE modem_state=MODEM_INIT;
 #include <FS.h>
 #include <SPIFFS.h>
 #include <CayenneLPP.h>
-#include <TinyGsmClient.h>
-#include <PubSubClient.h>
-#include <geohash.h>
-#include <SoftwareSerial.h>
 #include <IotWebConf.h>
-#include <StreamDebugger.h>
+#include "mqtt_wifi.h"
+#include "mqtt_gsm.h"
 #include "vesoil_hub.h"
 
 #ifdef HAS_OLED
 #include <SSD1306.h>
 SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
 #endif
-
 
 #ifdef HAS_WIFI
 const char thingName[] = "Hub";               // -- Initial name of the Thing. Used e.g. as SSID of the own Access Point.
@@ -78,21 +39,13 @@ const char configVersion[] = "1.1";
 DNSServer dnsServer;
 WebServer server(80);
 IotWebConf iotWebConf(thingName, &dnsServer, &server, wifiInitialApPassword, configVersion);
-WiFiClient espClient;
-int lastWifiStatus=-1;
-int lastMqttConnected=-1;
-PubSubClient mqttWifi(espClient);
+MqttWifiClient mqttWifiClient;
 #endif
 
-SoftwareSerial SerialAT(AT_RX, AT_TX, false);
-//StreamDebugger debugger(SerialAT, Serial);
-TinyGsm modem(SerialAT);
-TinyGsmClient client(modem);
-PubSubClient mqttGPRS(client);
+#ifdef HAS_GSM
+MqttGsmClient mqttGPRS;
+#endif
 
-GeoHash hasher(8);
-
-//AsyncWebServer server(80);
 Preferences preferences;
 float snr = 0;                        // signal noise ratio
 float rssi = 0;                       // Received Signal Strength Indicator
@@ -106,10 +59,7 @@ int buttonState = HIGH;               // the current reading from the input pin
 unsigned long lastButtonTime = 0;     // the last time the output pin was toggled
 unsigned long debounceDelay = 50;     // the debounce time; increase if the output flickers
 unsigned long btnLongDelay = 1000;    // the debounce time; increase if the output flickers
-String address;                       // current ipaddress
 
-String gsmStage;
-String gsmStatus;
 String wifiStatus;
 
 int currentPage=0;
@@ -118,7 +68,7 @@ bool haveReport=false;
 
 struct HubConfig config;
 
-const int wdtTimeout = 60000; //time in ms to trigger the watchdog
+const int wdtTimeout = 30000; //time in ms to trigger the watchdog
 hw_timer_t *timer = NULL;
 
 void resetModule() {
@@ -139,6 +89,11 @@ void setupWatchdog()
   timerAlarmEnable(timer); //enable interrupt
 }
 
+void displayUpdate()
+{
+  DisplayPage(currentPage);
+}
+
 void ShowNextPage()
 {
     currentPage++;
@@ -146,8 +101,10 @@ void ShowNextPage()
     if (currentPage==6)
       currentPage=0;
 
-    DisplayPage(currentPage);
+    displayUpdate();
 }
+
+#ifdef HAS_DISPLAY
 
 #define L1 0
 #define L2 12
@@ -157,8 +114,6 @@ void ShowNextPage()
 #define C1 0
 #define C2 32
 #define C3 64
-
-#ifdef HAS_DISPLAY
 
 void DisplayPage(int page)
 {
@@ -171,8 +126,8 @@ void DisplayPage(int page)
         // status
         case 0:
           display.drawString(C1, L1, "GSM");
-          display.drawString(C2, L1, gsmStage);
-          display.drawString(C3, L1, gsmStatus);
+          display.drawString(C2, L1, mqttGPRS.getGsmStage());
+          display.drawString(C3, L1, mqttGPRS.getGsmStatus());
 
           display.drawString(C1, L2, "WiFi");
           display.drawString(C2, L2, wifiStatus);
@@ -183,7 +138,6 @@ void DisplayPage(int page)
           break;
         case 1:
           display.drawString(0, 0, "Wifi Status");
-          display.drawString(C2, L2, address);
           if (wifiConnected)
           {
             display.drawString(C1, L2, "On");
@@ -237,14 +191,12 @@ void InitOLED() {
   delay(50); 
   digitalWrite(OLED_RST, HIGH); // while OLED is running, must set GPIO16 in high、
   delay(50); 
-
   display.init();
   display.displayOn();
-  //display.flipScreenVertically();  
   display.clear();
   display.drawString(0, 0, "Starting..");
-  
 }
+
 #endif
 
 void getConfig(STARTUPMODE startup_mode) {
@@ -390,7 +342,7 @@ void readLoraData(int packetSize)
        
     SendMQTTBinary(lpp._buffer, lpp._cursor);
   }
-  DisplayPage(currentPage);
+  displayUpdate();
 }
 
 #endif
@@ -398,7 +350,7 @@ void readLoraData(int packetSize)
 void mqttCallback(char* topic, byte* payload, unsigned int len) {
   incomingCount++;
   snprintf(incomingMessage, sizeof(incomingMessage), "#%d %s",incomingCount, (char *) payload);
-  DisplayPage(currentPage);
+  displayUpdate();
 }
 
 void GetMyMacAddress()
@@ -408,247 +360,25 @@ void GetMyMacAddress()
   snprintf(macStr, sizeof(macStr), "%02x%02x%02x%02x%02x%02x", array[0], array[1], array[2], array[3], array[4], array[5]);
 }
 
-#ifdef HAS_GSM
-void doSetupGprsMQTT()
-{
-  mqttGPRS.setServer(config.broker, 1883);
-  mqttGPRS.setCallback(mqttCallback);
-}
-
-
-void doModemStartGPRS()
-{  
-  Serial.println("Modem Start");
-  gsmStage = "Modem";
-  gsmStatus = "Starting";
-  DisplayPage(currentPage);
-
-  TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,9600);
-  delay(1000); 
-  Serial.println("modem restart");
-  modem.restart();  
-  delay(1000);  
-  
-  gsmStage = "Radio";
-  modem_state=MODEM_NOT_CONNECTED;
-}
-
-void doModemStart()
-{  
-    if (config.gprsEnabled)
-    {
-      doModemStartGPRS();
-    }
-}
-
-void waitForNetwork() 
-{
-  static int counter = 0;
-  counter += 1;
-  if ( (counter % 1000) == 0)
-  {
-    Serial.printf("Signal Quality %s\n", String(modem.getSignalQuality(), DEC).c_str());
-    if (modem.isNetworkConnected()) 
-    { 
-      gsmStage = Msg_Network;
-      gsmStatus = Msg_Connected;
-      DisplayPage(currentPage);
-      modem_state=MODEM_CONNECTED;
-      Serial.printf("Connected to GSM network\n");
-    }
-  }
-}
-
-void doGPRSConnect()
-{
-  Serial.println("GPRS Connect");
-
-  gsmStage = Msg_GPRS;
-  gsmStatus = Msg_Connecting;
-  DisplayPage(currentPage);
-    
-  bool connected = modem.gprsConnect(config.apn, config.gprsUser, config.gprsPass);    
-
-  gsmStatus = (char*)(connected ? Msg_Connected : Msg_Failed);
-  DisplayPage(currentPage);
-
-  if (connected) 
-  { 
-    Serial.println("GPRS Connected");
-    modem_state=GPRS_CONNECTED;
-  }
-}
-
-void mqttGPRSConnect()
+void SendMQTTBinary(uint8_t *report, int packetSize)
 {
   char topic[32];
-
-  if (!mqttGPRS.connected())
-  {
-    gsmStage = Msg_MQTT;
-    gsmStatus = Msg_Connecting;
-    DisplayPage(currentPage);
-    boolean mqttConnected = mqttGPRS.connect(macStr);
-    if (!mqttConnected)
-    {
-      gsmStatus = Msg_FailedToConnect;
-    }
-    else
-    {
-      sprintf(topic, "bongo/%s/hub", macStr);
-      mqttGPRS.subscribe(topic);  
-      mqttGPRS.publish(topic, "{\"state\":\"connected\"}", true);
-      Serial.println("MQTT connected via GPRS");
-      modem_state=MQ_CONNECTED;
-    }
-  }
-}  
-
-
-void mqttGPRSPoll()
-{
-  static int counter = 0;
-  counter += 1;
-  if ( (counter % 1000) == 0)
-  {
-    //String dt = modem.getGSMDateTime( DATE_FULL );
-    Serial.printf("Poll..");
-    bool gprsConnected = modem.isGprsConnected();
-    bool netConnected = modem.isNetworkConnected();
-    bool clientConnected = client.connected();
-    Serial.printf("Signal Quality %s Connections network=%d GPRS=%d client=%d\n", String(modem.getSignalQuality(), DEC).c_str(), netConnected, gprsConnected, clientConnected);
-    if (!gprsConnected)
-    {
-      Serial.printf("GPRS Disconnected\n");
-      modem_state=MODEM_NOT_CONNECTED;
-    }
-  }
-  mqttGPRS.loop();
-}
-
-void ModemCheck()
-{
-  static int counter = 0;
-  counter += 1;
-  if ( (counter % 1000) == 0)
-  {
-    Serial.printf("S=%d ",modem_state);
-  }
-
-  switch(modem_state)
-  {
-    case MODEM_INIT:
-      doModemStart();
-      break;
-    case MODEM_NOT_CONNECTED:
-      waitForNetwork();
-      break;
-    case MODEM_CONNECTED:
-      doGPRSConnect();
-      break;
-    case GPRS_CONNECTED:
-      mqttGPRSConnect();
-      break;      
-    case MQ_CONNECTED:
-      gsmStatus = Msg_Connected;
-      mqttGPRSPoll();
-      break;      
-  }
-}
-
-
-#endif
+  sprintf(topic, "bongo/%s/sensor", macStr);
 
 #ifdef HAS_WIFI
+  if (mqttWifiClient.sendMQTTBinary(report, packetSize))
+    return;
+#endif
 
-void doSetupWifiMQTT()
-{
-  mqttWifi.setCallback(mqttCallback);
-  mqttWifi.setServer(config.broker,1883);
+#ifdef HAS_GSM
+  if (mqttGPRS.sendMQTTBinary(report, packetSize))
+    return;
+#endif
+
+  Serial.printf("MQTT Failed, GPRS and WiFi not connected\n");
+  return;
 }
 
-void mqttWiFiConnect()
-{
-  char topic[32];
-
-  boolean mqttConnected = mqttWifi.connect(macStr);
-  if (mqttConnected)
-  {
-    Serial.printf("MQTT Connected over WiFi\n");
-    sprintf(topic, "bongo/%s/hub", macStr);
-    mqttWifi.subscribe(topic);  
-    mqttWifi.publish(topic, "{\"state\":\"connected\"}", true);
-  }
-}  
-
-bool isWifiConnected() {
-
-  iotWebConf.doLoop();
-
-  iotwebconf::NetworkState iotState = iotWebConf.getState();
-  if (iotState !=  iotwebconf::NetworkState::OnLine)
-  {
-    static const char *enum_str[] = { "Boot", "Not configured", "APMode", "Connecting", "Online", "Offline" };
-
-    wifiStatus = enum_str[iotState];
-    DisplayPage(currentPage);
-    return false;
-  }
-  
-  mqttWifi.loop();
-
-  int status = WiFi.status();
-
-  if (status == WL_CONNECTED)
-  {
-    int mqttConnected = mqttWifi.connected() ? 1:0;
-    if (lastMqttConnected != mqttConnected)
-    {
-        wifiStatus = mqttConnected==1?"MQTT Connected":"MQTT Disconnected";
-        DisplayPage(currentPage);
-    }
-
-    if (mqttConnected==0)
-    {
-        mqttWiFiConnect();
-    }
-
-    lastMqttConnected = mqttConnected;
-  }
-  else
-  {
-    if (lastWifiStatus != status)
-    {
-        switch (status) {
-          case WL_CONNECTED:
-            wifiStatus = "Connected";
-            break;
-          case WL_IDLE_STATUS:
-            wifiStatus = "Idle";
-            break;
-          case WL_NO_SSID_AVAIL:
-            wifiStatus = "No SSID";
-            break;
-          case WL_SCAN_COMPLETED:
-            wifiStatus = "Scan done";
-            break;
-          case WL_CONNECT_FAILED:
-            wifiStatus = "Connect failed";
-            break;
-          case WL_CONNECTION_LOST:
-            wifiStatus = "Connect lost";
-            break;
-          case WL_DISCONNECTED:
-            wifiStatus = "Disconnected";
-            break;
-      }
-      DisplayPage(currentPage);
-    }
-  }
-
-  lastWifiStatus = status;
-  return mqttWifi.connected();
-}
 
 void handleRoot()
 {
@@ -666,7 +396,7 @@ void handleRoot()
   server.send(200, "text/html", s);
 }
 
-void setupWifi() {
+void setupWifiConfigurator() {
   iotWebConf.setStatusPin(LED_BUILTIN);
   iotWebConf.init();
   
@@ -676,55 +406,41 @@ void setupWifi() {
   server.onNotFound([](){ iotWebConf.handleNotFound(); });
 }
 
-#endif
 
-void SendMQTTBinary(uint8_t *report, int packetSize)
-{
-  char topic[32];
-  sprintf(topic, "bongo/%s/sensor", macStr);
+void SystemCheck() {
+  Serial.printf("Rev %u Freq %d \n", ESP.getChipRevision(), ESP.getCpuFreqMHz());
+  Serial.printf("PSRAM avail %u free %u\n", ESP.getPsramSize(), ESP.getFreePsram());
+  Serial.printf("FLASH size  %u spd  %u\n", ESP.getFlashChipSize(), ESP.getFlashChipSpeed());
+  Serial.printf("HEAP  size  %u free  %u\n", ESP.getHeapSize(), ESP.getFreeHeap());
+}
 
-#ifdef HAS_WIFI
-  if (mqttWifi.connected())
+void loop() {
+
+  static int counter = 0;
+  counter += 1;
+  if ( (counter % 100) == 0)
   {
-      if (!mqttWifi.publish(topic, report, packetSize))
-      {
-        Serial.printf("MQTT Wifi Fail\n");
-      } 
-      else
-      {
-        Serial.printf("MQTT Sent Wifi %d bytes to %s\n", packetSize, topic);
-      }
-      return;
-  }
-#endif
+    Serial.printf("x");
+  }  
 
 #ifdef HAS_GSM
-  
-  if (!mqttGPRS.publish(topic, report, packetSize))
+    mqttGPRS.ModemCheck();
+#endif
+
+#ifdef HAS_WIFI
+  iotWebConf.doLoop();
+  iotwebconf::NetworkState iotState = iotWebConf.getState();
+  if (iotState !=  iotwebconf::NetworkState::OnLine)
   {
-    Serial.printf("MQTT GPRS Fail\n");
+    static const char *enum_str[] = { "Boot", "Not configured", "APMode", "Connecting", "Online", "Offline" };
+
+    wifiStatus = enum_str[iotState];
+    displayUpdate();
   }
   else
   {
-    Serial.printf("MQTT Sent GPRS %d bytes to %s\n", packetSize, topic);
+    wifiConnected = mqttWifiClient.isWifiConnected();
   }
-  return;    
-#endif
-
-  Serial.printf("MQTT Failed, GPRS and WiFi not connected\n");
-  return;
-}
-
-
-void loop() {
-  clrWatchdog();
-
-#ifdef HAS_GSM
-  ModemCheck();
-#endif
-
-#ifdef HAS_WIFI
-  wifiConnected = isWifiConnected();
 #endif
 
   int packetSize = LoRa.parsePacket();
@@ -735,13 +451,8 @@ void loop() {
   {
     ShowNextPage();
   }
-}
 
-void SystemCheck() {
-  Serial.printf("Rev %u Freq %d \n", ESP.getChipRevision(), ESP.getCpuFreqMHz());
-  Serial.printf("PSRAM avail %u free %u\n", ESP.getPsramSize(), ESP.getFreePsram());
-  Serial.printf("FLASH size  %u spd  %u\n", ESP.getFlashChipSize(), ESP.getFlashChipSpeed());
-  Serial.printf("HEAP  size  %u free  %u\n", ESP.getHeapSize(), ESP.getFreeHeap());
+  clrWatchdog();
 }
 
 void setup() {
@@ -767,25 +478,21 @@ void setup() {
 
   Serial.println("system check");
   SystemCheck();
-
-#ifdef HAS_WIFI
-  setupWifi();
-  doSetupWifiMQTT();
-#endif
-
   GetMyMacAddress();
 
-  startLoRa();
-
-  
-#ifdef HAS_GSM
-  doSetupGprsMQTT();
+#ifdef HAS_WIFI
+  setupWifiConfigurator();
+  mqttWifiClient.init(config.broker, macStr, mqttCallback, displayUpdate);
+  mqttWifiClient.doSetupWifiMQTT();
 #endif
 
-  gsmStage = "Booting";
-  gsmStatus = "";
+  startLoRa();
+  
+#ifdef HAS_GSM
+  mqttGPRS.init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, mqttCallback, displayUpdate);
+#endif
 
-  DisplayPage(currentPage);
+  displayUpdate();
 
   Serial.printf("End of setup\n");
 

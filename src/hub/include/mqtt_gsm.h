@@ -1,0 +1,82 @@
+#ifndef __MQTT_GSM__
+#define __MQTT_GSM__
+
+#define SerialMon Serial
+
+#include <PubSubClient.h>
+#include <SoftwareSerial.h>
+#include <StreamDebugger.h>
+
+#define TINY_GSM_MODEM_SIM800
+#define TINY_GSM_RX_BUFFER   1024
+#define TINY_GSM_DEBUG SerialMon
+#define GSM_AUTOBAUD_MIN 9600
+#define GSM_AUTOBAUD_MAX 115200
+#define TINY_GSM_USE_GPRS true
+#define TINY_GSM_USE_WIFI false
+#define GSM_PIN ""
+#define AT_RX        13
+#define AT_TX        12
+
+#include <TinyGsm.h>
+#include <TinyGsmClient.h>
+
+enum MODEM_STATE
+{
+    MODEM_INIT,
+    MODEM_NOT_CONNECTED,
+    MODEM_CONNECTED,
+    GPRS_CONNECTED,
+    MQ_CONNECTED,
+};
+
+class MqttGsmClient 
+{
+  public:
+    MqttGsmClient();
+    void init(
+      char *broker, 
+      char *macStr, 
+      char *apn,
+      char *gprsUser,
+      char *gprsPass,
+      std::function<void(char*, byte*, unsigned int)> callback, 
+      std::function<void()> displayUpdate);
+    void ModemCheck();
+    String getGsmStage();
+    String getGsmStatus();
+    bool sendMQTTBinary(uint8_t *report, int packetSize);
+
+  private:
+    void doModemStart();
+    void waitForNetwork();
+    void doGPRSConnect();
+    void mqttGPRSConnect();
+    void mqttGPRSPoll();
+    enum MODEM_STATE modem_state=MODEM_INIT;
+    std::function<void(char*, byte*, unsigned int)> _callback;
+    std::function<void()> _displayUpdate;
+    String _gsmStage= "Booting";
+    String _gsmStatus = "";
+    char * _macStr;
+    char * _apn;
+    char * _gprsUser;
+    char * _gprsPass;
+    SoftwareSerial SerialAT;
+    StreamDebugger debugger;
+    TinyGsm _modem;
+    TinyGsmClient _client;
+    PubSubClient _mqttGPRS;
+    const char *_broker;
+    const char * Msg_Quality = "Db ";
+    const char * Msg_Network = "Radio";
+    const char * Msg_GPRS    = "GPRS";
+    const char * Msg_MQTT    = "MQTT";
+
+    const char * Msg_Failed     = "Failed";
+    const char * Msg_Connected  = "Connected";
+    const char * Msg_Connecting = "Connecting";
+    const char * Msg_FailedToConnect = "Failed Connection";
+};
+
+#endif
