@@ -3,9 +3,10 @@
 #define SerialMon Serial
 
 MqttGsmClient::MqttGsmClient() 
-  : Seri alAT(AT_RX, AT_TX, false)
+  : SerialAT(AT_RX, AT_TX, false)
   , debugger(SerialAT, Serial)
   , _modem(debugger)
+  //, _modem(SerialAT)
   , _client(_modem)
   , _mqttGPRS(_client)
 {
@@ -66,13 +67,16 @@ void MqttGsmClient::doModemStart()
   _gsmStage = "Modem";
   _gsmStatus = "Starting";
   _displayUpdate();
-  TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,9600);
-  delay(1000); 
+  uint32_t rate = TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,19200);
 
-  Serial.println("modem restarting");
-  _modem.restart();  
-  Serial.println("modem restarted");
-  delay(1000);  
+  Serial.printf("modem baud rate %d\n", rate);
+  if (rate==0)
+    return;
+
+  bool restarted = _modem.restart();  
+  Serial.printf("modem restarted %d\n", restarted?1:0);
+  if (!restarted)
+    return;
   
   _gsmStage = "Radio";
   modem_state=MODEM_NOT_CONNECTED;
