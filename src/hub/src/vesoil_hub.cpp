@@ -68,7 +68,7 @@ bool haveReport=false;
 
 struct HubConfig config;
 
-const int wdtTimeout = 30000; //time in ms to trigger the watchdog
+const int wdtTimeout = 60000; //time in ms to trigger the watchdog
 hw_timer_t *timer = NULL;
 
 void resetModule() {
