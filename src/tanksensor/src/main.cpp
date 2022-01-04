@@ -59,7 +59,7 @@ void SendPacket(float distance)
     uint32_t chipid_l = chipid[0] + (chipid[1]<<8) + (chipid[2]<<16) + (chipid[3]<<24);
     uint32_t chipid_h = chipid[4] + (chipid[5]<<8) + (chipid[6]<<16) + (chipid[7]<<24);
 
-    float volts = power.get_battery_voltage();
+    float volts = power.get_supply_voltage();
     
 
     CayenneLPP lpp(64);
@@ -75,7 +75,6 @@ void SendPacket(float distance)
     Serial.print( volts);
     Serial.printf( " distance ");
     Serial.print( distance );
-    Serial.printf( " Tx Size=%d .. \n", lpp.getSize());
 
     if (GpsStatus() == LOCK_OK)
     {
@@ -88,13 +87,15 @@ void SendPacket(float distance)
       lpp.addGPS(CH_GPS, (float)gps.location.lat(), (float)gps.location.lng(), gps.altitude.feet());
     }
 
-    Serial.printf( " Tx Size=%d .. \n", lpp.getSize());
+    Serial.printf( " Tx Size=%d .. ", lpp.getSize());
 
     power.led_onoff(true);
     LoRa.beginPacket();
     LoRa.write( (const uint8_t *)lpp.getBuffer(), lpp.getSize());
     LoRa.endPacket();
     power.led_onoff(false);
+    
+    Serial.printf( " done\n");
 }
 
 void setup() {
@@ -116,7 +117,7 @@ bool waitForGps()
 
     Serial.printf("waiting for GPS try: %d  Age:%u  valid: %d   %d\n", i, gps.location.age(), gps.location.isValid(), gps.time.isValid());
 
-    // check whethe we have  gps sig
+    // check whether we have a gps signal
     if (gps.location.lat() != 0 && gps.location.isValid())
     {
       power.led_onoff(true);
@@ -136,7 +137,10 @@ void loop() {
   float distance =GetDistance();
   Serial.printf( " %f \n", distance);
   SendPacket(distance);
-  power.deep_sleep(60*4);
+
+  int delay = 60*4;
+  Serial.printf( " sleeping for %d seconds\n", delay);
+  power.deep_sleep(delay);
 }
 
 void stopLoRa()
@@ -192,7 +196,7 @@ void smartDelay(unsigned long ms)
     while (Serial1.available())
     {
       char c = Serial1.read();
-      Serial.print(c);
+      //Serial.print(c);
       gps.encode(c);
     }
   } while (millis() - start < ms);
