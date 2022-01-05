@@ -1,15 +1,12 @@
 #include "mqtt_gsm.h"
 
-#define SerialMon Serial
-
-MqttGsmClient::MqttGsmClient() 
-  : SerialAT(AT_RX, AT_TX, false)
-  , debugger(SerialAT, Serial)
-  , _modem(debugger)
-  //, _modem(SerialAT)
+MqttGsmClient::MqttGsmClient(int rx, int tx) 
+  : SerialAT(rx, tx, false)
+  , _modem(SerialAT)
   , _client(_modem)
   , _mqttGPRS(_client)
 {
+  
 }
 
 void MqttGsmClient::init(
@@ -88,9 +85,9 @@ void MqttGsmClient::waitForNetwork()
   counter += 1;
   if ( (counter % 1000) == 0)
   {
-    uint8_t chargeState;
-    int8_t percent;
-    uint16_t milliVolts;
+    uint8_t chargeState=0;
+    int8_t percent=0;
+    uint16_t milliVolts=0;
     _modem.getBattStats(chargeState, percent, milliVolts);
     Serial.printf("Signal Quality %s Chrg %d Percent %d Volts %d\n", String(_modem.getSignalQuality(), DEC).c_str(), chargeState, percent, milliVolts);
     if (_modem.isNetworkConnected()) 
@@ -170,7 +167,7 @@ void MqttGsmClient::mqttGPRSPoll()
   _mqttGPRS.loop();
 }
 
-void MqttGsmClient::ModemCheck()
+bool MqttGsmClient::ModemCheck()
 {
   static int counter = 0;
   counter += 1;
@@ -198,4 +195,11 @@ void MqttGsmClient::ModemCheck()
       mqttGPRSPoll();
       break;      
   }
+
+  return isConnected();
+}
+
+bool MqttGsmClient::isConnected()
+{
+  return (modem_state == MQ_CONNECTED);
 }

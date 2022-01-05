@@ -26,6 +26,7 @@ static const char * TAG = "Hub";
 #include "mqtt_wifi.h"
 #include "mqtt_gsm.h"
 #include "vesoil_hub.h"
+#include <wd.h>
 
 #ifdef HAS_OLED
 #include <SSD1306.h>
@@ -43,7 +44,10 @@ MqttWifiClient mqttWifiClient;
 #endif
 
 #ifdef HAS_GSM
-MqttGsmClient mqttGPRS;
+#define AT_RX        13
+#define AT_TX        12
+#define TINY_GSM_DEBUG SerialMon
+MqttGsmClient mqttGPRS(AT_RX, AT_TX);
 #endif
 
 Preferences preferences;
@@ -55,6 +59,7 @@ char incomingMessage[128];            // incoming mqtt
 int  incomingCount=0;
 int packetcount=0;
 bool wifiConnected=false;
+bool gprsConnected=false;
 int buttonState = HIGH;               // the current reading from the input pin
 unsigned long lastButtonTime = 0;     // the last time the output pin was toggled
 unsigned long debounceDelay = 50;     // the debounce time; increase if the output flickers
@@ -68,25 +73,20 @@ bool haveReport=false;
 
 struct HubConfig config;
 
-const int wdtTimeout = 60000; //time in ms to trigger the watchdog
-hw_timer_t *timer = NULL;
+const int lockupTimeout = 60000; //time in ms to trigger the watchdog
+Watchdog lockupWatchdog;
 
-void resetModule() {
-  ets_printf("WDT triggered\n");
+const int connectionTimeout = 60000; //time in ms to trigger the watchdog
+Watchdog connectionWatchdog;
+
+void resetModuleFromLockup() {
+  ets_printf("WDT triggered from lockup\n");
   esp_restart();
 }
 
-void clrWatchdog()
-{
-  timerWrite(timer, 0); //reset timer (feed watchdog)
-}
-
-void setupWatchdog()
-{
-  timer = timerBegin(0, 80, true); //timer 0, div 80
-  timerAttachInterrupt(timer, &resetModule, true); //attach callback
-  timerAlarmWrite(timer, wdtTimeout * 1000, false); //set time in us
-  timerAlarmEnable(timer); //enable interrupt
+void resetModuleFromNoConnection() {
+  ets_printf("WDT triggered from no connection\n");
+  esp_restart();
 }
 
 void displayUpdate()
@@ -424,7 +424,7 @@ void loop() {
   }  
 
 #ifdef HAS_GSM
-    mqttGPRS.ModemCheck();
+    gprsConnected = mqttGPRS.ModemCheck();
 #endif
 
 #ifdef HAS_WIFI
@@ -451,8 +451,11 @@ void loop() {
   {
     ShowNextPage();
   }
+  
+  lockupWatchdog.clrWatchdog();
 
-  clrWatchdog();
+  if (gprsConnected || wifiConnected)
+    connectionWatchdog.clrWatchdog();
 }
 
 void setup() {
@@ -496,5 +499,6 @@ void setup() {
 
   Serial.printf("End of setup\n");
 
-  setupWatchdog();
+  lockupWatchdog.setupWatchdog(lockupTimeout, resetModuleFromLockup);
+  connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
 }

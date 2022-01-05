@@ -1,22 +1,17 @@
 #ifndef __MQTT_GSM__
 #define __MQTT_GSM__
 
-#define SerialMon Serial
-
-#include <PubSubClient.h>
 #include <SoftwareSerial.h>
 #include <StreamDebugger.h>
+#include <PubSubClient.h>
 
 #define TINY_GSM_MODEM_SIM800
 #define TINY_GSM_RX_BUFFER   1024
-#define TINY_GSM_DEBUG SerialMon
 #define GSM_AUTOBAUD_MIN 9600
 #define GSM_AUTOBAUD_MAX 115200
 #define TINY_GSM_USE_GPRS true
 #define TINY_GSM_USE_WIFI false
 #define GSM_PIN ""
-#define AT_RX        13
-#define AT_TX        12
 
 #include <TinyGsm.h>
 #include <TinyGsmClient.h>
@@ -33,7 +28,7 @@ enum MODEM_STATE
 class MqttGsmClient 
 {
   public:
-    MqttGsmClient();
+    MqttGsmClient(int rx, int tx);
     void init(
       char *broker, 
       char *macStr, 
@@ -42,10 +37,11 @@ class MqttGsmClient
       char *gprsPass,
       std::function<void(char*, byte*, unsigned int)> callback, 
       std::function<void()> displayUpdate);
-    void ModemCheck();
+    bool ModemCheck();
     String getGsmStage();
     String getGsmStatus();
     bool sendMQTTBinary(uint8_t *report, int packetSize);
+    bool isConnected();
 
   private:
     void doModemStart();
@@ -63,7 +59,6 @@ class MqttGsmClient
     char * _gprsUser;
     char * _gprsPass;
     SoftwareSerial SerialAT;
-    StreamDebugger debugger;
     TinyGsm _modem;
     TinyGsmClient _client;
     PubSubClient _mqttGPRS;
