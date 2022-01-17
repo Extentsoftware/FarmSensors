@@ -11,6 +11,16 @@
         }
     },
     "sensors":{
+        "59830f12":{
+            "name": "Test Moisture Sensor",
+            "geohash": "u10h4kf4s",
+            "group": "Bongo"
+        },
+        "3a0080":{
+            "name": "Test Tank Sensor",
+            "geohash": "u10h4kf4s",
+            "group": "Bongo"
+        },
         "14e71f3f" : {
             "name": "14e71f3f",
             "geohash": null,
@@ -69,13 +79,6 @@
         },
         "59830e21":{
             "name": "B2-S5",
-            "geohash": null,
-            "group": "Bongo",
-            "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",
-            "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
-        },
-        "59830f12":{
-            "name": "59830f12",
             "geohash": null,
             "group": "Bongo",
             "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",

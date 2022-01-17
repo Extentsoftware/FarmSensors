@@ -14,6 +14,10 @@ static const char * TAG = "Hub";
 #define SerialMon Serial
 #define APP_VERSION 1
 
+#ifdef HAS_GSM
+#define TINY_GSM_DEBUG SerialMon
+#endif
+
 #include <vesoil.h>
 #include <SPI.h>
 #include <Wire.h>  
@@ -23,6 +27,7 @@ static const char * TAG = "Hub";
 #include <SPIFFS.h>
 #include <CayenneLPP.h>
 #include <IotWebConf.h>
+#include <IotWebConfUsing.h> // This loads aliases for easier class names.
 #include "mqtt_wifi.h"
 #include "mqtt_gsm.h"
 #include "vesoil_hub.h"
@@ -33,10 +38,12 @@ static const char * TAG = "Hub";
 SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
 #endif
 
+bool needReset = false;
+
 #ifdef HAS_WIFI
 const char thingName[] = "Hub";               // -- Initial name of the Thing. Used e.g. as SSID of the own Access Point.
 const char wifiInitialApPassword[] = "";      // -- Initial password to connect to the Thing, when it creates an own Access Point.
-const char configVersion[] = "1.1";
+const char configVersion[] = "1.2";
 DNSServer dnsServer;
 WebServer server(80);
 IotWebConf iotWebConf(thingName, &dnsServer, &server, wifiInitialApPassword, configVersion);
@@ -48,6 +55,7 @@ MqttWifiClient mqttWifiClient;
 #define AT_TX        12
 #define TINY_GSM_DEBUG SerialMon
 MqttGsmClient mqttGPRS(AT_RX, AT_TX);
+MqttGsmStats gprsStatus;
 #endif
 
 Preferences preferences;
@@ -73,11 +81,11 @@ bool haveReport=false;
 
 struct HubConfig config;
 
-const int lockupTimeout = 60000; //time in ms to trigger the watchdog
-Watchdog lockupWatchdog;
-
-const int connectionTimeout = 60000; //time in ms to trigger the watchdog
+const int connectionTimeout = 3 * 60000; //time in ms to trigger the watchdog
 Watchdog connectionWatchdog;
+
+const int lockupTimeout = 1000; //time in ms to trigger the watchdog
+Watchdog lockupWatchdog;
 
 void resetModuleFromLockup() {
   ets_printf("WDT triggered from lockup\n");
@@ -114,6 +122,7 @@ void ShowNextPage()
 #define C1 0
 #define C2 32
 #define C3 64
+#define C4 96
 
 void DisplayPage(int page)
 {
@@ -148,9 +157,22 @@ void DisplayPage(int page)
           }
           break;
         case 2:
+#ifdef HAS_GSM        
           display.drawString(C1, L1, "Gsm Status");
-          display.drawString(C1, L2, "dB");
-          //display.drawString(C2, L2, String(modem.getSignalQuality(), DEC));
+          display.drawString(C1, L2, "Volts");
+          display.drawString(C2, L2, String(gprsStatus.gsmVolts, DEC));
+          display.drawString(C3, L2, "dB");
+          display.drawString(C4, L2, String(gprsStatus.signalQuality, DEC));
+          display.drawString(C1, L3, "net");
+          display.drawString(C2, L3, gprsStatus.netConnected?"1":"0");
+          display.drawString(C3, L3, "gprs");
+          display.drawString(C4, L3, gprsStatus.gprsConnected?"1":"0");
+          display.drawString(C1, L4, "mqtt");
+          display.drawString(C2, L4, gprsStatus.mqttConnected?"1":"0");
+#else
+          display.drawString(C1, L1, "Gsm Status");
+          display.drawString(C1, L2, "** DISABLED **");
+#endif          
           break;
         case 3:
           display.drawString(C1, L1, "LoRa Status");
@@ -324,6 +346,7 @@ void readLoraData(int packetSize)
 
     haveReport = true;
     packetcount++; 
+    displayUpdate();
     CayenneLPP lpp(packetSize + 20);
     DynamicJsonDocument jsonBuffer(4096);
     JsonArray root = jsonBuffer.to<JsonArray>();
@@ -341,8 +364,7 @@ void readLoraData(int packetSize)
     Serial.println("");
        
     SendMQTTBinary(lpp._buffer, lpp._cursor);
-  }
-  displayUpdate();
+  }  
 }
 
 #endif
@@ -379,7 +401,7 @@ void SendMQTTBinary(uint8_t *report, int packetSize)
   return;
 }
 
-
+#ifdef HAS_WIFI
 void handleRoot()
 {
   // -- Let IotWebConf test and handle captive portal requests.
@@ -396,7 +418,24 @@ void handleRoot()
   server.send(200, "text/html", s);
 }
 
+void configSaved()
+{
+  Serial.println("Configuration was updated.");
+  needReset = true;
+}
+
 void setupWifiConfigurator() {
+  IotWebConfParameterGroup mqttGroup = IotWebConfParameterGroup("mqtt", "MQTT configuration");
+  IotWebConfTextParameter mqttServerParam = IotWebConfTextParameter("MQTT server","MQTTserver", config.broker, sizeof(config.broker), DEFAULT_BROKER);
+  IotWebConfTextParameter mqttAPNParam = IotWebConfTextParameter("APN","APN", config.apn, sizeof(config.apn), DEFAULT_APN);
+  IotWebConfTextParameter gprsUserNameParam = IotWebConfTextParameter("GPRS user","GPRSuser", config.gprsUser, sizeof(config.gprsUser), DEFAULT_GPRSUSER);
+  IotWebConfPasswordParameter gprsUserPasswordParam = IotWebConfPasswordParameter("GPRS pwd","GPRSpwd", config.gprsPass, sizeof(config.gprsPass),DEFAULT_GPRSPWD);
+  mqttGroup.addItem(&mqttServerParam);
+  mqttGroup.addItem(&mqttAPNParam);
+  mqttGroup.addItem(&gprsUserNameParam);
+  mqttGroup.addItem(&gprsUserPasswordParam);
+  iotWebConf.addParameterGroup(&mqttGroup);
+  iotWebConf.setConfigSavedCallback(&configSaved);
   iotWebConf.setStatusPin(LED_BUILTIN);
   iotWebConf.init();
   
@@ -405,7 +444,7 @@ void setupWifiConfigurator() {
   server.on("/config", []{ iotWebConf.handleConfig(); });
   server.onNotFound([](){ iotWebConf.handleNotFound(); });
 }
-
+#endif
 
 void SystemCheck() {
   Serial.printf("Rev %u Freq %d \n", ESP.getChipRevision(), ESP.getCpuFreqMHz());
@@ -415,19 +454,31 @@ void SystemCheck() {
 }
 
 void loop() {
+  
 
   static int counter = 0;
   counter += 1;
   if ( (counter % 100) == 0)
   {
+    //lockupWatchdog.clrWatchdog();
+    displayUpdate();
     Serial.printf("x");
   }  
 
 #ifdef HAS_GSM
-    gprsConnected = mqttGPRS.ModemCheck();
+    mqttGPRS.ModemCheck();
+    mqttGPRS.getStats(gprsStatus);
+    gprsConnected = gprsStatus.gprsConnected;
 #endif
 
 #ifdef HAS_WIFI
+  if (needReset)
+  {
+    Serial.println("Rebooting after 1 second.");
+    iotWebConf.delay(1000);
+    ESP.restart();
+  }  
+
   iotWebConf.doLoop();
   iotwebconf::NetworkState iotState = iotWebConf.getState();
   if (iotState !=  iotwebconf::NetworkState::OnLine)
@@ -452,8 +503,6 @@ void loop() {
     ShowNextPage();
   }
   
-  lockupWatchdog.clrWatchdog();
-
   if (gprsConnected || wifiConnected)
     connectionWatchdog.clrWatchdog();
 }
@@ -499,6 +548,6 @@ void setup() {
 
   Serial.printf("End of setup\n");
 
-  lockupWatchdog.setupWatchdog(lockupTimeout, resetModuleFromLockup);
   connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
+  //lockupWatchdog.setupWatchdog(lockupTimeout, resetModuleFromLockup);
 }

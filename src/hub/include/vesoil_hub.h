@@ -1,10 +1,6 @@
 #ifndef __VESOIL_HUB__
 #define __VESOIL_HUB__
 
-#define ERR_LOWPOWER  0x15  // 00010101
-#define INFO_WIFI     0x33  // 00110011
-#define INFO_NORMAL   0xAA  // 10101010
-
 #define FREQUENCY 868E6
 #define BAND      125E3   
 #define SPREAD       12   
@@ -72,6 +68,14 @@
 #endif
 
 
+#define DEFAULT_BROKER "bongomqtt.uksouth.cloudapp.azure.com"
+#define DEFAULT_APN_VODAPHONE "TM"
+#define DEFAULT_APN_ECONET "econet.net"
+#define DEFAULT_APN DEFAULT_APN_VODAPHONE
+#define DEFAULT_GPRSUSER ""
+#define DEFAULT_GPRSPWD ""
+
+
 struct HubConfig
 {
   // Wifi settings
@@ -90,14 +94,13 @@ struct HubConfig
   bool  enableCRC = true;       //
 
   // MQTT Settings
-  char  broker[42] = "bongomqtt.uksouth.cloudapp.azure.com";
+  char  broker[42] = DEFAULT_BROKER;
 
   // GPRS Settings
   bool  gprsEnabled = true;
-  char  apn[32]    = "TM";      // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
-  //char  apn[32]    = "econet.net";      // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
-  char  gprsUser[16] = "";      // GPRS User
-  char  gprsPass[16] = "";      // GPRS Password
+  char  apn[32]    = DEFAULT_APN;      // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
+  char  gprsUser[16] = DEFAULT_GPRSUSER;      // GPRS User
+  char  gprsPass[16] = DEFAULT_GPRSPWD;      // GPRS Password
 
 } default_config;
 

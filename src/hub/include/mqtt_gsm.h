@@ -25,7 +25,20 @@ enum MODEM_STATE
     MQ_CONNECTED,
 };
 
-class MqttGsmClient 
+struct MqttGsmStats
+{
+public:
+    uint16_t gsmDb=0;
+    uint16_t gsmVolts=0;
+    int16_t signalQuality=0;
+    uint8_t chargeState=0;
+    int8_t percent=0;
+    bool gprsConnected = false;
+    bool netConnected = false;
+    bool mqttConnected = false;
+};
+
+class MqttGsmClient
 {
   public:
     MqttGsmClient(int rx, int tx);
@@ -42,8 +55,10 @@ class MqttGsmClient
     String getGsmStatus();
     bool sendMQTTBinary(uint8_t *report, int packetSize);
     bool isConnected();
+    void getStats(MqttGsmStats& stats);
 
   private:
+    bool updateStatus();
     void doModemStart();
     void waitForNetwork();
     void doGPRSConnect();
@@ -59,9 +74,12 @@ class MqttGsmClient
     char * _gprsUser;
     char * _gprsPass;
     SoftwareSerial SerialAT;
+    StreamDebugger debugger;
     TinyGsm _modem;
     TinyGsmClient _client;
     PubSubClient _mqttGPRS;
+    MqttGsmStats status;
+    
     const char *_broker;
     const char * Msg_Quality = "Db ";
     const char * Msg_Network = "Radio";

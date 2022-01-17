@@ -237,13 +237,231 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "fill": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 17,
+        "x": 0,
+        "y": 21
+      },
+      "id": 19,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "name"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "previous"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "sensor",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "pfe"
+                ],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "PFE",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 17,
+        "x": 0,
+        "y": 30
+      },
+      "id": 20,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "name"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "previous"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "sensor",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "snr"
+                ],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "SNR",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
       "datasource": "InfluxDB",
       "fill": 1,
       "gridPos": {
         "h": 16,
         "w": 17,
         "x": 0,
-        "y": 21
+        "y": 39
       },
       "id": 16,
       "legend": {
@@ -355,7 +573,7 @@
         "h": 9,
         "w": 17,
         "x": 0,
-        "y": 37
+        "y": 55
       },
       "id": 14,
       "legend": {
@@ -560,12 +778,12 @@
         "h": 8,
         "w": 7,
         "x": 0,
-        "y": 46
+        "y": 64
       },
       "hideEmpty": true,
       "hideZero": false,
       "id": 6,
-      "initialZoom": "8",
+      "initialZoom": "10",
       "links": [
         {
           "type": "dashboard"
@@ -638,7 +856,7 @@
         }
       ],
       "thresholds": "0, 400",
-      "timeFrom": "1m",
+      "timeFrom": "10m",
       "timeShift": null,
       "title": "Tank Height",
       "transparent": false,
@@ -655,7 +873,7 @@
         "h": 8,
         "w": 10,
         "x": 7,
-        "y": 46
+        "y": 64
       },
       "id": 8,
       "links": [],
@@ -745,7 +963,7 @@
         "h": 9,
         "w": 17,
         "x": 0,
-        "y": 54
+        "y": 72
       },
       "id": 4,
       "interval": "2s",
@@ -848,7 +1066,7 @@
         {
           "decimals": null,
           "format": "lengthmm",
-          "label": "temp",
+          "label": "Distance",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -908,5 +1126,5 @@
   "timezone": "browser",
   "title": "Sensor Dashboard",
   "uid": "TKa_G24Gz",
-  "version": 27
+  "version": 31
 }

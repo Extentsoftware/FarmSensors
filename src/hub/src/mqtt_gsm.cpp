@@ -2,7 +2,8 @@
 
 MqttGsmClient::MqttGsmClient(int rx, int tx) 
   : SerialAT(rx, tx, false)
-  , _modem(SerialAT)
+  , debugger(SerialAT, Serial)
+  , _modem(debugger)
   , _client(_modem)
   , _mqttGPRS(_client)
 {
@@ -27,6 +28,7 @@ void MqttGsmClient::init(
   _displayUpdate = displayUpdate;
   _mqttGPRS.setServer(_broker, 1883);
   _mqttGPRS.setCallback(_callback);  
+  Serial.printf("GSM Broker %s apn %s\n", broker, apn);
 }
 
 String MqttGsmClient::getGsmStage()
@@ -80,30 +82,20 @@ void MqttGsmClient::doModemStart()
 }
 
 void MqttGsmClient::waitForNetwork() 
-{
-  static int counter = 0;
-  counter += 1;
-  if ( (counter % 1000) == 0)
-  {
-    uint8_t chargeState=0;
-    int8_t percent=0;
-    uint16_t milliVolts=0;
-    _modem.getBattStats(chargeState, percent, milliVolts);
-    Serial.printf("Signal Quality %s Chrg %d Percent %d Volts %d\n", String(_modem.getSignalQuality(), DEC).c_str(), chargeState, percent, milliVolts);
-    if (_modem.isNetworkConnected()) 
-    { 
-      _gsmStage = Msg_Network;
-      _gsmStatus = Msg_Connected;
-      _displayUpdate();
-      modem_state=MODEM_CONNECTED;
-      Serial.printf("Connected to GSM network\n");
-    }
+{  
+  if (status.netConnected) 
+  { 
+    _gsmStage = Msg_Network;
+    _gsmStatus = Msg_Connected;
+    _displayUpdate();
+    modem_state=MODEM_CONNECTED;
+    Serial.printf("Connected to GSM network\n");
   }
 }
 
 void MqttGsmClient::doGPRSConnect()
 {
-  Serial.println("GPRS Connect");
+  Serial.printf("GPRS Connect APN %s user %s pwd %s\n", _apn, _gprsUser, _gprsPass);
 
   _gsmStage = Msg_GPRS;
   _gsmStatus = Msg_Connecting;
@@ -112,24 +104,24 @@ void MqttGsmClient::doGPRSConnect()
   bool connected = _modem.gprsConnect(_apn, _gprsUser, _gprsPass);    
 
   _gsmStatus = (char*)(connected ? Msg_Connected : Msg_Failed);
-  _displayUpdate();
 
   if (connected) 
   { 
     Serial.println("GPRS Connected");
     modem_state=GPRS_CONNECTED;
   }
+  updateStatus();
 }
 
 void MqttGsmClient::mqttGPRSConnect()
 {
   char topic[32];
 
-  if (!_mqttGPRS.connected())
+  updateStatus();
+  if (!status.mqttConnected)
   {
     _gsmStage = Msg_MQTT;
     _gsmStatus = Msg_Connecting;
-    _displayUpdate();
     boolean mqttConnected = _mqttGPRS.connect(_macStr);
     if (!mqttConnected)
     {
@@ -143,39 +135,69 @@ void MqttGsmClient::mqttGPRSConnect()
       Serial.println("MQTT connected via GPRS");
       modem_state=MQ_CONNECTED;
     }
+    updateStatus();
   }
 }  
 
 void MqttGsmClient::mqttGPRSPoll()
 {
-  static int counter = 0;
-  counter += 1;
-  if ( (counter % 1000) == 0)
+  if (!status.gprsConnected || !status.mqttConnected)
   {
-    //String dt = modem.getGSMDateTime( DATE_FULL );
-    Serial.printf("Poll..");
-    bool gprsConnected = _modem.isGprsConnected();
-    bool netConnected = _modem.isNetworkConnected();
-    bool clientConnected = _client.connected();
-    Serial.printf("Signal Quality %s Connections network=%d GPRS=%d client=%d\n", String(_modem.getSignalQuality(), DEC).c_str(), netConnected, gprsConnected, clientConnected);
-    if (!gprsConnected || !clientConnected)
-    {
-      Serial.printf("GPRS Disconnected\n");
-      modem_state=MODEM_NOT_CONNECTED;
-    }
+    Serial.printf("GPRS Disconnected\n");
+    modem_state=MODEM_NOT_CONNECTED;
   }
-  _mqttGPRS.loop();
+  bool result = _mqttGPRS.loop();
+  if (!result)
+  {
+    modem_state = MODEM_INIT;
+  }
+}
+
+void MqttGsmClient::getStats(MqttGsmStats& stats) 
+{
+    memcpy(&stats, &status, sizeof(status));
+}
+
+bool MqttGsmClient::updateStatus()
+{
+    Serial.printf("gsm status check\n");
+    MqttGsmStats newStatus;
+    _modem.getBattStats(newStatus.chargeState, newStatus.percent, newStatus.gsmVolts);
+    newStatus.signalQuality = _modem.getSignalQuality();
+    newStatus.gprsConnected = _modem.isGprsConnected();
+    newStatus.netConnected = _modem.isNetworkConnected();
+    newStatus.mqttConnected = _mqttGPRS.connected();
+
+    // status changed?
+    bool changed = memcmp(&newStatus, &status, sizeof(newStatus))!=0;
+    if (changed)
+    {
+      memcpy(&status, &newStatus, sizeof(status));
+      Serial.printf("network=%d GPRS=%d client=%d Signal Quality %d Chrg %d Percent %d Volts %d\n"
+          , status.signalQuality
+          , status.gprsConnected
+          , status.mqttConnected
+          , status.signalQuality
+          , status.chargeState
+          , status.percent
+          , status.gsmVolts
+      );
+    }
+    if (changed)
+      _displayUpdate();
+    return changed;
 }
 
 bool MqttGsmClient::ModemCheck()
 {
   static int counter = 0;
-  counter += 1;
-  if ( (counter % 1000) == 0)
+  if ( (counter % 5) == 0)
   {
-    Serial.printf("S=%d ",modem_state);
+    updateStatus();    
   }
 
+  counter += 1;
+  
   switch(modem_state)
   {
     case MODEM_INIT:
