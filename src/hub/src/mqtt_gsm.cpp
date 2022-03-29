@@ -160,13 +160,26 @@ void MqttGsmClient::getStats(MqttGsmStats& stats)
 
 bool MqttGsmClient::updateStatus()
 {
-    Serial.printf("gsm status check\n");
+    
     MqttGsmStats newStatus;
+    Serial.printf("Get battery status\n");
     _modem.getBattStats(newStatus.chargeState, newStatus.percent, newStatus.gsmVolts);
+    Serial.printf("Get signal quality\n");
     newStatus.signalQuality = _modem.getSignalQuality();
-    newStatus.gprsConnected = _modem.isGprsConnected();
+    Serial.printf("Is Network connected?\n");
     newStatus.netConnected = _modem.isNetworkConnected();
-    newStatus.mqttConnected = _mqttGPRS.connected();
+    newStatus.gprsConnected = false;
+    newStatus.mqttConnected = false;
+    if (newStatus.netConnected)
+    {
+      Serial.printf("Is GPRS connected?\n");
+      newStatus.gprsConnected = _modem.isGprsConnected();
+      if (newStatus.gprsConnected)
+      {
+        Serial.printf("Is MQTT connected?\n");
+        newStatus.mqttConnected = _mqttGPRS.connected();
+      }
+    }
 
     // status changed?
     bool changed = memcmp(&newStatus, &status, sizeof(newStatus))!=0;
@@ -191,7 +204,7 @@ bool MqttGsmClient::updateStatus()
 bool MqttGsmClient::ModemCheck()
 {
   static int counter = 0;
-  if ( (counter % 5) == 0)
+  if ( (counter % 5000) == 0)
   {
     updateStatus();    
   }

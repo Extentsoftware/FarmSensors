@@ -24,6 +24,9 @@
 		},
 		{
 			"path": "src\\server"
+		},
+		{
+			"path": "src\\hub2"
 		}
 	],
 	"settings": {

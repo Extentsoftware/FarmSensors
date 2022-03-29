@@ -134,10 +134,11 @@ void DisplayPage(int page)
     {
         // status
         case 0:
+#ifdef HAS_GSM
           display.drawString(C1, L1, "GSM");
           display.drawString(C2, L1, mqttGPRS.getGsmStage());
           display.drawString(C3, L1, mqttGPRS.getGsmStatus());
-
+#endif
           display.drawString(C1, L2, "WiFi");
           display.drawString(C2, L2, wifiStatus);
 
@@ -425,17 +426,17 @@ void configSaved()
 }
 
 void setupWifiConfigurator() {
-  IotWebConfParameterGroup mqttGroup = IotWebConfParameterGroup("mqtt", "MQTT configuration");
-  IotWebConfTextParameter mqttServerParam = IotWebConfTextParameter("MQTT server","MQTTserver", config.broker, sizeof(config.broker), DEFAULT_BROKER);
-  IotWebConfTextParameter mqttAPNParam = IotWebConfTextParameter("APN","APN", config.apn, sizeof(config.apn), DEFAULT_APN);
-  IotWebConfTextParameter gprsUserNameParam = IotWebConfTextParameter("GPRS user","GPRSuser", config.gprsUser, sizeof(config.gprsUser), DEFAULT_GPRSUSER);
-  IotWebConfPasswordParameter gprsUserPasswordParam = IotWebConfPasswordParameter("GPRS pwd","GPRSpwd", config.gprsPass, sizeof(config.gprsPass),DEFAULT_GPRSPWD);
-  mqttGroup.addItem(&mqttServerParam);
-  mqttGroup.addItem(&mqttAPNParam);
-  mqttGroup.addItem(&gprsUserNameParam);
-  mqttGroup.addItem(&gprsUserPasswordParam);
-  iotWebConf.addParameterGroup(&mqttGroup);
-  iotWebConf.setConfigSavedCallback(&configSaved);
+  // IotWebConfParameterGroup mqttGroup = IotWebConfParameterGroup("mqtt", "MQTT configuration");
+  // IotWebConfTextParameter mqttServerParam = IotWebConfTextParameter("MQTT server","MQTTserver", config.broker, sizeof(config.broker), DEFAULT_BROKER);
+  // IotWebConfTextParameter mqttAPNParam = IotWebConfTextParameter("APN","APN", config.apn, sizeof(config.apn), DEFAULT_APN);
+  // IotWebConfTextParameter gprsUserNameParam = IotWebConfTextParameter("GPRS user","GPRSuser", config.gprsUser, sizeof(config.gprsUser), DEFAULT_GPRSUSER);
+  // IotWebConfPasswordParameter gprsUserPasswordParam = IotWebConfPasswordParameter("GPRS pwd","GPRSpwd", config.gprsPass, sizeof(config.gprsPass),DEFAULT_GPRSPWD);
+  // mqttGroup.addItem(&mqttServerParam);
+  // mqttGroup.addItem(&mqttAPNParam);
+  // mqttGroup.addItem(&gprsUserNameParam);
+  // mqttGroup.addItem(&gprsUserPasswordParam);
+  // iotWebConf.addParameterGroup(&mqttGroup);
+  // iotWebConf.setConfigSavedCallback(&configSaved);
   iotWebConf.setStatusPin(LED_BUILTIN);
   iotWebConf.init();
   
@@ -454,15 +455,12 @@ void SystemCheck() {
 }
 
 void loop() {
-  
-
   static int counter = 0;
   counter += 1;
   if ( (counter % 100) == 0)
   {
     //lockupWatchdog.clrWatchdog();
     displayUpdate();
-    Serial.printf("x");
   }  
 
 #ifdef HAS_GSM
