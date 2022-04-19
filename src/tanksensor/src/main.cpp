@@ -36,7 +36,7 @@ GPSLOCK GpsStatus() {
     }
 }
 
-float GetDistance() {
+float GetDistanceMm() {
     // Define inputs and outputs
   pinMode(TRIGPIN, OUTPUT);
   pinMode(ECHOPIN, INPUT);
@@ -49,10 +49,10 @@ float GetDistance() {
   // Read the ECHOPIN. pulseIn() returns the duration (length of the pulse) in microseconds:
   long duration = pulseIn(ECHOPIN, HIGH);
   
-  return duration / 58.0;
+  return duration / 5.882 ;
 }
 
-void SendPacket(float distance) 
+void SendPacket(float distanceMm) 
 {
     uint8_t chipid[]={0,0,0,0,0,0,0,0};
     esp_efuse_mac_get_default(&chipid[0]);
@@ -66,15 +66,15 @@ void SendPacket(float distance)
     lpp.reset();
     lpp.addPresence(CH_ID_LO, chipid_l);
     lpp.addPresence(CH_ID_HI, chipid_h); 
-    lpp.addDistance(CH_Distance, distance);
+    lpp.addDistance(CH_Distance, distanceMm);
     lpp.addVoltage(CH_VoltsS, volts);
 
     Serial.printf( " Id " );
     Serial.print( (chipid_h << 16) + chipid_l);
     Serial.printf( " Vs " );
     Serial.print( volts);
-    Serial.printf( " distance ");
-    Serial.print( distance );
+    Serial.printf( " distanceMm ");
+    Serial.print( distanceMm );
 
     if (GpsStatus() == LOCK_OK)
     {
@@ -134,12 +134,12 @@ bool waitForGps()
 
 void loop() {
   waitForGps();
-  float distance =GetDistance();
-  Serial.printf( " %f \n", distance);
-  SendPacket(distance);
+  float distanceMm =GetDistanceMm();
+  Serial.printf( " %f \n", distanceMm);
+  SendPacket(distanceMm);
 
   int delay = 60*4;
-  Serial.printf( " sleeping for %d seconds\n", delay);
+  Serial.printf( "deep sleeping for %d seconds\n", delay);
   power.deep_sleep(delay);
 }
 

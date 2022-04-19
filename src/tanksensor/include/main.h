@@ -95,7 +95,7 @@ enum GPSLOCK
     LOCK_WINDOW
 };
 
-float GetDistance();
+float GetDistanceMm();
 void stopLoRa();
 void startLoRa();
 void smartDelay(unsigned long ms);

@@ -27,6 +27,9 @@
 		},
 		{
 			"path": "src\\hub2"
+		},
+		{
+			"path": "src\\repeater"
 		}
 	],
 	"settings": {
