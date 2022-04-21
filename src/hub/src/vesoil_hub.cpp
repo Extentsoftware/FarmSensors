@@ -31,6 +31,7 @@ static const char * TAG = "Hub";
 #include "mqtt_wifi.h"
 #include "mqtt_gsm.h"
 #include "vesoil_hub.h"
+#include "ringbuffer.h"
 #include <wd.h>
 
 #ifdef HAS_OLED
@@ -39,6 +40,7 @@ SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
 #endif
 
 bool needReset = false;
+RingBuffer ringBuffer(16);
 
 #ifdef HAS_WIFI
 const char thingName[] = "Hub";               // -- Initial name of the Thing. Used e.g. as SSID of the own Access Point.
@@ -335,6 +337,13 @@ void startLoRa() {
   LoRa.receive();
 }
 
+int HashCode (uint8_t* buffer, int size) {
+    int h = 0;
+    for (uint8_t* ptr = buffer; size>0; --size, ++ptr)
+        h = h * 31 + *ptr;
+    return h;
+}
+
 void readLoraData(int packetSize) 
 {  
   if (packetSize>0) { 
@@ -349,10 +358,22 @@ void readLoraData(int packetSize)
     packetcount++; 
     displayUpdate();
     CayenneLPP lpp(packetSize + 20);
-    DynamicJsonDocument jsonBuffer(4096);
-    JsonArray root = jsonBuffer.to<JsonArray>();
 
     LoRa.readBytes(lpp._buffer, packetSize);
+
+    int hash = HashCode(lpp._buffer, packetSize);
+    
+    if (ringBuffer.exists(hash))
+    {
+      Serial.printf("Duplicate detected hash %d\n", hash); 
+      return;
+    }
+    else
+    {
+      Serial.printf("Packet hash %d\n", hash); 
+    }
+
+    ringBuffer.add( hash );
 
     lpp._cursor = packetSize;
 
@@ -360,6 +381,8 @@ void readLoraData(int packetSize)
     lpp.addGenericSensor(CH_RSSI, rssi);
     lpp.addGenericSensor(CH_PFE, (float)pfe);    
 
+    DynamicJsonDocument jsonBuffer(4096);
+    JsonArray root = jsonBuffer.to<JsonArray>();
     lpp.decode(lpp._buffer, lpp._cursor, root);
     serializeJsonPretty(root, Serial);
     Serial.println("");
@@ -512,7 +535,7 @@ void setup() {
   pinMode(BTN1, INPUT);        // Button 1
   Serial.begin(115200);
   while (!Serial);
-  delay(1000); 
+  //delay(1000); 
   Serial.println();
   Serial.println("VESTRONG LaPoulton LoRa HUB");
 
