@@ -1,77 +1,177 @@
 #include <Arduino.h>
+#include <SPI.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <CayenneLPP.h>
-#include "CubeCell_NeoPixel.h"
-#include "LoRaWan_APP.h"
+#include <TBeamPower.h>
+#include <main.h>
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
+#include "LoRa.h"
+#include "vesoil.h"
+#include "ringbuffer.h"
 
-#define RF_FREQUENCY                                868E6           // Hz
-#define TX_OUTPUT_POWER                             22              // dBm
-uint32_t _bandwidth                                 = 0;            // [0: 125 kHz,  4 = LORA_BW_041
-uint32_t  _spreadingFactor                          = 12;           // SF_12 [SF7..SF12] - 7
-uint8_t  _codingRate                                = 1;            // LORA_CR_4_5; [1: 4/5,    - 1
-#define LORA_PREAMBLE_LENGTH                        8               // Same for Tx and Rx
-#define LORA_SYMBOL_TIMEOUT                         0               // Symbols
-#define LORA_FIX_LENGTH_PAYLOAD_ON                  false
-#define LORA_IQ_INVERSION_ON                        false
-#define LORA_CRC                                    true
-#define LORA_FREQ_HOP                               false
-#define LORA_HOP_PERIOD                             0
-#define RX_TIMEOUT_VALUE                            1000
-#define BUFFER_SIZE                                 30 // Define the payload size here
-#define SYNCWORD                                    0
+// BLE
+#ifdef HAS_BLE
+BLEServer *pServer = NULL;
+BLECharacteristic * pTxCharacteristic;
+bool deviceConnected = false;
+bool oldDeviceConnected = false;
+uint8_t txValue = 0;
 
-#define COLOR_START                                 0x0000FF   //color blue
-#define COLOR_SENDING                               0xFFFFFF   //color white
-#define COLOR_SENT                                  0x00FF00   //color green
-#define COLOR_FAIL_SENSOR                           0xFF0000   // red 
-#define COLOR_FAIL_TX                               0xFF00FF
-#define COLOR_DURATION                              30
+#define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E" // UART service UUID
+#define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
+#define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+#endif
 
-char txpacket[BUFFER_SIZE];
-char rxpacket[BUFFER_SIZE];
 
-static RadioEvents_t RadioEvents;
+#define BUFFER_SIZE 128
+uint8_t rxpacket[BUFFER_SIZE];
+unsigned short txLen=0;
+bool sending=false;
+RingBuffer ringBuffer(16);
+struct SensorConfig config;
+
+void OnTxDone( void );
+void OnTxTimeout( void );
 void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr );
 
-bool isDebug()
-{
-    return digitalRead(USER_KEY)==0;
+TBeamPower power(PWRSDA, PWRSCL, BATTERY_PIN, BUSPWR, LED_BUILTIN);
+
+#ifdef HAS_BLE
+class MyServerCallbacks: public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+      deviceConnected = true;
+    };
+
+    void onDisconnect(BLEServer* pServer) {
+      deviceConnected = false;
+    }
+};
+
+class MyCallbacks: public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *pCharacteristic) {
+      std::string rxValue = pCharacteristic->getValue();
+
+      if (rxValue.length() > 0) {
+        Serial.println("*********");
+        Serial.print("Received Value: ");
+        for (int i = 0; i < rxValue.length(); i++)
+          Serial.print(rxValue[i]);
+
+        Serial.println();
+        Serial.println("*********");
+      }
+    }
+};
+
+void setupBLE() {
+  // Create the BLE Device
+  BLEDevice::init("UART Service");
+
+  // Create the BLE Server
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
+
+  // Create the BLE Service
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+
+  // Create a BLE Characteristic
+  pTxCharacteristic = pService->createCharacteristic(
+										CHARACTERISTIC_UUID_TX,
+										BLECharacteristic::PROPERTY_NOTIFY
+									);
+                      
+  pTxCharacteristic->addDescriptor(new BLE2902());
+
+  BLECharacteristic * pRxCharacteristic = pService->createCharacteristic(
+											 CHARACTERISTIC_UUID_RX,
+											BLECharacteristic::PROPERTY_WRITE
+										);
+
+  pRxCharacteristic->setCallbacks(new MyCallbacks());
+
+  // Start the service
+  pService->start();
+
+  // Start advertising
+  pServer->getAdvertising()->start();
+  Serial.println("Waiting a client connection to notify...");
+}
+#endif
+
+void setupSerial() { 
+  Serial.begin(115200);
+  while (!Serial);
+  Serial.println();
+  Serial.println("VESTRONG LaPoulton Hub");
 }
 
-void flash(uint32_t color,uint32_t time)
+
+void LoraReceive(int packetSize) 
 {
-    pinMode(USER_KEY, INPUT);
-    if (isDebug())
-    {    
-        turnOnRGB(color, time);
-        turnOffRGB();
-    }
+    LoRa.readBytes(rxpacket, packetSize);
+    power.led_onoff(true);
+    Serial.printf("got bytes:%d\n", packetSize);
+    power.led_onoff(false);
 }
 
 void setup() {
-    boardInitMcu( );
-    Serial.begin(115200);
-    delay(500);
-    turnOnRGB(COLOR_START, 500);
-    turnOffRGB();    
-    Serial.printf( "Started\n");
+  // Begin Serial communication at a baudrate of 9600:
+  setupSerial();
 
-    Radio.Init( &RadioEvents );
-    Radio.SetChannel( RF_FREQUENCY );
-    Radio.SetTxConfig( MODEM_LORA, TX_OUTPUT_POWER, 0, _bandwidth,
-                                _spreadingFactor, _codingRate,
-                                LORA_PREAMBLE_LENGTH, LORA_FIX_LENGTH_PAYLOAD_ON,
-                                LORA_CRC, LORA_FREQ_HOP, LORA_HOP_PERIOD, LORA_IQ_INVERSION_ON, 36000 );
+  power.begin();
+  power.power_sensors(false);
+  power.power_peripherals(true);
 
-    digitalWrite(Vext,HIGH); //POWER OFF
+#ifdef HAS_BLE
+  setupBLE();
+#endif
+
+  startLoRa();
 }
 
-void loop() 
-{
+void loop() {
+  int packetSize = LoRa.parsePacket();
+  if (packetSize>0)
+    LoraReceive(packetSize);
 }
 
-void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)
-{
-    Serial.printf( "OnRxDone\n");
+
+void startLoRa() {
+
+  power.power_LoRa(true);
+  Serial.printf("\nStarting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu txpower:%d\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth, config.txpower);
+
+  SPI.begin(SCK,MISO,MOSI,SS);
+  LoRa.setPins(SS,RST,DI0);
+
+  int result = LoRa.begin(config.frequency);
+  if (!result) 
+    Serial.printf("Starting LoRa failed: err %d\n", result);
+  else
+    Serial.println("Started LoRa OK");
+
+  LoRa.setPreambleLength(config.preamble);
+  LoRa.setSpreadingFactor(config.spreadFactor);
+  LoRa.setCodingRate4(config.codingRate);
+
+  if (config.enableCRC)
+      LoRa.enableCrc();
+    else 
+      LoRa.disableCrc();
+
+  if (config.syncword>0)
+    LoRa.setSyncWord(config.syncword);    
+
+  LoRa.setSignalBandwidth(config.bandwidth);
+
+  LoRa.setTxPower(config.txpower);
+  LoRa.idle();
+  
+  if (!result) {
+    Serial.printf("Starting LoRa failed: err %d", result);
+  }  
 }
+
