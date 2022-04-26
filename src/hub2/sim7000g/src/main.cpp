@@ -25,11 +25,7 @@ static const char * TAG = "Hub";
 #include "ringbuffer.h"
 #include <wd.h>
 
-#ifdef HAS_OLED
-#include <SSD1306.h>
-SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
-#endif
-
+#define BTN1  35
 bool needReset = false;
 RingBuffer ringBuffer(16);
 
@@ -44,8 +40,8 @@ MqttWifiClient mqttWifiClient;
 #endif
 
 #ifdef HAS_GSM
-#define AT_RX        13
-#define AT_TX        12
+#define AT_RX        27
+#define AT_TX        26
 #define TINY_GSM_DEBUG SerialMon
 MqttGsmClient mqttGPRS(AT_RX, AT_TX);
 MqttGsmStats gprsStatus;
@@ -89,131 +85,6 @@ void resetModuleFromNoConnection() {
   ets_printf("WDT triggered from no connection\n");
   esp_restart();
 }
-
-void displayUpdate()
-{
-  DisplayPage(currentPage);
-}
-
-void ShowNextPage()
-{
-    currentPage++;
-
-    if (currentPage==6)
-      currentPage=0;
-
-    displayUpdate();
-}
-
-#ifdef HAS_DISPLAY
-
-#define L1 0
-#define L2 12
-#define L3 24
-#define L4 36
-#define L5 48
-#define C1 0
-#define C2 32
-#define C3 64
-#define C4 96
-
-void DisplayPage(int page)
-{
-    display.clear();
-    display.setFont(ArialMT_Plain_10);
-    display.setTextAlignment(TEXT_ALIGN_LEFT);
-
-    switch(currentPage)
-    {
-        // status
-        case 0:
-#ifdef HAS_GSM
-          display.drawString(C1, L1, "GSM");
-          display.drawString(C2, L1, mqttGPRS.getGsmStage());
-          display.drawString(C3, L1, mqttGPRS.getGsmStatus());
-#endif
-          display.drawString(C1, L2, "WiFi");
-          display.drawString(C2, L2, wifiStatus);
-
-          display.drawString(C1, L3, "LORA");
-          display.drawString(C2, L3, "Pkts");
-          display.drawString(C3, L3, String(packetcount,DEC));
-          break;
-        case 1:
-          display.drawString(0, 0, "Wifi Status");
-          if (wifiConnected)
-          {
-            display.drawString(C1, L2, "On");
-          }
-          else
-          {
-            display.drawString(C1, L2, "Off");
-          }
-          break;
-        case 2:
-#ifdef HAS_GSM        
-          display.drawString(C1, L1, "Gsm Status");
-          display.drawString(C1, L2, "Volts");
-          display.drawString(C2, L2, String(gprsStatus.gsmVolts, DEC));
-          display.drawString(C3, L2, "dB");
-          display.drawString(C4, L2, String(gprsStatus.signalQuality, DEC));
-          display.drawString(C1, L3, "net");
-          display.drawString(C2, L3, gprsStatus.netConnected?"1":"0");
-          display.drawString(C3, L3, "gprs");
-          display.drawString(C4, L3, gprsStatus.gprsConnected?"1":"0");
-          display.drawString(C1, L4, "mqtt");
-          display.drawString(C2, L4, gprsStatus.mqttConnected?"1":"0");
-#else
-          display.drawString(C1, L1, "Gsm Status");
-          display.drawString(C1, L2, "** DISABLED **");
-#endif          
-          break;
-        case 3:
-          display.drawString(C1, L1, "LoRa Status");
-          display.drawString(C1, L2, "rssi");
-          display.drawString(C2, L2, String(rssi, 2));
-          display.drawString(C1, L2, "snr");
-          display.drawString(C2, L2, String(snr, 2));
-          display.drawString(C1, L3, "pfe");
-          display.drawString(C2, L3, String(pfe, DEC));
-          display.drawString(C1, L4, "pkts");
-          display.drawString(C2, L4, String(packetcount,DEC));
-          break;
-        case 4:
-          display.drawString(C1, L1, "LoRa Settings");
-          display.drawString(C1, L2, "Freq");
-          display.drawString(C2, L2, String(config.frequency, DEC));
-          display.drawString(C1, L2, "Code");
-          display.drawString(C2, L2, String(config.codingRate, DEC));
-          display.drawString(C1, L3, "Spread");
-          display.drawString(C2, L3, String(config.spreadFactor, DEC));
-          display.drawString(C1, L4, "Bwidth");
-          display.drawString(C2, L4, String(config.bandwidth,DEC));
-          display.drawString(C1, L4, "CRC");
-          display.drawString(C2, L4, String(config.enableCRC,DEC));
-          break;
-        case 5:
-          // screen saver
-          break;
-        default:
-          break;
-    }
-    display.display();
-}
-
-void InitOLED() {
-  pinMode(OLED_RST,OUTPUT);
-  digitalWrite(OLED_RST, LOW);    // set GPIO16 low to reset OLED
-  delay(50); 
-  digitalWrite(OLED_RST, HIGH); // while OLED is running, must set GPIO16 in high、
-  delay(50); 
-  display.init();
-  display.displayOn();
-  display.clear();
-  display.drawString(0, 0, "Starting..");
-}
-
-#endif
 
 void getConfig(STARTUPMODE startup_mode) {
 
@@ -265,69 +136,6 @@ STARTUPMODE getStartupMode() {
   return startup_mode;
 }
 
-int detectDebouncedBtnPush() {
-  int currentState = digitalRead(BTN1);
-
-  // check to see if you just pressed the button
-  // (i.e. the input went from LOW to HIGH), and you've waited long enough
-  // since the last press to ignore any noise:
-
-  // ignore if nothing has changed
-  if (currentState == buttonState)
-    return 0;
-
-  // ignore if time delay too quick
-  unsigned long delay = (millis() - lastButtonTime);
-  if (delay < debounceDelay)
-    return 0;
-
-  // whatever the reading is at, it's been there for longer than the debounce
-  // delay, so take it as the actual current state:
-  // if the button state has changed:
-  buttonState = currentState;
-  lastButtonTime = millis();
-
-  // only toggle the LED if the new button state is HIGH
-  if (buttonState == HIGH) {
-    return (delay>btnLongDelay)?2:1;
-  }
-  return 0;
-}
-
-#ifdef HAS_LORA
-
-void startLoRa() {
-
-  Serial.printf("Starting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth);
-
-  SPI.begin(LORA_SCK,MISO,MOSI,SS);
-  LoRa.setPins(SS,RST,DI0);
-
-  int result = LoRa.begin(config.frequency);  
-  if (!result) 
-    Serial.printf("Starting LoRa failed: err %d\n", result);
-  else
-    Serial.println("Started LoRa OK");
-
-    
-  LoRa.setPreambleLength(config.preamble);
-  LoRa.setSpreadingFactor(config.spreadFactor);
-  LoRa.setCodingRate4(config.codingRate);
-
-  if (config.enableCRC)
-      LoRa.enableCrc();
-    else 
-      LoRa.disableCrc();
-
-  // setting the sync work breaks the transmission.
-  if (config.syncword>0)
-    LoRa.setSyncWord(config.syncword);  
-
-  LoRa.setSignalBandwidth(config.bandwidth);
-
-  LoRa.receive();
-}
-
 int HashCode (uint8_t* buffer, int size) {
     int h = 0;
     for (uint8_t* ptr = buffer; size>0; --size, ++ptr)
@@ -347,7 +155,6 @@ void readLoraData(int packetSize)
 
     haveReport = true;
     packetcount++; 
-    displayUpdate();
     CayenneLPP lpp(packetSize + 20);
 
     LoRa.readBytes(lpp._buffer, packetSize);
@@ -382,12 +189,9 @@ void readLoraData(int packetSize)
   }  
 }
 
-#endif
-
 void mqttCallback(char* topic, byte* payload, unsigned int len) {
   incomingCount++;
   snprintf(incomingMessage, sizeof(incomingMessage), "#%d %s",incomingCount, (char *) payload);
-  displayUpdate();
 }
 
 void GetMyMacAddress()
@@ -451,7 +255,6 @@ void setupWifiConfigurator() {
   // mqttGroup.addItem(&gprsUserPasswordParam);
   // iotWebConf.addParameterGroup(&mqttGroup);
   // iotWebConf.setConfigSavedCallback(&configSaved);
-  iotWebConf.setStatusPin(LED_BUILTIN);
   iotWebConf.init();
   
   // -- Set up required URL handlers on the web server.
@@ -474,7 +277,6 @@ void loop() {
   if ( (counter % 100) == 0)
   {
     //lockupWatchdog.clrWatchdog();
-    displayUpdate();
   }  
 
 #ifdef HAS_GSM
@@ -498,7 +300,6 @@ void loop() {
     static const char *enum_str[] = { "Boot", "Not configured", "APMode", "Connecting", "Online", "Offline" };
 
     wifiStatus = enum_str[iotState];
-    displayUpdate();
   }
   else
   {
@@ -508,12 +309,6 @@ void loop() {
 
   int packetSize = LoRa.parsePacket();
   readLoraData(packetSize);
-
-  int btnState = detectDebouncedBtnPush();
-  if (btnState==1)
-  {
-    ShowNextPage();
-  }
   
   if (gprsConnected || wifiConnected)
     connectionWatchdog.clrWatchdog();
@@ -526,13 +321,8 @@ void setup() {
   pinMode(BTN1, INPUT);        // Button 1
   Serial.begin(115200);
   while (!Serial);
-  //delay(1000); 
   Serial.println();
   Serial.println("VESTRONG LaPoulton LoRa HUB");
-
-#ifdef HAS_OLED
-  InitOLED();
-#endif
 
   Serial.println("get startup");
   STARTUPMODE startup_mode = getStartupMode();
@@ -546,17 +336,13 @@ void setup() {
 
 #ifdef HAS_WIFI
   setupWifiConfigurator();
-  mqttWifiClient.init(config.broker, macStr, mqttCallback, displayUpdate);
+  mqttWifiClient.init(config.broker, macStr, mqttCallback);
   mqttWifiClient.doSetupWifiMQTT();
 #endif
 
-  startLoRa();
-  
 #ifdef HAS_GSM
-  mqttGPRS.init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, mqttCallback, displayUpdate);
+  mqttGPRS.init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, mqttCallback);
 #endif
-
-  displayUpdate();
 
   Serial.printf("End of setup\n");
 

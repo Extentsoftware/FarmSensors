@@ -8,12 +8,11 @@ MqttWifiClient::MqttWifiClient()
 {
 }
 
-void MqttWifiClient::init(const char *broker, const char *macStr, std::function<void(char*, byte*, unsigned int)> callback, std::function<void()> displayUpdate)
+void MqttWifiClient::init(const char *broker, const char *macStr, std::function<void(char*, byte*, unsigned int)> callback)
 {
   _broker = broker;
   _macStr = macStr;
   _callback = callback;
-  _displayUpdate = displayUpdate;
 }
 
 bool MqttWifiClient::sendMQTTBinary(uint8_t *report, int packetSize)
@@ -64,7 +63,6 @@ bool MqttWifiClient::isWifiConnected()
   if (_lastMqttConnected != mqttConnected)
   {
       _wifiStatus = mqttConnected ? "MQTT Connected" : "MQTT Disconnected";
-      _displayUpdate();
   }
 
   if (!mqttConnected)

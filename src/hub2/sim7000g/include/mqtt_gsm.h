@@ -5,8 +5,8 @@
 #include <StreamDebugger.h>
 #include <PubSubClient.h>
 
-#define TINY_GSM_MODEM_SIM800
-#define TINY_GSM_RX_BUFFER   1024
+#define TINY_GSM_MODEM_SIM7000
+#define TINY_GSM_RX_BUFFER 1024 // Set RX buffer to 1Kb
 #define GSM_AUTOBAUD_MIN 9600
 #define GSM_AUTOBAUD_MAX 115200
 #define TINY_GSM_USE_GPRS true
@@ -48,8 +48,7 @@ class MqttGsmClient
       char *apn,
       char *gprsUser,
       char *gprsPass,
-      std::function<void(char*, byte*, unsigned int)> callback, 
-      std::function<void()> displayUpdate);
+      std::function<void(char*, byte*, unsigned int)> callback);
     bool ModemCheck();
     String getGsmStage();
     String getGsmStatus();
@@ -66,7 +65,6 @@ class MqttGsmClient
     void mqttGPRSPoll();
     enum MODEM_STATE modem_state=MODEM_INIT;
     std::function<void(char*, byte*, unsigned int)> _callback;
-    std::function<void()> _displayUpdate;
     String _gsmStage= "Booting";
     String _gsmStatus = "";
     char * _macStr;

@@ -16,16 +16,14 @@ void MqttGsmClient::init(
   char *apn,
   char *gprsUser,
   char *gprsPass,
-  std::function<void(char*, byte*, unsigned int)> callback, 
-  std::function<void()> displayUpdate)
+  std::function<void(char*, byte*, unsigned int)> callback)
 {
   _broker = broker;
   _macStr = macStr;
   _callback = callback;
   _apn=apn;
   _gprsUser=gprsUser;
-  _gprsPass=gprsPass;
-  _displayUpdate = displayUpdate;
+  _gprsPass=gprsPass;  
   _mqttGPRS.setServer(_broker, 1883);
   _mqttGPRS.setCallback(_callback);  
   Serial.printf("GSM Broker %s apn %s\n", broker, apn);
@@ -65,7 +63,6 @@ void MqttGsmClient::doModemStart()
 {  
   _gsmStage = "Modem";
   _gsmStatus = "Starting";
-  _displayUpdate();
   uint32_t rate = TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,19200);
 
   Serial.printf("modem baud rate %d\n", rate);
@@ -87,7 +84,6 @@ void MqttGsmClient::waitForNetwork()
   { 
     _gsmStage = Msg_Network;
     _gsmStatus = Msg_Connected;
-    _displayUpdate();
     modem_state=MODEM_CONNECTED;
     Serial.printf("Connected to GSM network\n");
   }
@@ -99,7 +95,6 @@ void MqttGsmClient::doGPRSConnect()
 
   _gsmStage = Msg_GPRS;
   _gsmStatus = Msg_Connecting;
-  _displayUpdate();
     
   bool connected = _modem.gprsConnect(_apn, _gprsUser, _gprsPass);    
 
@@ -196,8 +191,6 @@ bool MqttGsmClient::updateStatus()
           , status.gsmVolts
       );
     }
-    if (changed)
-      _displayUpdate();
     return changed;
 }
 

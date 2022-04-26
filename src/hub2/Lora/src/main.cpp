@@ -7,9 +7,13 @@
 #include <SPIFFS.h>
 #include <main.h>
 #include <LoRa.h>
+#include <Wire.h>
 #include "ringbuffer.h"
 #include <IotWebConf.h>
 #include <IotWebConfUsing.h> // This loads aliases for easier class names.
+#ifdef HAS_OLED
+#include <SSD1306.h>
+#endif
 
 // 4 SPIs on esp32, SPI0 and SPI1 are used for internal flash.
 // HSPI/VSPI has 3 CS line each, to drive 3 devices each.
@@ -24,7 +28,11 @@
 #define SIM_SCLK 14
 #define SIM_CS   13
 
-SPIClass spiSim7000g(HSPI);
+#define SIM_SDA      4   // -> 39
+#define SIM_SCL      15  // -> 36
+#define SIM_ADDR     0xC3
+
+TwoWire Sim7000g(1);
 
  #define BUFFER_SIZE 128
 uint8_t rxpacket[BUFFER_SIZE];
@@ -38,7 +46,6 @@ void OnTxTimeout( void );
 void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr );
 
 #ifdef HAS_OLED
-#include <SSD1306.h>
 SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
 #endif
 
@@ -125,13 +132,15 @@ void LoraReceive(int packetSize)
     ringBuffer.add( hash );
     ++packetcount;
 
-    spiSim7000g.writeBytes(rxpacket, packetSize); 
+    Sim7000g.beginTransmission( SIM_ADDR ); 
+    Sim7000g.write(rxpacket, packetSize); 
+    Sim7000g.endTransmission( true ); 
 
     DisplayPage();
 }
 
 void startSim() {
-  spiSim7000g.begin(SIM_SCK, SIM_MISO, SIM_MOSI, SIM_SS);
+  Sim7000g.begin( SIM_SDA, SIM_SCL );
 }
 
 void startLoRa() {
@@ -184,6 +193,6 @@ void setup() {
   DisplayPage();
   #endif
 
-  // startSim();
+  startSim();
   startLoRa();
 }
