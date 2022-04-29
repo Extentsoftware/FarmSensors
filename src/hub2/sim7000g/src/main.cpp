@@ -2,12 +2,7 @@
 
 static const char * TAG = "Hub";
 
-#define SerialMon Serial
 #define APP_VERSION 1
-
-#ifdef HAS_GSM
-#define TINY_GSM_DEBUG SerialMon
-#endif
 
 #include <vesoil.h>
 #include <SPI.h>
@@ -15,17 +10,19 @@ static const char * TAG = "Hub";
 #include <LoRa.h>
 #include <Preferences.h>
 #include <FS.h>
-#include <SPIFFS.h>
 #include <CayenneLPP.h>
 #include <IotWebConf.h>
 #include <IotWebConfUsing.h> // This loads aliases for easier class names.
+#ifdef HAS_WIFI
 #include "mqtt_wifi.h"
+#endif
 #include "mqtt_gsm.h"
 #include "main.h"
 #include "ringbuffer.h"
 #include <wd.h>
 
 #define BTN1  35
+
 bool needReset = false;
 RingBuffer ringBuffer(16);
 
@@ -40,10 +37,7 @@ MqttWifiClient mqttWifiClient;
 #endif
 
 #ifdef HAS_GSM
-#define AT_RX        27
-#define AT_TX        26
-#define TINY_GSM_DEBUG SerialMon
-MqttGsmClient mqttGPRS(AT_RX, AT_TX);
+MqttGsmClient *mqttGPRS;
 MqttGsmStats gprsStatus;
 #endif
 
@@ -115,13 +109,13 @@ STARTUPMODE getStartupMode() {
 
   // get startup by detecting how many seconds the button is held
   int btndown = 0;
-  int pin=0;
-  do {
-    pin = digitalRead(BTN1);
-    Serial.printf("pin=%d\n",pin);
-    delay(interval);
-    btndown += interval;
-  } while (pin==0);
+  // int pin=0;
+  // do {
+  //   pin = digitalRead(BTN1);
+  //   Serial.printf("pin=%d\n",pin);
+  //   delay(interval);
+  //   btndown += interval;
+  // } while (pin==0);
   
   
   if (btndown<2000)
@@ -212,7 +206,7 @@ void SendMQTTBinary(uint8_t *report, int packetSize)
 #endif
 
 #ifdef HAS_GSM
-  if (mqttGPRS.sendMQTTBinary(report, packetSize))
+  if (mqttGPRS->sendMQTTBinary(report, packetSize))
     return;
 #endif
 
@@ -280,8 +274,8 @@ void loop() {
   }  
 
 #ifdef HAS_GSM
-    mqttGPRS.ModemCheck();
-    mqttGPRS.getStats(gprsStatus);
+    mqttGPRS->ModemCheck();
+    mqttGPRS->getStats(gprsStatus);
     gprsConnected = gprsStatus.gprsConnected;
 #endif
 
@@ -341,11 +335,12 @@ void setup() {
 #endif
 
 #ifdef HAS_GSM
-  mqttGPRS.init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, mqttCallback);
+  mqttGPRS = new MqttGsmClient();
+  mqttGPRS->init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, mqttCallback);
 #endif
 
   Serial.printf("End of setup\n");
 
-  connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
+  //connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
   //lockupWatchdog.setupWatchdog(lockupTimeout, resetModuleFromLockup);
 }

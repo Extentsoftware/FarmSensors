@@ -7,11 +7,13 @@
 
 #define TINY_GSM_MODEM_SIM7000
 #define TINY_GSM_RX_BUFFER 1024 // Set RX buffer to 1Kb
-#define GSM_AUTOBAUD_MIN 9600
+#define GSM_AUTOBAUD_MIN 9600 
 #define GSM_AUTOBAUD_MAX 115200
 #define TINY_GSM_USE_GPRS true
 #define TINY_GSM_USE_WIFI false
-#define GSM_PIN ""
+#define GSM_PIN             ""
+#define PWR_PIN             4
+#define LED_PIN             12
 
 #include <TinyGsm.h>
 #include <TinyGsmClient.h>
@@ -41,7 +43,7 @@ public:
 class MqttGsmClient
 {
   public:
-    MqttGsmClient(int rx, int tx);
+    MqttGsmClient();
     void init(
       char *broker, 
       char *macStr, 
@@ -63,6 +65,10 @@ class MqttGsmClient
     void doGPRSConnect();
     void mqttGPRSConnect();
     void mqttGPRSPoll();
+    void modemPowerOn();
+    void modemPowerOff();
+    void modemRestart();
+    
     enum MODEM_STATE modem_state=MODEM_INIT;
     std::function<void(char*, byte*, unsigned int)> _callback;
     String _gsmStage= "Booting";
@@ -71,13 +77,13 @@ class MqttGsmClient
     char * _apn;
     char * _gprsUser;
     char * _gprsPass;
-    SoftwareSerial SerialAT;
-    StreamDebugger debugger;
-    TinyGsm _modem;
-    TinyGsmClient _client;
-    PubSubClient _mqttGPRS;
+    StreamDebugger* debugger;
+    TinyGsm* _modem;
+    TinyGsmClient* _client;
+    PubSubClient* _mqttGPRS;
     MqttGsmStats status;
-    
+
+
     const char *_broker;
     const char * Msg_Quality = "Db ";
     const char * Msg_Network = "Radio";
