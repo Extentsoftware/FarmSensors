@@ -21,8 +21,6 @@ static const char * TAG = "Hub";
 #include "ringbuffer.h"
 #include <wd.h>
 
-#define BTN1  35
-
 bool needReset = false;
 RingBuffer ringBuffer(16);
 
@@ -104,29 +102,7 @@ void getConfig(STARTUPMODE startup_mode) {
 }
 
 STARTUPMODE getStartupMode() {
-  const int interval = 100;
   STARTUPMODE startup_mode = NORMAL;
-
-  // get startup by detecting how many seconds the button is held
-  int btndown = 0;
-  // int pin=0;
-  // do {
-  //   pin = digitalRead(BTN1);
-  //   Serial.printf("pin=%d\n",pin);
-  //   delay(interval);
-  //   btndown += interval;
-  // } while (pin==0);
-  
-  
-  if (btndown<2000)
-    startup_mode = NORMAL;   // NORMAL
-  else 
-    startup_mode = RESET;   // reset config
-
-  Serial.printf("button held for %d mode is %d\n", btndown, startup_mode );
-
-  buttonState = digitalRead(BTN1);
-
   return startup_mode;
 }
 
@@ -274,9 +250,7 @@ void loop() {
   }  
 
 #ifdef HAS_GSM
-    mqttGPRS->ModemCheck();
-    mqttGPRS->getStats(gprsStatus);
-    gprsConnected = gprsStatus.gprsConnected;
+    gprsConnected = mqttGPRS->ModemCheck();
 #endif
 
 #ifdef HAS_WIFI
@@ -300,10 +274,9 @@ void loop() {
     wifiConnected = mqttWifiClient.isWifiConnected();
   }
 #endif
-
   int packetSize = LoRa.parsePacket();
   readLoraData(packetSize);
-  
+
   if (gprsConnected || wifiConnected)
     connectionWatchdog.clrWatchdog();
 }
@@ -312,7 +285,6 @@ void setup() {
   
   incomingMessage[0]='\0';
 
-  pinMode(BTN1, INPUT);        // Button 1
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
@@ -336,11 +308,11 @@ void setup() {
 
 #ifdef HAS_GSM
   mqttGPRS = new MqttGsmClient();
-  mqttGPRS->init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, mqttCallback);
+  mqttGPRS->init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, config.simPin, mqttCallback);
 #endif
 
   Serial.printf("End of setup\n");
 
-  //connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
+  connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
   //lockupWatchdog.setupWatchdog(lockupTimeout, resetModuleFromLockup);
 }

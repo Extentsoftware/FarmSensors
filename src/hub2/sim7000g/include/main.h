@@ -71,7 +71,12 @@
 #define DEFAULT_BROKER "bongomqtt.uksouth.cloudapp.azure.com"
 #define DEFAULT_APN_VODAPHONE "TM"
 #define DEFAULT_APN_ECONET "econet.net"
+#define DEFAULT_APN_WOWWW "webapn.at"
+#define DEFAULT_SIMPIN_WOWWW "6107"
+#define DEFAULT_SIMPIN_VODAPHONE ""
+
 #define DEFAULT_APN DEFAULT_APN_VODAPHONE
+#define DEFAULT_SIMPIN DEFAULT_SIMPIN_VODAPHONE
 #define DEFAULT_GPRSUSER ""
 #define DEFAULT_GPRSPWD ""
 
@@ -97,10 +102,11 @@ struct HubConfig
   char  broker[42] = DEFAULT_BROKER;
 
   // GPRS Settings
-  bool  gprsEnabled = true;
-  char  apn[32]    = DEFAULT_APN;      // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
+  bool  gprsEnabled =  true;
+  char  apn[32]    =   DEFAULT_APN;      // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
   char  gprsUser[16] = DEFAULT_GPRSUSER;      // GPRS User
   char  gprsPass[16] = DEFAULT_GPRSPWD;      // GPRS Password
+  char  simPin[16] =   DEFAULT_SIMPIN;      // GPRS Password
 
 } default_config;
 

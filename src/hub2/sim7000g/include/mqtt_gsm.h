@@ -1,6 +1,7 @@
 #ifndef __MQTT_GSM__
 #define __MQTT_GSM__
 
+#include <stdio.h>
 #include <SoftwareSerial.h>
 #include <StreamDebugger.h>
 #include <PubSubClient.h>
@@ -50,13 +51,14 @@ class MqttGsmClient
       char *apn,
       char *gprsUser,
       char *gprsPass,
+      char *simPin,
       std::function<void(char*, byte*, unsigned int)> callback);
     bool ModemCheck();
     String getGsmStage();
     String getGsmStatus();
     bool sendMQTTBinary(uint8_t *report, int packetSize);
     bool isConnected();
-    void getStats(MqttGsmStats& stats);
+    void getStatus(MqttGsmStats& stats);
 
   private:
     bool updateStatus();
@@ -68,6 +70,7 @@ class MqttGsmClient
     void modemPowerOn();
     void modemPowerOff();
     void modemRestart();
+    bool printStatus();
     
     enum MODEM_STATE modem_state=MODEM_INIT;
     std::function<void(char*, byte*, unsigned int)> _callback;
@@ -77,6 +80,7 @@ class MqttGsmClient
     char * _apn;
     char * _gprsUser;
     char * _gprsPass;
+    char * _simPin;
     StreamDebugger* debugger;
     TinyGsm* _modem;
     TinyGsmClient* _client;
