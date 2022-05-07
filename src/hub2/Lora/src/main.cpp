@@ -1,40 +1,24 @@
 #include <Arduino.h>
-#include <SPI.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <Preferences.h>
-#include <FS.h>
-#include <SPIFFS.h>
 #include <main.h>
 #include <LoRa.h>
-#include <Wire.h>
 #include "ringbuffer.h"
-#include <IotWebConf.h>
-#include <IotWebConfUsing.h> // This loads aliases for easier class names.
+#include "base64.hpp"
+
 #ifdef HAS_OLED
 #include <SSD1306.h>
 #endif
 
-// 4 SPIs on esp32, SPI0 and SPI1 are used for internal flash.
-// HSPI/VSPI has 3 CS line each, to drive 3 devices each.
+#include "BluetoothSerial.h"
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+#endif
+BluetoothSerial SerialBT;
 
-//TTGO lora32 has SPI pins:
-//        MISO    MOSI     SCK     CS
-//SD      IO02    IO15     IO14    IO13
-//Lora    IO19    IO27     IO05    IO18
+#define STX 0x02
+#define ETX 0x03
 
-#define SIM_MISO 2
-#define SIM_MOSI 15
-#define SIM_SCLK 14
-#define SIM_CS   13
-
-#define SIM_SDA      4   // -> 39
-#define SIM_SCL      15  // -> 36
-#define SIM_ADDR     0xC3
-
-TwoWire Sim7000g(1);
-
- #define BUFFER_SIZE 128
+#define BUFFER_SIZE 128
 uint8_t rxpacket[BUFFER_SIZE];
 unsigned short txLen=0;
 bool sending=false;
@@ -49,18 +33,8 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr );
 SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
 #endif
 
-#ifdef HAS_WIFI
-const char thingName[] = "Hub";               // -- Initial name of the Thing. Used e.g. as SSID of the own Access Point.
-const char wifiInitialApPassword[] = "";      // -- Initial password to connect to the Thing, when it creates an own Access Point.
-const char configVersion[] = "1.2";
-DNSServer dnsServer;
-WebServer server(80);
-IotWebConf iotWebConf(thingName, &dnsServer, &server, wifiInitialApPassword, configVersion);
-#endif
-
 int packetcount=0;
-bool wifiConnected=false;
-String wifiStatus = "Off";
+int duppacketcount=0;
 
 void setupSerial() { 
   Serial.begin(115200);
@@ -69,31 +43,36 @@ void setupSerial() {
   Serial.println("VESTRONG LaPoulton Hub");
 }
 
+int HashCode (uint8_t* buffer, int size) {
+    int h = 0;
+    for (uint8_t* ptr = buffer; size>0; --size, ++ptr)
+        h = h * 31 + *ptr;
+    return h;
+}
+
 #ifdef HAS_DISPLAY
 
 #define L1 0
-#define L2 12
-#define L3 24
-#define L4 36
-#define L5 48
+#define L2 24
+#define L3 47
 #define C1 0
-#define C2 32
-#define C3 64
-#define C4 96
+#define C2 48
+#define C3 72
 
 void DisplayPage()
 {
     display.clear();
-    display.setFont(ArialMT_Plain_10);
+    display.setFont(ArialMT_Plain_16);
     display.setTextAlignment(TEXT_ALIGN_LEFT);
 
-    display.drawString(C1, L2, "WiFi");
-    display.drawString(C2, L2, wifiStatus);
+    display.drawString(C1, L1, "Pkts");
+    display.drawString(C2, L1, String(packetcount,DEC));
 
-    display.drawString(C1, L3, "LORA");
-    display.drawString(C2, L3, "Pkts");
-    display.drawString(C3, L3, String(packetcount,DEC));
-     display.display();
+
+    display.drawString(C1, L2, "Dups");
+    display.drawString(C2, L2, String(duppacketcount,DEC));
+
+    display.display();
 }
 
 void InitOLED() {
@@ -110,13 +89,6 @@ void InitOLED() {
 
 #endif
 
-int HashCode (uint8_t* buffer, int size) {
-    int h = 0;
-    for (uint8_t* ptr = buffer; size>0; --size, ++ptr)
-        h = h * 31 + *ptr;
-    return h;
-}
-
 void LoraReceive(int packetSize) 
 {  
     Serial.printf("got bytes:%d\n", packetSize);
@@ -126,21 +98,26 @@ void LoraReceive(int packetSize)
     if (ringBuffer.exists(hash))
     {
       Serial.printf("Duplicate detected hash %d\n", hash); 
+      ++duppacketcount;
       return;
     }
     Serial.printf("Unique Packet hash %d\n", hash); 
     ringBuffer.add( hash );
     ++packetcount;
 
-    Sim7000g.beginTransmission( SIM_ADDR ); 
-    Sim7000g.write(rxpacket, packetSize); 
-    Sim7000g.endTransmission( true ); 
+    if (SerialBT.connected())
+    {
+      unsigned char base64_text[128];
+      int base64_length = encode_base64(rxpacket,packetSize,base64_text);      
+      SerialBT.write(STX);      
+      for (int i=0;i<base64_length; i++)
+      {
+        SerialBT.write(base64_text[i]);
+      }      
+      SerialBT.write(ETX);
+    }    
 
     DisplayPage();
-}
-
-void startSim() {
-  Sim7000g.begin( SIM_SDA, SIM_SCL );
 }
 
 void startLoRa() {
@@ -178,6 +155,16 @@ void startLoRa() {
   }  
 }
 
+void startBT() {
+  SerialBT.begin("Lora Hub"); //Bluetooth device name
+}
+
+void loopBT() {
+  if (SerialBT.available()) {
+    Serial.write(SerialBT.read());
+  }
+}
+
 void loop() {
   int packetSize = LoRa.parsePacket();
   if (packetSize>0)
@@ -193,6 +180,6 @@ void setup() {
   DisplayPage();
   #endif
 
-  startSim();
+  startBT();
   startLoRa();
 }

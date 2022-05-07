@@ -21,6 +21,16 @@ static const char * TAG = "Hub";
 #include "ringbuffer.h"
 #include <wd.h>
 
+#include "BluetoothSerial.h"
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+#endif
+BluetoothSerial SerialBT;
+
+#define STX 0x02
+#define ETX 0x03
+
+bool bt_connected = false;
 bool needReset = false;
 RingBuffer ringBuffer(16);
 
@@ -241,7 +251,31 @@ void SystemCheck() {
   Serial.printf("HEAP  size  %u free  %u\n", ESP.getHeapSize(), ESP.getFreeHeap());
 }
 
+void startBT() {
+  SerialBT.begin("Sim7000G Hub", true); //Bluetooth device name  
+}
+
+void loopBT() {
+  bool connected = SerialBT.connect("Lora Hub");
+
+  if (connected != bt_connected){
+    Serial.printf("BT connected=%s\n", connected?"Yes":"No");
+    bt_connected = connected;
+  }
+  
+  if (!bt_connected)
+    return;
+
+  if (SerialBT.available()) {
+    Serial.write(SerialBT.read());
+  }
+}
+
+
 void loop() {
+  
+  loopBT();
+
   static int counter = 0;
   counter += 1;
   if ( (counter % 100) == 0)
@@ -310,6 +344,7 @@ void setup() {
   mqttGPRS = new MqttGsmClient();
   mqttGPRS->init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, config.simPin, mqttCallback);
 #endif
+  startBT();
 
   Serial.printf("End of setup\n");
 

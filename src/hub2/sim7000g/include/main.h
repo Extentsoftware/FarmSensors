@@ -15,59 +15,6 @@
 #define RST           14   // GPIO14 -- SX1278's RESET
 #define DI0           26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
 
-#ifdef TTGO_LORA32_V1
-
-#define HAS_OLED
-#define OLED_SDA      4
-#define OLED_SCL      15
-#define OLED_RST      16
-#define OLED_ADDR     0x3C
-
-#define DEF           21
-#define PWRSDA        21
-#define PWRSCL        22
-#define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected
-#define BUSPWR        4       // GPIO04 -- sensor bus power control
-
-#undef  HASPSRAM
-
-#define BTN1          0 
-#define BTN2          36 
-
-#endif
-
-
-#ifdef TTGO_TBEAM_V07
-
-#define PWRSDA        21    
-#define PWRSCL        22
-#define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected
-#define BUSPWR        4       // GPIO04 -- sensor bus power control
-
-#define HASPSRAM
-#define PSRAMSIZE     64000000
-#define STORESIZE     PSRAMSIZE / sizeof(SensorReport)
-
-#define BTN1          38      // GPIO38 On board button (V07 board is GPIO39)
-
-#endif
-
-#ifdef TTGO_TBEAM_V10
-
-#define PWRSDA        21    
-#define PWRSCL        22
-#define BATTERY_PIN   35      // battery level measurement pin, here is the voltage divider connected
-#define BUSPWR        4       // GPIO04 -- sensor bus power control
-
-#define HASPSRAM
-#define PSRAMSIZE     64000000
-#define STORESIZE     PSRAMSIZE / sizeof(SensorReport)
-
-#define BTN1          38      // GPIO38 On board button (V07 board is GPIO39)
-
-#endif
-
-
 #define DEFAULT_BROKER "bongomqtt.uksouth.cloudapp.azure.com"
 #define DEFAULT_APN_VODAPHONE "TM"
 #define DEFAULT_APN_ECONET "econet.net"
