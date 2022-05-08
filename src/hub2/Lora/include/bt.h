@@ -1,3 +1,4 @@
+#if false
 #ifndef __BT__
 #define __BT__
 
@@ -107,4 +108,5 @@ class Bt
     std::function<void(char, byte*, unsigned int)> _callback;
 };
 
+#endif
 #endif

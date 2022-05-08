@@ -4,14 +4,14 @@
 #include <LoRa.h>
 #include <CayenneLPP.h>
 #include "ringbuffer.h"
-#include "bt.h"
+#include "BleServer.h"
 #include <vesoil.h>
 
 #ifdef HAS_OLED
 #include <SSD1306.h>
 #endif
 
-Bt bt;
+BleServer bt;
 
 #define BUFFER_SIZE 128
 uint8_t rxpacket[BUFFER_SIZE];
@@ -167,6 +167,6 @@ void setup() {
   DisplayPage();
   #endif
 
-  bt.init("Lora Hub", false, NULL);
+  bt.init("Lora Hub", NULL);
   startLoRa();
 }
