@@ -7,8 +7,9 @@
 #include "main.h"
 #include <wd.h>
 #include "bt.h"
+#include "BleClient.h"
 
-Bt bt;
+BleClient bt;
 MqttGsmClient *mqttGPRS;
 MqttGsmStats gprsStatus;
 
@@ -106,7 +107,7 @@ void setup() {
   mqttGPRS = new MqttGsmClient();
   mqttGPRS->init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, config.simPin, mqttCallback);
 
-  bt.init("Hub", true, btCallback);
+  bt.init();
   Serial.printf("End of setup\n");
 
   connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);

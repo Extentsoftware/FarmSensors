@@ -1,5 +1,5 @@
-#ifndef __BLE__
-#define __BLE__
+#ifndef __BLE_SERVER__
+#define __BLE_SERVER__
 
 #include "Arduino.h"
 #include <BLEDevice.h>
@@ -42,7 +42,7 @@ class BleServer : BLEServerCallbacks
         Serial.println();
       }
     }
-
+ 
     void init(std::string name, std::function<void(char *, byte*, unsigned int)> callback ) 
     {
       _callback = callback;
