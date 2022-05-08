@@ -2,27 +2,22 @@
 #include <Preferences.h>
 #include <main.h>
 #include <LoRa.h>
+#include <CayenneLPP.h>
 #include "ringbuffer.h"
-#include "base64.hpp"
+#include "bt.h"
+#include <vesoil.h>
 
 #ifdef HAS_OLED
 #include <SSD1306.h>
 #endif
 
-#include "BluetoothSerial.h"
-#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
-#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
-#endif
-BluetoothSerial SerialBT;
-
-#define STX 0x02
-#define ETX 0x03
+Bt bt;
 
 #define BUFFER_SIZE 128
 uint8_t rxpacket[BUFFER_SIZE];
 unsigned short txLen=0;
 bool sending=false;
-RingBuffer ringBuffer(16);
+RingBuffer ringBuffer(64);
 struct HubConfig config;
 
 void OnTxDone( void );
@@ -92,8 +87,16 @@ void InitOLED() {
 void LoraReceive(int packetSize) 
 {  
     Serial.printf("got bytes:%d\n", packetSize);
-    LoRa.readBytes(rxpacket, packetSize);
-    int hash = HashCode(rxpacket, packetSize);
+    Serial.printf("lora data %d bytes\n",packetSize);
+    float snr = LoRa.packetSnr();
+    float rssi = LoRa.packetRssi();
+    long pfe = LoRa.packetFrequencyError();
+    CayenneLPP lpp(packetSize + 20);
+    Serial.printf("Got %d snr:%f rssi:%f pfe:%ld\n",packetSize, snr, rssi, pfe); 
+
+    LoRa.readBytes(lpp._buffer, packetSize);
+
+    int hash = HashCode(lpp._buffer, packetSize);
 
     if (ringBuffer.exists(hash))
     {
@@ -104,18 +107,12 @@ void LoraReceive(int packetSize)
     Serial.printf("Unique Packet hash %d\n", hash); 
     ringBuffer.add( hash );
     ++packetcount;
+    lpp._cursor = packetSize;
 
-    if (SerialBT.connected())
-    {
-      unsigned char base64_text[128];
-      int base64_length = encode_base64(rxpacket,packetSize,base64_text);      
-      SerialBT.write(STX);      
-      for (int i=0;i<base64_length; i++)
-      {
-        SerialBT.write(base64_text[i]);
-      }      
-      SerialBT.write(ETX);
-    }    
+    lpp.addGenericSensor(CH_SNR, snr);
+    lpp.addGenericSensor(CH_RSSI, rssi);
+    lpp.addGenericSensor(CH_PFE, (float)pfe);  
+    bt.sendData(0x10, lpp._buffer, lpp._cursor);
 
     DisplayPage();
 }
@@ -155,16 +152,6 @@ void startLoRa() {
   }  
 }
 
-void startBT() {
-  SerialBT.begin("Lora Hub"); //Bluetooth device name
-}
-
-void loopBT() {
-  if (SerialBT.available()) {
-    Serial.write(SerialBT.read());
-  }
-}
-
 void loop() {
   int packetSize = LoRa.parsePacket();
   if (packetSize>0)
@@ -180,6 +167,6 @@ void setup() {
   DisplayPage();
   #endif
 
-  startBT();
+  bt.init("Lora Hub", false, NULL);
   startLoRa();
 }

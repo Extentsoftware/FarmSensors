@@ -212,7 +212,7 @@ bool MqttGsmClient::updateStatus()
     return changed;
 }
 
-bool MqttGsmClient::printStatus()
+void MqttGsmClient::printStatus()
 {
   Serial.printf("updateStatus:: state=%d network=%d GPRS=%d MQTT=%d Signal Quality %d Chrg %d Percent %d Volts %d\n"
     , modem_state
@@ -223,7 +223,7 @@ bool MqttGsmClient::printStatus()
     , status.chargeState
     , status.percent
     , status.gsmVolts
-);
+  );
 }
 
 bool MqttGsmClient::ModemCheck()

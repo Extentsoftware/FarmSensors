@@ -30,12 +30,6 @@
 
 struct HubConfig
 {
-  // Wifi settings
-  char  ssid[16] = "VM7518894";
-  char  password[16] = "9scvfpkKcygt";
-  bool  softAPMode = false;
-  bool  wifiEnabled = true;
-
   // LoRA settings
   long  frequency = FREQUENCY;  // LoRa transmit frequency
   long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
@@ -57,25 +51,12 @@ struct HubConfig
 
 } default_config;
 
-enum STARTUPMODE
-{
-    NORMAL=0,
-    RESET=2
-};
-
 void GetMyMacAddress();
-int detectDebouncedBtnPush();
 void onReceive(int packetSize);
 void SystemCheck();
-void readLoraData(int packetSize);
-void getConfig(STARTUPMODE startup_mode);
-STARTUPMODE getStartupMode();
-void flashlight(char code);
+void getConfig();
 void startLoRa();
 void SendMQTTBinary(uint8_t *report, int packetSize);
-void InitOLED();
-void DisplayPage(int page);
-void ShowNextPage();
 void setup();
 
 #endif

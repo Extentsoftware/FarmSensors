@@ -70,7 +70,7 @@ class MqttGsmClient
     void modemPowerOn();
     void modemPowerOff();
     void modemRestart();
-    bool printStatus();
+    void printStatus();
     
     enum MODEM_STATE modem_state=MODEM_INIT;
     std::function<void(char*, byte*, unsigned int)> _callback;

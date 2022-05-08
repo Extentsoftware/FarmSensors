@@ -15,11 +15,6 @@
 #define LORA_RST     14   // GPIO14 -- SX1278's RESET
 #define LORA_DI0     26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
 
-#define SIM_SCK      14  
-#define SIM_MISO     2
-#define SIM_MOSI     15
-#define SIM_SS       13  
-
 #ifdef TTGO_LORA32_V1
 
 #define HAS_OLED
