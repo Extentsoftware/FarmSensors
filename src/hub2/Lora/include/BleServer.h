@@ -13,9 +13,9 @@
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define SENS_CHARACTERISTIC_UUID "SENS"
 #define INDX_CHARACTERISTIC_UUID "INDX"
+#define VOLT_CHARACTERISTIC_UUID    "VOLT"
 
-
-class BleServer : BLEServerCallbacks
+class BleServer : BLEServerCallbacks,BLECharacteristicCallbacks
 {
   public:
     void onConnect(BLEServer* pServer) {
@@ -32,8 +32,10 @@ class BleServer : BLEServerCallbacks
     void onWrite(BLECharacteristic *pCharacteristic) {
       std::string rxValue = pCharacteristic->getValue();
       BLEUUID uuid = pCharacteristic->getUUID();
-      if (rxValue.length() > 0) {
-        Serial.printf("Received Index Change %s: %d bytes: \n",uuid.toString(), rxValue.length());
+      int len = rxValue.length();
+      Serial.printf("Received Index Change %s: %d bytes: \n",uuid.toString().c_str(), len);
+      if (len > 0) {
+        
         //if (_callback)
         //  _callback()
         for (int i = 0; i < rxValue.length(); i++)
@@ -68,10 +70,22 @@ class BleServer : BLEServerCallbacks
                   BLECharacteristic::PROPERTY_WRITE
                 );
 
+      pVoltsCharacteristic = pService->createCharacteristic(
+                  VOLT_CHARACTERISTIC_UUID,
+                  BLECharacteristic::PROPERTY_READ   |
+                  BLECharacteristic::PROPERTY_WRITE  |
+                  BLECharacteristic::PROPERTY_NOTIFY
+                );
+
       // https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
       // Create a BLE Descriptor
       pSenseCharacteristic->addDescriptor(new BLE2902());
       pIndexCharacteristic->addDescriptor(new BLE2902());
+      pVoltsCharacteristic->addDescriptor(new BLE2902());
+
+      pSenseCharacteristic->setCallbacks(this);
+      pIndexCharacteristic->setCallbacks(this);
+      pVoltsCharacteristic->setCallbacks(this);
 
       // Start the service
       pService->start();
@@ -91,12 +105,20 @@ class BleServer : BLEServerCallbacks
     }
     
     void sendData(unsigned char cmd, unsigned char * packet, int packetSize)
-    {      
+    {     
         uint8_t * buffer = (uint8_t *)malloc(packetSize * 2);
         int base64_length = encode_base64(packet, packetSize, buffer);
+        Serial.printf("set value %d bytes %s\n", base64_length, buffer); 
         pSenseCharacteristic->setValue(buffer, base64_length);
         free(buffer);
         pSenseCharacteristic->notify();
+    }
+    
+    void sendVolts(float volts)
+    {     
+        Serial.printf("set volts %f\n", volts); 
+        pVoltsCharacteristic->setValue(volts);
+        pVoltsCharacteristic->notify();
     }
 
   private:
@@ -126,6 +148,7 @@ class BleServer : BLEServerCallbacks
     BLEServer* pServer = NULL;
     BLECharacteristic* pSenseCharacteristic = NULL;
     BLECharacteristic* pIndexCharacteristic = NULL;
+    BLECharacteristic* pVoltsCharacteristic = NULL;
     bool deviceConnected = false;
     bool oldDeviceConnected = false;
     uint32_t value = 0;

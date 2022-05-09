@@ -30,6 +30,7 @@ SSD1306 display(OLED_ADDR, OLED_SDA, OLED_SCL);
 
 int packetcount=0;
 int duppacketcount=0;
+float batteryVolts=0;
 
 void setupSerial() { 
   Serial.begin(115200);
@@ -152,10 +153,22 @@ void startLoRa() {
   }  
 }
 
+// void checkBattery() {
+//   adcAttachPin(35);
+//   analogReadResolution(10); // Default of 12 is not very linear. Recommended to use 10 or 11 depending on needed resolution.
+//   float v = analogRead(35) * 2.0 * (3.3 / 1024.0);
+//   if (batteryVolts != v)
+//   {
+//     batteryVolts = v;
+//     bt.sendVolts(batteryVolts);
+//   }
+// }
+
 void loop() {
   int packetSize = LoRa.parsePacket();
   if (packetSize>0)
     LoraReceive(packetSize);
+//  checkBattery();
 }
 
 void setup() {

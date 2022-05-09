@@ -13,6 +13,7 @@
 #define SERVICE_UUID                "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define SENS_CHARACTERISTIC_UUID    "SENS"
 #define INDX_CHARACTERISTIC_UUID    "INDX"
+#define VOLT_CHARACTERISTIC_UUID    "VOLT"
 
 class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks 
 {
@@ -35,6 +36,7 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
     } // onResult
         
     void onConnect(BLEClient* pclient) {
+        Serial.println("onConnect");
     }
 
     void onDisconnect(BLEClient* pclient) {
@@ -58,8 +60,8 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
         // Obtain a reference to the service we are after in the remote BLE server.
         BLERemoteService* pRemoteService = pClient->getService(SERVICE_UUID);
         if (pRemoteService == nullptr) {
-        pClient->disconnect();
-        return false;
+          pClient->disconnect();
+          return false;
         }
         Serial.println(" - Found our service");
 
@@ -67,22 +69,22 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
         // Obtain a reference to the characteristic in the service of the remote BLE server.
         pRemoteCharacteristic = pRemoteService->getCharacteristic(SENS_CHARACTERISTIC_UUID);
         if (pRemoteCharacteristic == nullptr) {
-        Serial.print("Failed to find our characteristic UUID: ");
-        Serial.println(SENS_CHARACTERISTIC_UUID);
-        pClient->disconnect();
-        return false;
+          Serial.print("Failed to find our characteristic UUID: ");
+          Serial.println(SENS_CHARACTERISTIC_UUID);
+          pClient->disconnect();
+          return false;
         }
         Serial.println(" - Found our characteristic");
 
         // Read the value of the characteristic.
         if(pRemoteCharacteristic->canRead()) {
-        std::string value = pRemoteCharacteristic->readValue();
-        Serial.print("The characteristic value was: ");
-        Serial.println(value.c_str());
+          std::string value = pRemoteCharacteristic->readValue();
+          Serial.print("The characteristic value was: ");
+          Serial.println(value.c_str());
         }
 
         if(pRemoteCharacteristic->canNotify())
-        pRemoteCharacteristic->registerForNotify(notifyCallback);
+          pRemoteCharacteristic->registerForNotify(notifyCallback);
 
         connected = true;
     }
@@ -91,13 +93,21 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
         BLERemoteCharacteristic* pBLERemoteCharacteristic,
         uint8_t* pData,
         size_t length,
-        bool isNotify) {
+        bool isNotify) 
+    {
         Serial.print("Notify callback for characteristic ");
         Serial.print(pBLERemoteCharacteristic->getUUID().toString().c_str());
         Serial.print(" of data length ");
         Serial.println(length);
         Serial.print("data: ");
         Serial.println((char*)pData);
+
+        //if(pBLERemoteCharacteristic->canRead()) {
+          Serial.print("The characteristic value was: ");
+          std::string value = pBLERemoteCharacteristic->readValue();
+          Serial.println(value.c_str());
+        //}
+
     }
 
     void init() 
