@@ -97,6 +97,7 @@ void setup() {
   
   Serial.begin(115200);
   while (!Serial);
+  esp_log_level_set("*", ESP_LOG_DEBUG);
   Serial.println();
   Serial.println("VESTRONG LaPoulton LoRa HUB");
 

@@ -54,10 +54,10 @@ void MqttGsmClient::doModemStart()
   
   Serial.println("doModemStart:: Restarting modem...");
 
-  if (!_modem->restart()) {
-    Serial.println("doModemStart:: Failed to restart modem");
-    return;
-  }
+  // if (!_modem->restart()) {
+  //   Serial.println("doModemStart:: Failed to restart modem");
+  //   return;
+  // }
   
   Serial.println("doModemStart:: Initializing modem...");
   if (!_modem->init()) {

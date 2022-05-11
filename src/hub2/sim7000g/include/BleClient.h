@@ -3,9 +3,6 @@
 
 #include "Arduino.h"
 #include <BLEDevice.h>
-#include <BLEServer.h>
-#include <BLEUtils.h>
-#include <BLE2902.h>
 #include <functional>
 #include "base64.hpp"
 
@@ -14,6 +11,8 @@
 #define SENS_CHARACTERISTIC_UUID    "SENS"
 #define INDX_CHARACTERISTIC_UUID    "INDX"
 #define VOLT_CHARACTERISTIC_UUID    "VOLT"
+
+static bool ble_notified = false;
 
 class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks 
 {
@@ -53,9 +52,13 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
 
         pClient->setClientCallbacks(this);
 
+        Serial.printf(" - MTU %d", pClient->getMTU());
+
         // Connect to the remove BLE Server.
         pClient->connect(myDevice);  // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
         Serial.println(" - Connected to server");
+
+        
 
         // Obtain a reference to the service we are after in the remote BLE server.
         BLERemoteService* pRemoteService = pClient->getService(SERVICE_UUID);
@@ -64,7 +67,6 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
           return false;
         }
         Serial.println(" - Found our service");
-
 
         // Obtain a reference to the characteristic in the service of the remote BLE server.
         pRemoteCharacteristic = pRemoteService->getCharacteristic(SENS_CHARACTERISTIC_UUID);
@@ -87,6 +89,7 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
           pRemoteCharacteristic->registerForNotify(notifyCallback);
 
         connected = true;
+        return connected;
     }
 
     static void notifyCallback(
@@ -102,35 +105,38 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
         Serial.print("data: ");
         Serial.println((char*)pData);
 
-        //if(pBLERemoteCharacteristic->canRead()) {
-          Serial.print("The characteristic value was: ");
-          std::string value = pBLERemoteCharacteristic->readValue();
-          Serial.println(value.c_str());
-        //}
-
+        ble_notified = true;
     }
 
     void init() 
     {
         BLEDevice::init("");        
+        BLEDevice::setMTU(500);
         BLEScan* pBLEScan = BLEDevice::getScan();
         pBLEScan->setAdvertisedDeviceCallbacks(this);
-        //pBLEScan->setInterval(1349);
-        //pBLEScan->setWindow(449);
         pBLEScan->setActiveScan(true);
         pBLEScan->start(5, false);
     }
 
     void loop() 
     {
+        if (ble_notified)
+        {
+          ble_notified = false;
+          if(pRemoteCharacteristic->canRead()) {
+            std::string value = pRemoteCharacteristic->readValue();
+            Serial.print("In loop: The characteristic value was: ");
+            Serial.println(value.c_str());
+          }
+        }
         // If the flag "doConnect" is true then we have scanned for and found the desired
         // BLE Server with which we wish to connect.  Now we connect to it.  Once we are 
         // connected we set the connected flag to be true.
         if (doConnect == true) {
             if (connectToServer()) {
-            Serial.println("We are now connected to the BLE Server.");
+              Serial.println("We are now connected to the BLE Server.");
             } else {
-            Serial.println("We have failed to connect to the server; there is nothin more we will do.");
+              Serial.println("We have failed to connect to the server; there is nothin more we will do.");
             }
             doConnect = false;
         }
