@@ -12,7 +12,7 @@
 #define INDX_CHARACTERISTIC_UUID    "INDX"
 #define VOLT_CHARACTERISTIC_UUID    "VOLT"
 
-static bool ble_notified = false;
+static bool ble_sense_notified = false;
 
 class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks 
 {
@@ -69,8 +69,8 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
         Serial.println(" - Found our service");
 
         // Obtain a reference to the characteristic in the service of the remote BLE server.
-        pRemoteCharacteristic = pRemoteService->getCharacteristic(SENS_CHARACTERISTIC_UUID);
-        if (pRemoteCharacteristic == nullptr) {
+        pRemoteSenseCharacteristic = pRemoteService->getCharacteristic(SENS_CHARACTERISTIC_UUID);
+        if (pRemoteSenseCharacteristic == nullptr) {
           Serial.print("Failed to find our characteristic UUID: ");
           Serial.println(SENS_CHARACTERISTIC_UUID);
           pClient->disconnect();
@@ -79,14 +79,14 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
         Serial.println(" - Found our characteristic");
 
         // Read the value of the characteristic.
-        if(pRemoteCharacteristic->canRead()) {
-          std::string value = pRemoteCharacteristic->readValue();
+        if(pRemoteSenseCharacteristic->canRead()) {
+          std::string value = pRemoteSenseCharacteristic->readValue();
           Serial.print("The characteristic value was: ");
           Serial.println(value.c_str());
         }
 
-        if(pRemoteCharacteristic->canNotify())
-          pRemoteCharacteristic->registerForNotify(notifyCallback);
+        if(pRemoteSenseCharacteristic->canNotify())
+          pRemoteSenseCharacteristic->registerForNotify(notifyCallback);
 
         connected = true;
         return connected;
@@ -105,28 +105,38 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
         Serial.print("data: ");
         Serial.println((char*)pData);
 
-        ble_notified = true;
+        ble_sense_notified = true;
     }
 
-    void init() 
+    void init(std::function<void(byte*, unsigned int)> transmit_callback) 
     {
+        _transmit_callback = transmit_callback;
+        Serial.printf("BLEDevice::init\n");
         BLEDevice::init("");        
         BLEDevice::setMTU(500);
         BLEScan* pBLEScan = BLEDevice::getScan();
         pBLEScan->setAdvertisedDeviceCallbacks(this);
+        Serial.printf("pBLEScan->setActiveScan\n");
         pBLEScan->setActiveScan(true);
+        Serial.printf("pBLEScan->start\n");
         pBLEScan->start(5, false);
+        Serial.printf("BLEDevice::init end\n");
     }
 
     void loop() 
     {
-        if (ble_notified)
+        if (ble_sense_notified)
         {
-          ble_notified = false;
-          if(pRemoteCharacteristic->canRead()) {
-            std::string value = pRemoteCharacteristic->readValue();
+          ble_sense_notified = false;
+          if(pRemoteSenseCharacteristic->canRead()) {
+            std::string value = pRemoteSenseCharacteristic->readValue();
             Serial.print("In loop: The characteristic value was: ");
             Serial.println(value.c_str());
+            unsigned char * buffer = (uint8_t *)malloc(value.length());
+            int base64_length = decode_base64((unsigned char *)(value.c_str()), buffer);
+            if (_transmit_callback != NULL)
+              _transmit_callback(buffer, base64_length);
+            free(buffer);
           }
         }
         // If the flag "doConnect" is true then we have scanned for and found the desired
@@ -158,8 +168,9 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
     boolean doConnect = false;
     boolean connected = false;
     boolean doScan = false;
-    BLERemoteCharacteristic* pRemoteCharacteristic;
+    BLERemoteCharacteristic* pRemoteSenseCharacteristic;
     BLEAdvertisedDevice* myDevice;
+    std::function<void(byte*, unsigned int)> _transmit_callback;
 
 };
 

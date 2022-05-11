@@ -39,14 +39,8 @@ void getConfig() {
     return;
 }
 
-void btCallback(char cmd, byte* payload, unsigned int len) {
-  Serial.printf("Got BT cmd %d with %d bytes payload\n", cmd, len);
-  switch(cmd)
-  {
-    case 0x10:
-      SendMQTTBinary(payload, len);
-      break;
-  }
+void btCallback(byte* payload, unsigned int len) {
+    SendMQTTBinary(payload, len);
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int len) {
@@ -108,7 +102,7 @@ void setup() {
   mqttGPRS = new MqttGsmClient();
   mqttGPRS->init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, config.simPin, mqttCallback);
 
-  bt.init();
+  bt.init(btCallback);
   Serial.printf("End of setup\n");
 
   connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
