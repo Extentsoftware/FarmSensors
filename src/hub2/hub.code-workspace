@@ -11,6 +11,12 @@
 		},
 		{
 			"path": "test"
+		},
+		{
+			"path": "sim7000g-Lora"
+		},
+		{
+			"path": "LoraEmpty"
 		}
 	],
 	"settings": {

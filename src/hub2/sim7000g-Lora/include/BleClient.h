@@ -52,13 +52,20 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
 
         pClient->setClientCallbacks(this);
 
-        Serial.printf(" - MTU %d", pClient->getMTU());
+        pClient->setMTU(500);
+        Serial.printf(" - MTU %d\n", pClient->getMTU());
 
         // Connect to the remove BLE Server.
-        pClient->connect(myDevice);  // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
-        Serial.println(" - Connected to server");
+        for (int i=0;i<3;i++)
+        {
+            delay(1000);
+            bool connected = pClient->connect(myDevice);  // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
+            if (connected)
+              break;
+            Serial.printf("Failed to connect to server - attempt %d", i+1);
+        }
 
-        
+        Serial.println(" - Connected to server");
 
         // Obtain a reference to the service we are after in the remote BLE server.
         BLERemoteService* pRemoteService = pClient->getService(SERVICE_UUID);
@@ -98,21 +105,22 @@ class BleClient : BLEClientCallbacks, BLEAdvertisedDeviceCallbacks
         size_t length,
         bool isNotify) 
     {
-        Serial.print("Notify callback for characteristic ");
+        Serial.print("Notify callback for characteristic ");        
         Serial.print(pBLERemoteCharacteristic->getUUID().toString().c_str());
         Serial.print(" of data length ");
         Serial.println(length);
         Serial.print("data: ");
         Serial.println((char*)pData);
 
-        ble_sense_notified = true;
+        if (pBLERemoteCharacteristic->getUUID().equals(BLEUUID(SENS_CHARACTERISTIC_UUID)))
+          ble_sense_notified = true;
     }
 
     void init(std::function<void(byte*, unsigned int)> transmit_callback) 
     {
         _transmit_callback = transmit_callback;
         Serial.printf("BLEDevice::init\n");
-        BLEDevice::init("");        
+        BLEDevice::init("SIM7000G");        
         BLEDevice::setMTU(500);
         BLEScan* pBLEScan = BLEDevice::getScan();
         pBLEScan->setAdvertisedDeviceCallbacks(this);

@@ -26,9 +26,7 @@ static const char * TAG = "Hub";
 #include <FS.h>
 #include <SPIFFS.h>
 #include <CayenneLPP.h>
-#include <IotWebConf.h>
-#include <IotWebConfUsing.h> // This loads aliases for easier class names.
-#include "mqtt_wifi.h"
+ #include "mqtt_wifi.h"
 #include "mqtt_gsm.h"
 #include "vesoil_hub.h"
 #include "ringbuffer.h"

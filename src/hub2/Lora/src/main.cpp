@@ -3,7 +3,7 @@
 #include <main.h>
 #include <LoRa.h>
 #include <CayenneLPP.h>
-#include "ringbuffer.h"
+#include "messagebuffer.h"
 #include "BleServer.h"
 #include <vesoil.h>
 
@@ -17,7 +17,7 @@ BleServer bt;
 uint8_t rxpacket[BUFFER_SIZE];
 unsigned short txLen=0;
 bool sending=false;
-RingBuffer ringBuffer(64);
+MessageBuffer messageBuffer(128);
 struct HubConfig config;
 
 void OnTxDone( void );
@@ -37,13 +37,6 @@ void setupSerial() {
   while (!Serial);
   Serial.println();
   Serial.println("VESTRONG LaPoulton Hub");
-}
-
-int HashCode (uint8_t* buffer, int size) {
-    int h = 0;
-    for (uint8_t* ptr = buffer; size>0; --size, ++ptr)
-        h = h * 31 + *ptr;
-    return h;
 }
 
 #ifdef HAS_DISPLAY
@@ -97,23 +90,31 @@ void LoraReceive(int packetSize)
 
     LoRa.readBytes(lpp._buffer, packetSize);
 
-    int hash = HashCode(lpp._buffer, packetSize);
-
-    if (ringBuffer.exists(hash))
-    {
-      Serial.printf("Duplicate detected hash %d\n", hash); 
-      ++duppacketcount;
-      return;
-    }
-    Serial.printf("Unique Packet hash %d\n", hash); 
-    ringBuffer.add( hash );
-    ++packetcount;
+    // add signal strength etc
     lpp._cursor = packetSize;
-
     lpp.addGenericSensor(CH_SNR, snr);
     lpp.addGenericSensor(CH_RSSI, rssi);
     lpp.addGenericSensor(CH_PFE, (float)pfe);  
-    bt.sendData(0x10, lpp._buffer, lpp._cursor);
+
+    // convert to base64
+    int size = lpp._cursor * 2;
+    uint8_t * base64_buffer = (uint8_t *)malloc(size);
+    memset(base64_buffer,0,size);
+    int base64_length = encode_base64(lpp._buffer, lpp._cursor, base64_buffer);
+    Serial.printf("set value %d bytes %s\n", base64_length, base64_buffer); 
+
+    if (messageBuffer.add(base64_buffer))
+    {
+      ++packetcount;
+      bt.sendData(base64_buffer);
+    }
+    else
+    {
+      Serial.printf("Duplicate detected\n"); 
+      ++duppacketcount;
+      free(base64_buffer);
+      return;
+    }
 
     DisplayPage();
 }
