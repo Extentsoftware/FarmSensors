@@ -287,4 +287,4 @@ void MqttGsmClient::modemRestart()
     modemPowerOff();
     delay(1000);
     modemPowerOn();
-}
+}  
