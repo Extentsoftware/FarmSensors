@@ -18,11 +18,11 @@
 #define LORA32_DI0           26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
 
 // on TTGO SIM7000g
-#define LORA_SS             5  // --> 18 grey
-#define LORA_SCK            18 // -->  5 white
-#define LORA_MISO           19 // --> 19 black
-#define LORA_MOSI           23 // --> 27 brown
-#define LORA_RST            12 // --> 14 red
+#define LORA_SS             5  // --> 18 grey x
+#define LORA_SCK            18 // -->  5 white x
+#define LORA_MISO           19 // --> 19 black x
+#define LORA_MOSI           23 // --> 27 brown x
+#define LORA_RST            12 // --> 14 red x
 #define LORA_DI0            32 // --> 26 orange
 
 

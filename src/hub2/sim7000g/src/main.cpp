@@ -1,3 +1,23 @@
+#if 1
+#include <Arduino.h>
+#include <SPI.h>
+#include "main.h"
+
+SPIClass SPI1(HSPI);
+
+void loop() {
+}
+
+
+void setup() {
+  SPI1.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  Serial.begin(115200);
+  while (!Serial);
+  Serial.println();
+  Serial.println("VESTRONG LaPoulton LoRa HUB");
+}
+#else
+
 // https://github.com/Xinyuan-LilyGO/LilyGO-T-SIM7000G
 #define APP_VERSION 1
 
@@ -256,3 +276,4 @@ void setup() {
 
   connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
 }
+#endif
