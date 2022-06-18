@@ -1,20 +1,28 @@
-#if 1
+#if 0
 #include <Arduino.h>
 #include <SPI.h>
 #include "main.h"
 
-SPIClass SPI1(HSPI);
-
+//SPIClass SPI1(HSPI);
+SPIClass * vspi = NULL;
+SPIClass * hspi = NULL;
 void loop() {
 }
 
 
 void setup() {
-  SPI1.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  //SPI1.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  
   Serial.begin(115200);
   while (!Serial);
   Serial.println();
   Serial.println("VESTRONG LaPoulton LoRa HUB");
+
+  hspi = new SPIClass(HSPI);
+  Serial.println("#1");
+  hspi->begin();
+  Serial.println("#2");
+
 }
 #else
 
@@ -64,7 +72,8 @@ const int connectionTimeout = 3 * 60000; //time in ms to trigger the watchdog
 Watchdog connectionWatchdog;
 
 #ifdef HAS_LORA
-SPIClass SPI1(HSPI);
+//SPIClass SPI1(HSPI);
+SPIClass * hspi = NULL;
 #endif
 
 const int lockupTimeout = 1000; //time in ms to trigger the watchdog
@@ -186,9 +195,14 @@ void LoraReceive(int packetSize)
 void startLoRa() {
 
   Serial.printf("\nStarting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu txpower:%d\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth, config.txpower);
+  hspi = new SPIClass(HSPI);
+  Serial.println("#1");
+  hspi->begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  
+  //SPI1.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  //LoRa.setSPI(SPI1);
 
-  SPI1.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
-  LoRa.setSPI(SPI1);
+  LoRa.setSPI(*hspi);
   LoRa.setPins(LORA_SS, LORA_RST, LORA_DI0);
 
   int result = LoRa.begin(config.frequency);
