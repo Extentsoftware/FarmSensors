@@ -27,38 +27,42 @@
 
 
 #define DEFAULT_BROKER            "bongomqtt.uksouth.cloudapp.azure.com"
-#define DEFAULT_APN_VODAPHONE     "TM"
+
+#define DEFAULT_APN_VODAPHONE     ""
+#define DEFAULT_APN_THREE         "three.co.uk"
 #define DEFAULT_APN_ECONET        "econet.net"
 #define DEFAULT_APN_WOWWW         "webapn.at"
-#define DEFAULT_SIMPIN_VODAPHONE  ""
 
-#define DEFAULT_APN               DEFAULT_APN_VODAPHONE
-#define DEFAULT_SIMPIN            DEFAULT_SIMPIN_VODAPHONE
-#define DEFAULT_GPRSUSER          ""
-#define DEFAULT_GPRSPWD           ""
+#define DEFAULT_SIMPIN_VODAPHONE  ""
+#define DEFAULT_SIMPIN_THREE      ""
+
+#define DEFAULT_APN        DEFAULT_APN_VODAPHONE
+#define DEFAULT_SIMPIN     DEFAULT_SIMPIN_VODAPHONE
+#define DEFAULT_GPRSUSER   ""
+#define DEFAULT_GPRSPWD    ""
 
 
 struct HubConfig
 {
   // LoRA settings
-  long  frequency = FREQUENCY;  // LoRa transmit frequency
-  long  bandwidth = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
-  long  preamble = PREAMBLE;
-  unsigned char   syncword = SYNCWORD;
-  int   spreadFactor = SPREAD;  // signal processing gain. higher values give greater range but take longer (more power) to transmit
-  int   codingRate = CODERATE;  // extra info for CRC
-  bool  enableCRC = true;       //
-  int   txpower=20;
+  long  frequency         = FREQUENCY;  // LoRa transmit frequency
+  long  bandwidth         = BAND;       // lower (narrower) bandwidth values give longer range but become unreliable the tx/rx drift in frequency
+  long  preamble          = PREAMBLE;
+  int   spreadFactor      = SPREAD;     // signal processing gain. higher values give greater range but take longer (more power) to transmit
+  int   codingRate        = CODERATE;   // extra info for CRC
+  bool  enableCRC         = true;       //
+  unsigned char syncword  = SYNCWORD;
+  int   txpower           = 20;
 
   // MQTT Settings
-  char  broker[42] = DEFAULT_BROKER;
+  char  broker[42]        = DEFAULT_BROKER;
 
   // GPRS Settings
-  bool  gprsEnabled =  true;
-  char  apn[32]    =   DEFAULT_APN;      // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
-  char  gprsUser[16] = DEFAULT_GPRSUSER;      // GPRS User
-  char  gprsPass[16] = DEFAULT_GPRSPWD;      // GPRS Password
-  char  simPin[16] =   DEFAULT_SIMPIN;      // GPRS Password
+  bool  gprsEnabled       = true;
+  char  apn[32]           = DEFAULT_APN;        // APN (example: internet.vodafone.pt) use https://wiki.apnchanger.org
+  char  gprsUser[16]      = DEFAULT_GPRSUSER;   // GPRS User
+  char  gprsPass[16]      = DEFAULT_GPRSPWD;    // GPRS Password
+  char  simPin[16]        = DEFAULT_SIMPIN;     // GPRS Password
 
 } default_config;
 

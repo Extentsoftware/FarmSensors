@@ -50,9 +50,7 @@ void MqttGsmClient::doModemStart()
   _gsmStage = "Modem";
   _gsmStatus = "Starting";
 
-  modemRestart();
-  
-  Serial.println("doModemStart:: Restarting modem...");
+  modemPowerOn();
 
   Serial.println("doModemStart:: Initializing modem...");
   if (!_modem->init()) {
@@ -64,8 +62,40 @@ void MqttGsmClient::doModemStart()
     Serial.printf("Unlocking with pin: %s\n",_simPin);
     _modem->simUnlock(_simPin);
   }
-  
-  _modem->setPreferredMode(38); // LTE
+
+  uint8_t network[] = {
+      2,  /*Automatic*/
+      13, /*GSM only*/
+      38, /*LTE only*/
+      51  /*GSM and LTE only*/
+  };  
+  for (int i = 0; i <= 4; i++) {
+
+      Serial.printf("Try method '%d' \n", network[i]);
+      _modem->setNetworkMode(network[i]);
+      delay(3000);
+      bool isConnected = false;
+      int tryCount = 60;
+      while (tryCount--) {
+          int16_t signal =  _modem->getSignalQuality();
+          Serial.print("Signal: ");
+          Serial.print(signal);
+          Serial.print(" ");
+          Serial.print("isNetworkConnected: ");
+          isConnected = _modem->isNetworkConnected();
+          Serial.println( isConnected ? "CONNECT" : "NO CONNECT");
+          if (isConnected) {
+              break;
+          }
+          delay(1000);
+      }
+      if (isConnected) {
+          break;
+      }
+  }
+
+  _modem->setPreferredMode(3); // cat-m & nb-iot
+  delay(500);
 
   _gsmStage = "Radio";
   modem_state=MODEM_NOT_CONNECTED;
@@ -184,11 +214,18 @@ void MqttGsmClient::getStatus(MqttGsmStats& stats)
 bool MqttGsmClient::updateStatus()
 {
     MqttGsmStats newStatus;
-    _modem->getBattStats(newStatus.chargeState, newStatus.percent, newStatus.gsmVolts);
     newStatus.signalQuality = _modem->getSignalQuality();
     newStatus.gprsConnected = false;
     newStatus.mqttConnected = false;
-    _modem->sendAT("+CREG?");
+
+    //_modem->sendAT("+CSQ");
+    //_modem->sendAT("+COPS?");
+    //_modem->sendAT("+COPS=?");
+    //delay(30000);
+    //return false;
+
+    _modem->getBattStats(newStatus.chargeState, newStatus.percent, newStatus.gsmVolts);
+        
     newStatus.netConnected = _modem->isNetworkConnected();
 
     
@@ -270,7 +307,7 @@ void MqttGsmClient::modemPowerOn()
     Serial.printf("modemPowerOn:: GSM Power On\n");  
     pinMode(PWR_PIN, OUTPUT);
     digitalWrite(PWR_PIN, LOW);
-    delay(1000);    //Datasheet Ton mintues = 1S
+    delay(3000);    //Datasheet Ton mintues = 1S
     digitalWrite(PWR_PIN, HIGH);
 }
 

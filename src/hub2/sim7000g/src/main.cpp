@@ -1,31 +1,3 @@
-#if 0
-#include <Arduino.h>
-#include <SPI.h>
-#include "main.h"
-
-//SPIClass SPI1(HSPI);
-SPIClass * vspi = NULL;
-SPIClass * hspi = NULL;
-void loop() {
-}
-
-
-void setup() {
-  //SPI1.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
-  
-  Serial.begin(115200);
-  while (!Serial);
-  Serial.println();
-  Serial.println("VESTRONG LaPoulton LoRa HUB");
-
-  hspi = new SPIClass(HSPI);
-  Serial.println("#1");
-  hspi->begin();
-  Serial.println("#2");
-
-}
-#else
-
 // https://github.com/Xinyuan-LilyGO/LilyGO-T-SIM7000G
 #define APP_VERSION 1
 
@@ -48,7 +20,7 @@ void setup() {
 #include "BleServer.h"
 #endif
 
-static const char * TAG = "Hub1.0";
+static const char * TAG = "Hub1.1";
 
 #ifdef HAS_BLUETOOTH
 BleServer bt;
@@ -68,7 +40,7 @@ int packetcount=0;
 int duppacketcount=0;
 struct HubConfig config;
 
-const int connectionTimeout = 3 * 60000; //time in ms to trigger the watchdog
+const int connectionTimeout = 15 * 60000; //time in ms to trigger the watchdog
 Watchdog connectionWatchdog;
 
 #ifdef HAS_LORA
@@ -195,13 +167,9 @@ void LoraReceive(int packetSize)
 void startLoRa() {
 
   Serial.printf("\nStarting Lora: freq:%lu enableCRC:%d coderate:%d spread:%d bandwidth:%lu txpower:%d\n", config.frequency, config.enableCRC, config.codingRate, config.spreadFactor, config.bandwidth, config.txpower);
-  hspi = new SPIClass(HSPI);
-  Serial.println("#1");
-  hspi->begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
-  
-  //SPI1.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
-  //LoRa.setSPI(SPI1);
 
+  hspi = new SPIClass(HSPI);
+  hspi->begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
   LoRa.setSPI(*hspi);
   LoRa.setPins(LORA_SS, LORA_RST, LORA_DI0);
 
@@ -290,4 +258,3 @@ void setup() {
 
   connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
 }
-#endif
