@@ -13,10 +13,10 @@
 #include <wd.h>
 #include <Preferences.h>
 #include <CayenneLPP.h>
-#include "messagebuffer.h"
 #include "base64.hpp"
 
 #ifdef HAS_BLUETOOTH
+#include "messagebuffer.h"
 #include "BleServer.h"
 #endif
 
@@ -24,6 +24,7 @@ static const char * TAG = "Hub1.1";
 
 #ifdef HAS_BLUETOOTH
 BleServer bt;
+MessageBuffer messageBuffer(128);
 #endif
 
 #ifdef HAS_GSM
@@ -32,7 +33,6 @@ MqttGsmStats gprsStatus;
 #endif
 
 Preferences preferences;
-MessageBuffer messageBuffer(128);
 
 char macStr[18];                      // my mac address
 bool gprsConnected=false;
@@ -44,7 +44,6 @@ const int connectionTimeout = 15 * 60000; //time in ms to trigger the watchdog
 Watchdog connectionWatchdog;
 
 #ifdef HAS_LORA
-//SPIClass SPI1(HSPI);
 SPIClass * hspi = NULL;
 #endif
 
@@ -101,15 +100,10 @@ void SendMQTTBinary(uint8_t *report, int packetSize)
   char topic[32];
   sprintf(topic, "bongo/%s/sensor", macStr);
   
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
-
 #ifdef HAS_GSM
   mqttGPRS->sendMQTTBinary(report, packetSize);
 #endif
 
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, HIGH);
 }
 
 void SystemCheck() {
@@ -122,7 +116,7 @@ void SystemCheck() {
 #ifdef HAS_LORA
 void LoraReceive(int packetSize) 
 {  
-    Serial.printf("lora data %d bytes\n",packetSize);
+    Serial.printf("lora received %d bytes\n",packetSize);
     float snr = LoRa.packetSnr();
     float rssi = LoRa.packetRssi();
     long pfe = LoRa.packetFrequencyError();
@@ -141,6 +135,7 @@ void LoraReceive(int packetSize)
     SendMQTTBinary(lpp._buffer, lpp._cursor);
 #endif
 
+#ifdef HAS_BLUETOOTH
     // convert to base64
     int size = lpp._cursor * 2;
     uint8_t * base64_buffer = (uint8_t *)malloc(size);
@@ -151,9 +146,7 @@ void LoraReceive(int packetSize)
     if (messageBuffer.add(base64_buffer))
     {
       ++packetcount;
-#ifdef HAS_BLUETOOTH
       bt.sendData(base64_buffer);
-#endif
     }
     else
     {
@@ -162,6 +155,8 @@ void LoraReceive(int packetSize)
       free(base64_buffer);
       return;
     }
+#endif
+  Serial.printf("lora receive complete\n");
 }
 
 void startLoRa() {
