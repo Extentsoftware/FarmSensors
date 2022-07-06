@@ -26,13 +26,14 @@ void MqttGsmClient::init(
   char *gprsUser,
   char *gprsPass,
   char *simPin,
-  std::function<void(char*, byte*, unsigned int)> callback)
-  //std::function<void(char*, byte*, unsigned int)> callback_gps
-  
+  std::function<void(char*, byte*, unsigned int)> callback
+  , std::function<void(MqttGsmStats *)> callback_status
+)
 {
   _broker = broker;
   _macStr = macStr;
   _callback = callback;
+  _callback_status = callback_status;
   _apn=apn;
   _gprsUser=gprsUser;
   _gprsPass=gprsPass;  
@@ -313,7 +314,7 @@ bool MqttGsmClient::ModemCheck()
   static int gps_fail_count =0;
   bool changed = false;
   counter += 1;
-  if ( (counter % 50000) == 0)
+  if ( (counter % check_poll_rate) == 0)
   {
     printStatus();
     if (modem_state!=MODEM_INIT)
@@ -337,7 +338,7 @@ bool MqttGsmClient::ModemCheck()
         _gsmStatus = Msg_Connected;
         mqttGPRSPoll();
         ++gps_counter;
-        if (gps_counter>5)
+        if (gps_counter > get_gps_rate)
         {
           Serial.printf("gps_counter %d\n",gps_counter);
           gps_counter=0;
@@ -356,7 +357,7 @@ bool MqttGsmClient::ModemCheck()
         else
         {
           ++ gps_fail_count;
-          if (gps_fail_count>5)
+          if (gps_fail_count > start_gps_fail_max)
             modem_state = MQ_CONNECTED;
         }
         break;
@@ -371,7 +372,7 @@ bool MqttGsmClient::ModemCheck()
         else
         {
           ++ gps_fail_count;
-          if (gps_fail_count>20)
+          if (gps_fail_count > get_gps_fail_max)
             modem_state = MQ_CONNECTED;
         }
         break;      

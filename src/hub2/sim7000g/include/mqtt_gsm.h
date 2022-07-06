@@ -62,7 +62,9 @@ class MqttGsmClient
       char *gprsUser,
       char *gprsPass,
       char *simPin,
-      std::function<void(char*, byte*, unsigned int)> callback);
+      std::function<void(char*, byte*, unsigned int)> callback
+      , std::function<void(MqttGsmStats *)> callback_status
+    );
     bool ModemCheck();
     String getGsmStage();
     String getGsmStatus();
@@ -87,6 +89,7 @@ class MqttGsmClient
         
     enum MODEM_STATE modem_state=MODEM_INIT;
     std::function<void(char*, byte*, unsigned int)> _callback;
+    std::function<void(MqttGsmStats *)> _callback_status;
     String _gsmStage= "Booting";
     String _gsmStatus = "";
     char * _macStr;
@@ -99,6 +102,11 @@ class MqttGsmClient
     TinyGsmClient* _client;
     PubSubClient* _mqttGPRS;
     MqttGsmStats status;
+
+    const int start_gps_fail_max = 5;
+    const int get_gps_fail_max = 15;
+    const int check_poll_rate = 50000;
+    const int get_gps_rate = 5;
 
     const char *_broker;
     const char * Msg_Quality = "Db ";
