@@ -131,10 +131,6 @@ void LoraReceive(int packetSize)
     lpp.addGenericSensor(CH_RSSI, rssi);
     lpp.addGenericSensor(CH_PFE, (float)pfe);  
 
-#ifdef HAS_GSM
-    SendMQTTBinary(lpp._buffer, lpp._cursor);
-#endif
-
 #ifdef HAS_BLUETOOTH
     // convert to base64
     int size = lpp._cursor * 2;
@@ -156,6 +152,11 @@ void LoraReceive(int packetSize)
       return;
     }
 #endif
+
+#ifdef HAS_GSM
+    SendMQTTBinary(lpp._buffer, lpp._cursor);
+#endif
+
   Serial.printf("lora receive complete\n");
 }
 
