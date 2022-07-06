@@ -26,6 +26,8 @@ enum MODEM_STATE
     MODEM_CONNECTED,
     GPRS_CONNECTED,
     MQ_CONNECTED,
+    START_GPS,
+    GET_GPS
 };
 
 struct MqttGsmStats
@@ -39,6 +41,14 @@ public:
     bool gprsConnected = false;
     bool netConnected = false;
     bool mqttConnected = false;
+    float lat=0; 
+    float lon=0; 
+    float speed=0;
+    float alt=0;
+    int vs=0;
+    int us=0;
+    bool gpsOn;
+    bool gpsfix;
 };
 
 class MqttGsmClient
@@ -59,6 +69,9 @@ class MqttGsmClient
     bool sendMQTTBinary(uint8_t *report, int packetSize);
     bool isConnected();
     void getStatus(MqttGsmStats& stats);
+    void enableGPS();
+    void disableGPS();
+    bool GetGps();
 
   private:
     bool updateStatus();
@@ -71,7 +84,7 @@ class MqttGsmClient
     void modemPowerOff();
     void modemRestart();
     void printStatus();
-    
+        
     enum MODEM_STATE modem_state=MODEM_INIT;
     std::function<void(char*, byte*, unsigned int)> _callback;
     String _gsmStage= "Booting";
@@ -86,7 +99,6 @@ class MqttGsmClient
     TinyGsmClient* _client;
     PubSubClient* _mqttGPRS;
     MqttGsmStats status;
-
 
     const char *_broker;
     const char * Msg_Quality = "Db ";

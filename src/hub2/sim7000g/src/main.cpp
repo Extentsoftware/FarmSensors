@@ -219,7 +219,6 @@ void loop() {
     LoraReceive(packetSize);
 #endif
 
-  // Serial.println(touchRead(TOUCH_PIN));  // get value of Touch 0 pin = GPIO 4    
 }
 
 void setup() {

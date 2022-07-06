@@ -27,6 +27,8 @@ void MqttGsmClient::init(
   char *gprsPass,
   char *simPin,
   std::function<void(char*, byte*, unsigned int)> callback)
+  //std::function<void(char*, byte*, unsigned int)> callback_gps
+  
 {
   _broker = broker;
   _macStr = macStr;
@@ -214,21 +216,23 @@ void MqttGsmClient::getStatus(MqttGsmStats& stats)
 bool MqttGsmClient::updateStatus()
 {
     MqttGsmStats newStatus;
+    
+    newStatus.gpsOn = status.gpsOn;
+    newStatus.lat = status.lat;
+    newStatus.lon = status.lon;
+    newStatus.speed = status.speed;
+    newStatus.alt = status.alt;
+    newStatus.gpsfix = status.gpsfix;
+    newStatus.vs = status.vs;
+    newStatus.us = status.us;
+
     newStatus.signalQuality = _modem->getSignalQuality();
     newStatus.gprsConnected = false;
     newStatus.mqttConnected = false;
-
-    //_modem->sendAT("+CSQ");
-    //_modem->sendAT("+COPS?");
-    //_modem->sendAT("+COPS=?");
-    //delay(30000);
-    //return false;
-
     _modem->getBattStats(newStatus.chargeState, newStatus.percent, newStatus.gsmVolts);
         
     newStatus.netConnected = _modem->isNetworkConnected();
 
-    
     if (newStatus.netConnected)
     {
       newStatus.gprsConnected = _modem->isGprsConnected();
@@ -246,7 +250,7 @@ bool MqttGsmClient::updateStatus()
 
 void MqttGsmClient::printStatus()
 {
-  Serial.printf("updateStatus:: state=%d network=%d GPRS=%d MQTT=%d Signal Quality %d Chrg %d Percent %d Volts %d\n"
+  Serial.printf("updateStatus:: state=%d network=%d GPRS=%d MQTT=%d Signal Quality %d Chrg %d Percent %d Volts %d gps: fix=%s lat/lon %f/%f speed %f alt %f vs %d us %d\n"
     , modem_state
     , status.netConnected
     , status.gprsConnected
@@ -255,16 +259,63 @@ void MqttGsmClient::printStatus()
     , status.chargeState
     , status.percent
     , status.gsmVolts
+    , status.gpsfix?"Y":"N"
+    , status.lat
+    , status.lon
+    , status.speed
+    , status.alt
+    , status.vs
+    , status.us
   );
+}
+
+void MqttGsmClient::enableGPS()
+{
+    // Set SIM7000G GPIO4 LOW ,turn on GPS power
+    // CMD:AT+SGPIO=0,4,1,1
+    // Only in version 20200415 is there a function to control GPS power
+    _modem->sendAT("+SGPIO=0,4,1,1");
+    if (_modem->waitResponse(10000L) != 1) {
+        Serial.printf("enableGps power failed\n");
+        DBG(" SGPIO=0,4,1,1 false ");
+    }
+    status.gpsOn = _modem->enableGPS();
+    Serial.printf("gps: enabled success=%s\n", status.gpsOn?"Y":"N");
+} 
+
+void MqttGsmClient::disableGPS()
+{
+    // Set SIM7000G GPIO4 LOW ,turn off GPS power
+    // CMD:AT+SGPIO=0,4,1,0
+    // Only in version 20200415 is there a function to control GPS power
+    _modem->sendAT("+SGPIO=0,4,1,0");
+    if (_modem->waitResponse(10000L) != 1) {
+        DBG(" SGPIO=0,4,1,0 false ");
+    }
+    _modem->disableGPS();
+    Serial.printf("gps: disabled\n");
+    status.gpsOn = false;
+}
+
+
+bool MqttGsmClient::GetGps()
+{
+  if (!status.gpsOn)
+    enableGPS();
+  status.gpsfix = _modem->getGPS(&status.lat, &status.lon, &status.speed, &status.alt, &status.vs, &status.us);
+  return status.gpsfix;
 }
 
 bool MqttGsmClient::ModemCheck()
 {
   static int counter = 0;
+  static int gps_counter = 9999;
+  static int gps_fail_count =0;
   bool changed = false;
   counter += 1;
-  if ( (counter % 5000) == 0)
+  if ( (counter % 50000) == 0)
   {
+    printStatus();
     if (modem_state!=MODEM_INIT)
       changed = updateStatus();    
     
@@ -285,13 +336,46 @@ bool MqttGsmClient::ModemCheck()
       case MQ_CONNECTED:
         _gsmStatus = Msg_Connected;
         mqttGPRSPoll();
+        ++gps_counter;
+        if (gps_counter>5)
+        {
+          Serial.printf("gps_counter %d\n",gps_counter);
+          gps_counter=0;
+          gps_fail_count=0;
+          modem_state = START_GPS;
+        }
+        break;
+      case START_GPS:
+        mqttGPRSPoll();
+        enableGPS();
+        if (status.gpsOn)
+        {
+          gps_fail_count=0;
+          modem_state = GET_GPS;
+        }
+        else
+        {
+          ++ gps_fail_count;
+          if (gps_fail_count>5)
+            modem_state = MQ_CONNECTED;
+        }
+        break;
+      case GET_GPS:
+        mqttGPRSPoll();
+        bool success = GetGps();
+        if (success)
+        {
+          disableGPS();
+          modem_state = MQ_CONNECTED;
+        }
+        else
+        {
+          ++ gps_fail_count;
+          if (gps_fail_count>20)
+            modem_state = MQ_CONNECTED;
+        }
         break;      
     }
-  }
-
-  if ( changed || (counter % 50000) == 0)
-  {
-    printStatus();
   }
 
   return isConnected();
