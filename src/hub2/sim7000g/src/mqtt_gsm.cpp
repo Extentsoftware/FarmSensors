@@ -26,13 +26,13 @@ void MqttGsmClient::init(
   char *gprsUser,
   char *gprsPass,
   char *simPin,
-  std::function<void(char*, byte*, unsigned int)> callback
-  , std::function<void(MqttGsmStats *)> callback_status
+  std::function<void(char*, byte*, unsigned int)> callback_mqtt,
+  std::function<void(MqttGsmStats *)> callback_status
 )
 {
   _broker = broker;
   _macStr = macStr;
-  _callback = callback;
+  _callback_mqtt = callback_mqtt;
   _callback_status = callback_status;
   _apn=apn;
   _gprsUser=gprsUser;
@@ -43,7 +43,7 @@ void MqttGsmClient::init(
   Serial.printf("init:: Set MQTT Broker\n");    
   _mqttGPRS->setServer(_broker, 1883);
   Serial.printf("init:: Set MQTT callback\n");    
-  _mqttGPRS->setCallback(_callback);  
+  _mqttGPRS->setCallback(_callback_mqtt);  
 
 }
 
@@ -154,10 +154,8 @@ void MqttGsmClient::mqttGPRSConnect()
       sprintf(topic, "bongo/%s/hub", _macStr);
       Serial.printf("mqttGPRSConnect:: Subscribing..%s\n", topic);
       _mqttGPRS->subscribe(topic);  
-      Serial.printf("mqttGPRSConnect:: publishing ..%s\n", topic);
-      _mqttGPRS->publish(topic, "{\"state\":\"connected\"}", true);
       modem_state=MQ_CONNECTED;
-      Serial.printf("mqttGPRSConnect:: Published..%s\n", topic);
+      _callback_status( &status );
     }
   }
 }  
@@ -172,11 +170,11 @@ String MqttGsmClient::getGsmStatus()
   return _gsmStatus;
 }
 
-bool MqttGsmClient::sendMQTTBinary(uint8_t *report, int packetSize)
+bool MqttGsmClient::sendMQTTBinary(uint8_t *report, int packetSize, char *subtopic)
 {
   Serial.printf("sendMQTTBinary::entered\n");
   char topic[32];
-  sprintf(topic, "bongo/%s/sensor", _macStr);
+  sprintf(topic, "bongo/%s/%s", _macStr,subtopic);
 
   if (_mqttGPRS->connected())
   {
