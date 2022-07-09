@@ -30,7 +30,7 @@ void MqttGsmClient::init(
 {
   _broker = broker;
   _macStr = macStr;
-  _callback = callback;
+  _callback_mqtt = callback;
   _apn=apn;
   _gprsUser=gprsUser;
   _gprsPass=gprsPass;  
@@ -40,7 +40,7 @@ void MqttGsmClient::init(
   Serial.printf("init:: Set MQTT Broker\n");    
   _mqttGPRS->setServer(_broker, 1883);
   Serial.printf("init:: Set MQTT callback\n");    
-  _mqttGPRS->setCallback(_callback);  
+  _mqttGPRS->setCallback(_callback_mqtt);  
 
 }
 
@@ -139,11 +139,11 @@ String MqttGsmClient::getGsmStatus()
   return _gsmStatus;
 }
 
-bool MqttGsmClient::sendMQTTBinary(uint8_t *report, int packetSize)
+bool MqttGsmClient::sendMQTTBinary(uint8_t *report, int packetSize, char *subtopic)
 {
   Serial.printf("sendMQTTBinary::entered\n");
   char topic[32];
-  sprintf(topic, "bongo/%s/sensor", _macStr);
+  sprintf(topic, "bongo/%s/%s", _macStr, subtopic);
 
   if (_mqttGPRS->connected())
   {

@@ -1,4 +1,12 @@
 // https://github.com/Xinyuan-LilyGO/LilyGO-T-SIM7000G
+//
+//
+//  Todo: 
+//     Configure APN via BT
+//     Get cached entries via BT
+//     phone app to display moisture
+//    
+
 #define APP_VERSION 1
 
 #include <vesoil.h>
@@ -84,8 +92,17 @@ void getConfig() {
 static void btCallback(byte* payload, unsigned int len) {
 }
 
-void mqttCallback(char* topic, byte* payload, unsigned int len) {
+void callback_mqqt(char* topic, byte* payload, unsigned int len) {
   // receiving stuff back from the cloud
+}
+
+// Status updates every so often from gsm
+void callback_status(MqttGsmStats * status)
+{
+    CayenneLPP lpp(packetSize + 20);
+    lpp.addGenericSensor(CH_GPS, snr);
+    mqttGPRS->sendMQTTBinary(lpp._buffer, lpp._cursor, "hub");
+
 }
 
 void GetMyMacAddress()
@@ -93,17 +110,6 @@ void GetMyMacAddress()
   uint8_t array[6];
   esp_efuse_mac_get_default(array);
   snprintf(macStr, sizeof(macStr), "%02x%02x%02x%02x%02x%02x", array[0], array[1], array[2], array[3], array[4], array[5]);
-}
-
-void SendMQTTBinary(uint8_t *report, int packetSize)
-{
-  char topic[32];
-  sprintf(topic, "bongo/%s/sensor", macStr);
-  
-#ifdef HAS_GSM
-  mqttGPRS->sendMQTTBinary(report, packetSize);
-#endif
-
 }
 
 void SystemCheck() {
@@ -154,7 +160,7 @@ void LoraReceive(int packetSize)
 #endif
 
 #ifdef HAS_GSM
-    SendMQTTBinary(lpp._buffer, lpp._cursor);
+  mqttGPRS->sendMQTTBinary(lpp._buffer, lpp._cursor, "sensor");
 #endif
 
   Serial.printf("lora receive complete\n");
@@ -237,7 +243,7 @@ void setup() {
 
 #ifdef HAS_GSM
   mqttGPRS = new MqttGsmClient();
-  mqttGPRS->init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, config.simPin, mqttCallback);
+  mqttGPRS->init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, config.simPin, callback_mqqt, callback_status);
 #endif
 
 #ifdef HAS_LORA

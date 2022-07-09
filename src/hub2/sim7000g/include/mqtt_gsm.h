@@ -68,7 +68,7 @@ class MqttGsmClient
     bool ModemCheck();
     String getGsmStage();
     String getGsmStatus();
-    bool sendMQTTBinary(uint8_t *report, int packetSize);
+    bool sendMQTTBinary(uint8_t *report, int packetSize, char * subtopic);
     bool isConnected();
     void getStatus(MqttGsmStats& stats);
     void enableGPS();
@@ -88,7 +88,7 @@ class MqttGsmClient
     void printStatus();
         
     enum MODEM_STATE modem_state=MODEM_INIT;
-    std::function<void(char*, byte*, unsigned int)> _callback;
+    std::function<void(char*, byte*, unsigned int)> _callback_mqtt;
     std::function<void(MqttGsmStats *)> _callback_status;
     String _gsmStage= "Booting";
     String _gsmStatus = "";

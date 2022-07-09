@@ -4,16 +4,10 @@
 			"path": "sim7000g"
 		},
 		{
-			"path": "Lora"
-		},
-		{
 			"path": "common"
 		},
 		{
 			"path": "test"
-		},
-		{
-			"path": "sim7000g-Lora"
 		},
 		{
 			"path": "LoraEmpty"
@@ -21,7 +15,13 @@
 	],
 	"settings": {
 		"files.associations": {
-			"*.tpp": "cpp"
+			"*.tpp": "cpp",
+			"*.tcc": "cpp",
+			"unordered_map": "cpp",
+			"fstream": "cpp",
+			"istream": "cpp",
+			"ostream": "cpp",
+			"sstream": "cpp"
 		}
 	}
 }

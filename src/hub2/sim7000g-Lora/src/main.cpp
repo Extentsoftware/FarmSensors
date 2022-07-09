@@ -64,7 +64,7 @@ void btCallback(byte* payload, unsigned int len) {
     SendMQTTBinary(payload, len);
 }
 
-void mqttCallback(char* topic, byte* payload, unsigned int len) {
+void callback_mqqt(char* topic, byte* payload, unsigned int len) {
 }
 
 void GetMyMacAddress()
@@ -120,7 +120,7 @@ void setup() {
   GetMyMacAddress();
 
   mqttGPRS = new MqttGsmClient();
-  mqttGPRS->init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, config.simPin, mqttCallback);
+  mqttGPRS->init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, config.simPin, callback_mqqt);
 
   bt.init(btCallback);
   Serial.printf("End of setup\n");
