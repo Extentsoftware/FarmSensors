@@ -364,6 +364,7 @@ bool MqttGsmClient::ModemCheck()
         bool success = GetGps();
         if (success)
         {
+          _callback_status( &status );
           disableGPS();
           modem_state = MQ_CONNECTED;
         }

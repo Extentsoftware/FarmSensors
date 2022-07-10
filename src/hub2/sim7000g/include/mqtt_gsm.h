@@ -106,7 +106,7 @@ class MqttGsmClient
     const int start_gps_fail_max = 5;
     const int get_gps_fail_max = 15;
     const int check_poll_rate = 50000;
-    const int get_gps_rate = 5;
+    const int get_gps_rate = 3000;
 
     const char *_broker;
     const char * Msg_Quality = "Db ";

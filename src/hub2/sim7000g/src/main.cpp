@@ -99,10 +99,9 @@ void callback_mqqt(char* topic, byte* payload, unsigned int len) {
 // Status updates every so often from gsm
 void callback_status(MqttGsmStats * status)
 {
-    CayenneLPP lpp(packetSize + 20);
-    lpp.addGenericSensor(CH_GPS, snr);
+    CayenneLPP lpp( sizeof(MqttGsmStats) + 20);
+    lpp.addGPS(CH_GPS, status->lat, status->lon, status->alt);
     mqttGPRS->sendMQTTBinary(lpp._buffer, lpp._cursor, "hub");
-
 }
 
 void GetMyMacAddress()
