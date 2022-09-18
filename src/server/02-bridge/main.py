@@ -68,7 +68,7 @@ def send_to_farmos(sensor, data):
                 privatekey = sensor_config["farmos_privatekey"]
                 publickey = sensor_config["farmos_publickey"]
                 endpoint = CONFIG["farmos"]["address"]
-                url = endpoint + publickey + '?private_key=' + privatekey                
+                url = endpoint + publickey + '/data/basic?private_key=' + privatekey                
                 r = requests.post(url = url, data = data) 
             else:
                 logging.info(f"Sensor {sensor} not configured for farmos" )
@@ -118,6 +118,7 @@ def process_message(topic, payload:bytes):
         logging.error(f"Exception {e}" )
 
 def process_hub_message(hub_id, payload:bytes):
+    frame = LppFrame().from_bytes(payload)
     status = json.loads(payload.decode("utf-8", "ignore"))
     name = hub_id
     geohash_code= None
@@ -174,7 +175,7 @@ def process_sensor_message(payload:bytes):
                         "sensor": sensor_hex,
                         "name": name,
                     },
-                    "time": str(datetime.now()), 
+                    "time": str(datetime.utcnow()), 
                     "fields": 
                     { 
                     }
@@ -192,6 +193,8 @@ def process_sensor_message(payload:bytes):
     lat = add_reading(frame, json_packet, 2, "longitude", 0 )
     lng = add_reading(frame, json_packet, 2, "latitude", 1 )
     alt = add_reading(frame, json_packet, 2, "altitude", 2 )
+    
+    json_packet[0]['fields']["timestamp"] =  int(datetime.utcnow().timestamp())
 
     if lat is not None and lng is not None:
         geohash_code =  geohash.encode(lat, lng)
@@ -204,11 +207,14 @@ def process_sensor_message(payload:bytes):
         json_packet[0]['fields']["geohash"] =  geohash_code
         json_packet[0]['tags']["location"] =  True
 
-    logging.info(f"Influx data {json_packet}" )
+    logging.info(f"Influx data {json.dumps(json_packet)}" )
 
+    farmos_data = json.dumps(json_packet[0]['fields'])
+    logging.info(f"farmos data {sensor_hex} {farmos_data}" )
+
+    send_to_farmos(sensor_hex, farmos_data)
     influxdb_client.write_points(json_packet)
 
-    send_to_farmos(sensor, payload)
 
 def _init_influxdb_database():
     logging.info('Connecting to influx db')
@@ -250,7 +256,11 @@ if __name__ == '__main__':
     #payload = b'\x00d\x00\x00:\x14\x01d\x00\x00Y\x83\nd\x00\x00\x03\x1d\x06g\x00\x9f\x07t\x01K\x08t\x01\xa3\x0ed\x00\x00\x00\t\x0fd\x00\x00\x002\x10d\x00\x00C\x1c'
     #payload = "{ \"state\" : \"connected\" }".encode("utf-8")
     #process_message("bongo/test/hub", payload)
-    #payloadx = b'\x00d\x00\x00\x0f\x12\x01d\x00\x00Y\x83\x07t\x00\x00\x08t\x01\xa9\x0ed\x00\x00\x00\x11\x0fd\x00\x00\x00p\x10d\x00\x00;u'
-    #process_message("bongo/test/sensor", payloadx)
+    payload = b'\x00d\x00\x00\x13C\x01d\x00\x00\x14\xe7\nd\x00\x00\x03\x1e\x06g\x00\xca\x07t\x00\xe6\x08t\x01\x99\x0ed\x00\x00\x00\n\x0fd\x00\x00\x00:\x10d\x00\x006\xa2'
+    process_message("bongo/14e71042/sensor", payload)
+    
+    # hub
+    #payloadx =b'\x02\x88\x07\xd6\x07\x00\x03\xfd\x00$\xd6'
+    #process_message("bongo/349454bf5c70/hub", payloadx)
 
     main()

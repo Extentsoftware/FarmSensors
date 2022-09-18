@@ -1,7 +1,7 @@
 {
     "farmos":{
-        "enabled": false,
-        "address":"https://Bongo.azurefd.net/farm/sensor/listener/"
+        "enabled": true,
+        "address":"http://farmos.uksouth.cloudapp.azure.com/asset/"
     },
     "hubs":{
         "14e71f3f" : {
@@ -11,6 +11,13 @@
         }
     },
     "sensors":{
+        "14e71343" : {
+            "name": "14e71343",
+            "geohash": null,
+            "group": "Bongo",
+            "farmos_privatekey": "9c11156c46464e27d451a67614ff048c",
+            "farmos_publickey": "42682f54-90d7-4bb1-8d02-c33ee432c451"
+        },
         "59830f12":{
             "name": "Test Moisture Sensor",
             "geohash": "u10h4kf4s",

@@ -1,5 +1,6 @@
 // https://github.com/Xinyuan-LilyGO/LilyGO-T-SIM7000G
 //
+// Sim recharge https://www.thingsmobile.com/portal?step=sim_detail&msisdn=882360012311307
 //
 //  Todo: 
 //     Configure APN via BT
