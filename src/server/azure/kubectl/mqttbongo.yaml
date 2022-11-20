@@ -125,6 +125,7 @@ metadata:
   labels:
     environment: devs
 spec:
+  # Azure PublicIP 'mqtt'  bongomqtt.uksouth.cloudapp.azure.com
   loadBalancerIP: 20.49.137.76
   type: LoadBalancer
   ports:
