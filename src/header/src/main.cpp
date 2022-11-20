@@ -97,8 +97,10 @@ void setup() {
     boardInitMcu( );
     Serial.begin(115200);
     delay(500);
-    //turnOnRGB(COLOR_START, 500);
-    turnOffRGB();    
+    
+    // turnOnRGB(COLOR_START, 500);
+    // turnOffRGB();    
+    
     Serial.printf( "Started\n");
     state=TX;
     TimerInit( &wakeUp, onWakeUp );
