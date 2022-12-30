@@ -74,7 +74,10 @@ bool sense_b_success=false;
 
 bool isDebug()
 {
-    return digitalRead(USER_KEY)==0;
+    bool debug = digitalRead(USER_KEY)==0;
+    if (debug)
+        Serial.printf( "debug mode ON\n");
+    return debug;
 }
 
 void onSleepNormal()

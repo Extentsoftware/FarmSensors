@@ -76,6 +76,7 @@ void MqttGsmClient::doModemStart()
 
       Serial.printf("Try method '%d' \n", network[i]);
       _modem->setNetworkMode(network[i]);
+      //_modem->
       delay(3000);
       bool isConnected = false;
       int tryCount = 60;
