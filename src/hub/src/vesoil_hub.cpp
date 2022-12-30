@@ -26,11 +26,12 @@ static const char * TAG = "Hub";
 #include <FS.h>
 #include <SPIFFS.h>
 #include <CayenneLPP.h>
- #include "mqtt_wifi.h"
+#include "mqtt_wifi.h"
 #include "mqtt_gsm.h"
 #include "vesoil_hub.h"
 #include "ringbuffer.h"
 #include <wd.h>
+#include <IotWebConf.h>
 
 #ifdef HAS_OLED
 #include <SSD1306.h>
@@ -43,7 +44,7 @@ RingBuffer ringBuffer(16);
 #ifdef HAS_WIFI
 const char thingName[] = "Hub";               // -- Initial name of the Thing. Used e.g. as SSID of the own Access Point.
 const char wifiInitialApPassword[] = "";      // -- Initial password to connect to the Thing, when it creates an own Access Point.
-const char configVersion[] = "1.2";
+const char configVersion[] = "1.3";
 DNSServer dnsServer;
 WebServer server(80);
 IotWebConf iotWebConf(thingName, &dnsServer, &server, wifiInitialApPassword, configVersion);
