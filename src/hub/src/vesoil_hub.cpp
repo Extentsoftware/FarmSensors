@@ -506,12 +506,14 @@ void loop() {
     static const char *enum_str[] = { "Boot", "Not configured", "APMode", "Connecting", "Online", "Offline" };
 
     wifiStatus = enum_str[iotState];
-    displayUpdate();
   }
   else
   {
     wifiConnected = mqttWifiClient.isWifiConnected();
+    wifiStatus = "Connected";
   }
+  
+  displayUpdate();
 #endif
 
   int packetSize = LoRa.parsePacket();
