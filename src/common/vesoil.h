@@ -18,3 +18,4 @@ enum SensorChannel
     CH_RSSI       = 15,
     CH_PFE        = 16
 };
+ 

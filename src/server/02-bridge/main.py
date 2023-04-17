@@ -186,7 +186,9 @@ def process_sensor_message(payload:bytes):
     add_reading(frame, json_packet, 14, "snr" )
     add_reading(frame, json_packet, 15, "rssi" )
     add_reading(frame, json_packet, 16, "pfe" )
-    add_reading(frame, json_packet, 6, "temp" )
+    add_reading(frame, json_packet, 4, "airtemp" )
+    add_reading(frame, json_packet, 5, "airhum" )
+    add_reading(frame, json_packet, 6, "gndtemp" )
     add_reading(frame, json_packet, 7, "voltsR" )
     add_reading(frame, json_packet, 8, "voltsS" )
     add_reading(frame, json_packet, 3, "distance" )
@@ -246,7 +248,7 @@ def main():
 
 if __name__ == '__main__':
     logging.config.dictConfig(LOGGING_CONFIG)
-    logging.info('MQTT to InfluxDB bridge v1.13')
+    logging.info('MQTT to InfluxDB bridge v1.14')
 
     _read_config()
     
@@ -256,8 +258,8 @@ if __name__ == '__main__':
     #payload = b'\x00d\x00\x00:\x14\x01d\x00\x00Y\x83\nd\x00\x00\x03\x1d\x06g\x00\x9f\x07t\x01K\x08t\x01\xa3\x0ed\x00\x00\x00\t\x0fd\x00\x00\x002\x10d\x00\x00C\x1c'
     #payload = "{ \"state\" : \"connected\" }".encode("utf-8")
     #process_message("bongo/test/hub", payload)
-    payload = b'\x00d\x00\x00\x13C\x01d\x00\x00\x14\xe7\nd\x00\x00\x03\x1e\x06g\x00\xca\x07t\x00\xe6\x08t\x01\x99\x0ed\x00\x00\x00\n\x0fd\x00\x00\x00:\x10d\x00\x006\xa2'
-    process_message("bongo/14e71042/sensor", payload)
+    #payload = b'\x00d\x00\x00\x13C\x01d\x00\x00\x14\xe7\nd\x00\x00\x03\x1e\x06g\x00\xca\x07t\x00\xe6\x08t\x01\x99\x0ed\x00\x00\x00\n\x0fd\x00\x00\x00:\x10d\x00\x006\xa2'
+    #process_message("bongo/14e71042/sensor", payload)
     
     # hub
     #payloadx =b'\x02\x88\x07\xd6\x07\x00\x03\xfd\x00$\xd6'
