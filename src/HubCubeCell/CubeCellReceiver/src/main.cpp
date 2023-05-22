@@ -70,14 +70,6 @@ void setup() {
     Radio.Rx( 0 );
     if (Wire.begin())
         Serial.printf("I2C started, clock %d\n", Wire.getClock());
-
-    delay(1000);
-
-    Wire.beginTransmission(CHANNEL);          // transmit to device #9
-    Wire.write("hello");
-    uint8_t err = Wire.endTransmission();    // stop transmitting
-    Serial.printf("I2C ERROR %d %s\n", err);
-
 }
 
 void loop() 
@@ -96,21 +88,6 @@ void OnRxDone( unsigned char* payload, unsigned short size, short rssi, signed c
     turnOnRGB(COLOR_RECEIVED, 100);
     turnOffRGB();
     Serial.printf("\r\nreceived packet with Rssi %d , length %d\r\n", rssi, size);
-
-    // CayenneLPPDecode lppd;
-    // DynamicJsonDocument jsonBuffer(512);
-    // JsonObject root = jsonBuffer.to<JsonObject>(); 
-    // lppd.write(payload, size);
-    // if (lppd.isValid())
-    // {
-    //     lppd.decode(root);
-    //     serializeJsonPretty(root, Serial);
-    //     Serial.println();
-    // }
-    // else
-    // {
-    //     Serial.printf("packet reported as corrupt by decoder\r\n");
-    // }
 
     // https://forum.arduino.cc/t/send-text-string-over-i2c-between-two-arduinos/326052
     Wire.beginTransmission(CHANNEL);          // transmit to device #9
