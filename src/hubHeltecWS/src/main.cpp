@@ -207,26 +207,17 @@ void receiveEvent(int howMany)
   static int pkts =0;
   pkts++;
   char buf[32];
-  Serial.printf( buf, "I2C %d Pkt %d\n",howMany, pkts);
+  sprintf( buf, "I2C %d Pkt %d",howMany, pkts);
   Heltec.display->clear();
-  Heltec.display->drawString(0, 30, buf);
+  Heltec.display->drawString(0, 20, buf);
   Heltec.display->display();
 
   unsigned char buffer[ 64 ];
   memset(buffer,0,sizeof(buffer));
-#if false  
-  int i=0;
-  while (Wire1.available()>0)
-  {
-    unsigned char c = Wire1.read();
-    buffer[i] = c;
-    Serial.printf("%02X ", c);
-  }    
-#else
+
   Wire1.readBytes(buffer, howMany);
   for(int i=0; i<howMany; i++)
     Serial.printf("%02X ", buffer[i]);
-#endif
   Serial.printf( "\n");
 
   sendMQTTBinary(buffer, howMany, "sensor");
@@ -266,11 +257,10 @@ void setup()
   Heltec.display->init();
   Heltec.display->flipScreenVertically();  
   Heltec.display->setFont(ArialMT_Plain_10);
+  Heltec.display->setBrightness(5);
   Heltec.display->clear();
   
-  Heltec.display->drawString(0, 0, "VESTRONG");
-  Heltec.display->drawString(0, 10, "WIFI Listen");
-  Heltec.display->drawString(0, 20, "LORA Listen");
+  Heltec.display->drawString(0, 0, "Ready");
   Heltec.display->display();
 
 
