@@ -86,10 +86,11 @@ void WiFiEvent(WiFiEvent_t event)
       break;
 
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-      Serial.println("WiFi lost IP");
+      Serial.println("WiFi ARDUINO_EVENT_WIFI_STA_LOST_IP");
       break;
 
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+      Serial.println("WiFi ARDUINO_EVENT_WIFI_STA_DISCONNECTED");
       //Serial.println("WiFi lost connection");
       //xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
       //xTimerStart(wifiReconnectTimer, 0);
