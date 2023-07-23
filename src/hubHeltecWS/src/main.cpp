@@ -14,6 +14,8 @@ static const char * TAG = "Hub1.1";
 char macStr[18];                      // my mac address
 bool gprsConnected=false;
 int packetcount=0;
+char connStatus[64];
+char topic[64];
 
 const int connectionTimeout = 15 * 60000; //time in ms to trigger the watchdog
 
@@ -39,6 +41,18 @@ AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
 TimerHandle_t wifiReconnectTimer;
 
+void updateDisplay()
+{
+  char buf[32];
+  Heltec.display->clear();
+  sprintf( buf, "Incoming Pkts %d",packetcount);
+  Heltec.display->drawString(0, 20, buf);
+  sprintf( buf, "%s",connStatus);
+  Heltec.display->drawString(0, 30, buf);
+  Heltec.display->display();
+}
+
+
 void GetMyMacAddress()
 {
   uint8_t array[6] { 0,0,0,0,0,0 };
@@ -48,6 +62,8 @@ void GetMyMacAddress()
 
 void connectToWifi()
 {
+  sprintf(connStatus, "Connecting Wifi");
+  updateDisplay();
   Serial.println("Connecting to Wi-Fi...");
   Serial.printf("SSID %s Pwd %s \n", WIFI_SSID, WIFI_PASSWORD);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -55,7 +71,8 @@ void connectToWifi()
 
 void connectToMqtt()
 {
-  Serial.println("Connecting to MQTT...");
+  sprintf(connStatus, "Connecting MQTT");
+  updateDisplay();
   mqttClient.connect();
 }
 
@@ -64,56 +81,60 @@ void WiFiEvent(WiFiEvent_t event)
   switch (event)
   {
 //#if USING_CORE_ESP32_CORE_V200_PLUS
-
     case ARDUINO_EVENT_WIFI_READY:
-      Serial.println("WiFi ready");
+      sprintf(connStatus, "Wifi Ready");
+      updateDisplay();
       break;
 
     case ARDUINO_EVENT_WIFI_STA_START:
-      Serial.println("WiFi STA starting");
+      sprintf(connStatus, "Wifi Starting");
+      updateDisplay();
       break;
 
     case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-      Serial.println("WiFi STA connected");
+      sprintf(connStatus, "Wifi Connected");
+      updateDisplay();
       break;
 
     case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-      Serial.println("WiFi connected");
-      Serial.print("IP address: ");
-      Serial.println(WiFi.localIP());
+      sprintf(connStatus, "Wifi %s", WiFi.localIP());
+      updateDisplay();
       connectToMqtt();
       break;
 
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-      Serial.println("WiFi ARDUINO_EVENT_WIFI_STA_LOST_IP");
+      sprintf(connStatus, "WIFI_STA_LOST_IP");
+      updateDisplay();
       break;
 
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-      Serial.println("WiFi ARDUINO_EVENT_WIFI_STA_DISCONNECTED");
-      //Serial.println("WiFi lost connection");
-      //xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+      sprintf(connStatus, "WIFI_STA_DISCONNECTED");
+      updateDisplay();
+
+      xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
       //xTimerStart(wifiReconnectTimer, 0);
       break;
 
     default:
+      sprintf(connStatus, "Wifi EVENT %d", event);
+      updateDisplay();
       break;
   }
 }
 
 void onMqttConnect(bool sessionPresent)
 {
-  Serial.println("Connected to MQTT broker: ");
-  //char topic[32];
-  //sprintf(topic, "bongo/%s", macStr);
-  //uint16_t packetIdSub = mqttClient.subscribe(topic, 2);
+  sprintf(connStatus, "Connected to MQTT");
+  updateDisplay();
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 {
   (void) reason;
 
-  Serial.println("Disconnected from MQTT.");
+  sprintf(connStatus, "Disconnected from MQTT");
+  updateDisplay();
 
   if (WiFi.isConnected())
   {
@@ -121,7 +142,7 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
   }
   else
   {
-    xTimerStart(wifiReconnectTimer, 0);
+    xTimerStart(wifiReconnectTimer, 2000);
   }
 }
 
@@ -170,26 +191,22 @@ void onMqttPublish(const uint16_t& packetId)
   Serial.println(packetId);
 }
 
-bool sendMQTTBinary(unsigned char *report, int packetSize, const char *subtopic)
+bool sendMQTTBinary(unsigned char *report, int packetSize)
 {
-  Serial.printf("sendMQTTBinary::entered\n");
-  char topic[32];
-  sprintf(topic, "bongo/%s/%s", macStr,subtopic);
-
   if (mqttClient.connected())
   {
       if (!mqttClient.publish(topic,0,false, (char *)report, packetSize))
       {
-        Serial.printf("MQTT GPRS Fail\n");
+        sprintf(connStatus, "MQTT Fail");
       } 
       else
       {
-        Serial.printf("MQTT Sent GPRS %d bytes to %s\n", packetSize, topic);
+        sprintf(connStatus,"MQTT Sent %d", packetSize);
       }
       return true;
   }
   else
-    Serial.printf("MQTT GPRS Not connected!\n");
+    sprintf(connStatus,"MQTT Not connected");
   return false;
 }
 
@@ -198,20 +215,14 @@ void loop() {
   static long i=0;
   i++;
   if ( (i % 300000) == 0)
-  {
+  {    
     Serial.printf(" %d ",Wire1.available());
   }  
 }
 
 void receiveEvent(int howMany)
 {
-  static int pkts =0;
-  pkts++;
-  char buf[32];
-  sprintf( buf, "I2C %d Pkt %d",howMany, pkts);
-  Heltec.display->clear();
-  Heltec.display->drawString(0, 20, buf);
-  Heltec.display->display();
+  packetcount++;
 
   unsigned char buffer[ 64 ];
   memset(buffer,0,sizeof(buffer));
@@ -221,7 +232,8 @@ void receiveEvent(int howMany)
     Serial.printf("%02X ", buffer[i]);
   Serial.printf( "\n");
 
-  sendMQTTBinary(buffer, howMany, "sensor");
+  sendMQTTBinary(buffer, howMany);
+  updateDisplay();
 }
 
 void setup()
@@ -254,13 +266,13 @@ void setup()
       0 );
  
   GetMyMacAddress();
+  sprintf(topic, "bongo/%s/sensor", macStr);
 
   Heltec.display->init();
   Heltec.display->flipScreenVertically();  
   Heltec.display->setFont(ArialMT_Plain_10);
   Heltec.display->setBrightness(5);
   Heltec.display->clear();
-  
   Heltec.display->drawString(0, 0, "Ready");
   Heltec.display->display();
 

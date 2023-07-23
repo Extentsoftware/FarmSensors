@@ -101,7 +101,7 @@ void flash(uint32_t color,uint32_t time)
 void setup() {
     boardInitMcu( );
     Serial.begin(115200);
-    delay(500);
+    delay(250);
     
     Serial.printf( "Started\n");
     state=TX;
@@ -130,7 +130,7 @@ void SendPacket(float volts)
     float hum = 0.0f;
     
     digitalWrite(Vext,LOW); // POWER ON
-    delay(1000);             // stabilise
+    delay(500);             // stabilise
 
     dht.begin();
     sensor_t sensor;
@@ -155,7 +155,8 @@ void SendPacket(float volts)
     Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("%"));
     Serial.println(F("------------------------------------"));
     // Set delay between sensor readings based on sensor details.
-    //delayMS = sensor.min_delay / 1000;
+    int delayMS = sensor.min_delay / 1000;
+    delay(delayMS);
     sensors_event_t event;
     dht.temperature().getEvent(&event);
     sense_t_success = !isnan(event.temperature);
@@ -171,9 +172,9 @@ void SendPacket(float volts)
         Serial.println(F("°C"));
         sense_t_success = true;
     }
-
+    delay(delayMS);
     dht.humidity().getEvent(&event);
-    sense_h_success = !isnan(event.relative_humidity);
+    sense_h_success = !isnan(event.relative_humidity) && event.relative_humidity != 1.0;
     if (!sense_h_success)
     {
         Serial.println(F("Error reading humidity!"));
