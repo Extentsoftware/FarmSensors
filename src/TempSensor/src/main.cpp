@@ -6,8 +6,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <CayenneLPP.h>
+
+#ifdef HAS_DHT
 #include <DHT.h>
 #include <DHT_U.h>
+#endif
+
+#ifdef HAS_BME280
+#include <SPI.h>
+#include "Seeed_BME280.h"
+#include <Wire.h>
+#endif
+
 #include "CubeCell_NeoPixel.h"
 #include "LoRaWan_APP.h"
 #include "vesoil.h"
@@ -67,9 +77,17 @@ typedef enum
 
 States_t state;
 
+#ifdef HAS_DHT
 #define DHTPIN      GPIO0
 #define DHTTYPE     DHT22
 DHT_Unified dht(DHTPIN, DHTTYPE);
+#endif
+
+#ifdef HAS_BME280
+BME280 bme;
+#endif
+
+
 
 bool sense_t_success=false;
 bool sense_h_success=false;
@@ -124,7 +142,8 @@ void setup() {
     
 }
 
-void SendPacket(float volts) 
+#ifdef HAS_DHT
+void SendDhtPacket(float volts) 
 {
     float temp = 0.0f;
     float hum = 0.0f;
@@ -217,6 +236,50 @@ void SendPacket(float volts)
 
 
     Radio.Send( lpp.getBuffer(), lpp.getSize() );    
+}
+#endif
+
+#ifdef HAS_BME280
+void SendBM280Packet(float volts) 
+{
+     unsigned status;
+    // default settings
+    Serial.println("Power on BME280 sensor");
+    digitalWrite(Vext,LOW); // POWER ON
+    delay(1000);             // stabilise
+
+    if(!bme.init()){
+        Serial.println("Device error!");
+    }
+    
+    Serial.print(bme.getTemperature());
+    Serial.println(" °C");
+
+    Serial.print("Pressure = ");
+
+    Serial.print(bme.getPressure() / 100.0F);
+    Serial.println(" hPa");
+
+    // Serial.print("Approx. Altitude = ");
+    // Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
+    // Serial.println(" m");
+
+    Serial.print("Humidity = ");
+    Serial.print(bme.getHumidity());
+    Serial.println(" %");
+    digitalWrite(Vext,HIGH); // POWER ON
+}
+#endif
+
+void SendPacket(float volts) 
+{
+#ifdef HAS_DHT
+    SendDhtPacket(volts);
+#endif
+
+#ifdef HAS_BME280
+    SendBM280Packet(volts);
+#endif
 }
 
 void loop() 
