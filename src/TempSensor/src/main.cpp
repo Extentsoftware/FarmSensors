@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <CayenneLPP.h>
+#include <Wire.h>
+#include <OneWire.h>
 
 #ifdef HAS_DHT
 #include <DHT.h>
@@ -14,8 +16,8 @@
 
 #ifdef HAS_BME280
 #include <SPI.h>
-#include "Seeed_BME280.h"
-#include <Wire.h>
+//#include "Seeed_BME280.h"
+#include "BME280.h"
 #endif
 
 #include "CubeCell_NeoPixel.h"
@@ -84,7 +86,7 @@ DHT_Unified dht(DHTPIN, DHTTYPE);
 #endif
 
 #ifdef HAS_BME280
-BME280 bme;
+Adafruit_BME280 bme;
 #endif
 
 
@@ -248,26 +250,48 @@ void SendBM280Packet(float volts)
     Serial.println("Power on BME280 sensor");
     digitalWrite(Vext,LOW); // POWER ON
     delay(1000);             // stabilise
-
-    if(!bme.init()){
-        Serial.println("Device error!");
+    
+    status = bme.begin();  
+    // You can also pass in a Wire library object like &Wire2
+    // status = bme.begin(0x76, &Wire2)
+    if (!status) {
+        Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
+        Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(),16);
+        Serial.print("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085\n");
+        Serial.print("   ID of 0x56-0x58 represents a BMP 280,\n");
+        Serial.print("        ID of 0x60 represents a BME 280.\n");
+        Serial.print("        ID of 0x61 represents a BME 680.\n");
+        return;
     }
     
-    Serial.print(bme.getTemperature());
+        CayenneLPP lpp(64);
+    lpp.reset();
+    uint64_t id = getID();
+    uint32_t l = id & 0x0000FFFF;
+    uint32_t h = (id >> 16 ) & 0x0000FFFF;
+    
+    Serial.printf("ID = %lx\n", id);
+    Serial.printf("ID = (%lu)\n", id);
+    Serial.printf("ID = (%u)\n", l);
+    Serial.printf("ID = (%u)\n", h);
+    lpp.addGenericSensor(CH_ID_LO,l);     // id of this sensor
+    lpp.addGenericSensor(CH_ID_HI,h);     // id of this sensor
+
+    float temp = bme.readTemperature() / 100.0F;
+    Serial.print(temp);
     Serial.println(" °C");
 
     Serial.print("Pressure = ");
 
-    Serial.print(bme.getPressure() / 100.0F);
+    float press = bme.readPressure() / 100.0F;
+    Serial.print(press);
     Serial.println(" hPa");
-
-    // Serial.print("Approx. Altitude = ");
-    // Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
-    // Serial.println(" m");
+    lpp.addTemperature(CH_AirPressure, press);
 
     Serial.print("Humidity = ");
-    Serial.print(bme.getHumidity());
+    Serial.print(bme.readHumidity());
     Serial.println(" %");
+
     digitalWrite(Vext,HIGH); // POWER ON
 }
 #endif
@@ -355,3 +379,4 @@ void onWakeUp()
 {
     state = TX;
 }
+
