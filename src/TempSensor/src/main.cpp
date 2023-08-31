@@ -123,7 +123,6 @@ void setup() {
     Serial.begin(115200);
     delay(250);
     
-    Serial.printf( "Started\n");
     state=TX;
     TimerInit( &wakeUp, onWakeUp );
 
@@ -245,11 +244,9 @@ void SendDhtPacket(float volts)
 #ifdef HAS_BME280
 void SendBM280Packet(float volts) 
 {
-     unsigned status;
-    // default settings
-    Serial.println("Power on BME280 sensor");
+    unsigned status;
     digitalWrite(Vext,LOW); // POWER ON
-    delay(1000);             // stabilise
+    delay(100);             // stabilise
     
     status = bme.begin();  
     // You can also pass in a Wire library object like &Wire2
@@ -264,35 +261,26 @@ void SendBM280Packet(float volts)
         return;
     }
     
-        CayenneLPP lpp(64);
+    CayenneLPP lpp(64);
     lpp.reset();
     uint64_t id = getID();
     uint32_t l = id & 0x0000FFFF;
     uint32_t h = (id >> 16 ) & 0x0000FFFF;
     
-    Serial.printf("ID = %lx\n", id);
-    Serial.printf("ID = (%lu)\n", id);
-    Serial.printf("ID = (%u)\n", l);
-    Serial.printf("ID = (%u)\n", h);
+    float temp = bme.readTemperature();
+    float press = bme.readPressure() / 100.0F;
+    float hum = bme.readHumidity();
+
     lpp.addGenericSensor(CH_ID_LO,l);     // id of this sensor
     lpp.addGenericSensor(CH_ID_HI,h);     // id of this sensor
+    lpp.addTemperature(CH_AirTemp, temp);
+    lpp.addBarometricPressure(CH_AirPressure, press);
 
-    float temp = bme.readTemperature() / 100.0F;
-    Serial.print(temp);
-    Serial.println(" °C");
+    Serial.printf("ID = %lx  %f v %f °C %f hPa %f %\n",id, volts, temp, press, hum);
 
-    Serial.print("Pressure = ");
+    digitalWrite(Vext,HIGH); // POWER OFF
 
-    float press = bme.readPressure() / 100.0F;
-    Serial.print(press);
-    Serial.println(" hPa");
-    lpp.addTemperature(CH_AirPressure, press);
-
-    Serial.print("Humidity = ");
-    Serial.print(bme.readHumidity());
-    Serial.println(" %");
-
-    digitalWrite(Vext,HIGH); // POWER ON
+    Radio.Send( lpp.getBuffer(), lpp.getSize() );    
 }
 #endif
 
@@ -315,7 +303,7 @@ void loop()
 		case TX:
             // Check battery voltage ok first
             volts = getBatteryVoltage();
-            Serial.printf( "Battery %d\n", volts);
+            
             if (volts < BATTLOW)
             {
                 onSleep(TIME_UNTIL_WAKEUP_LOWPOWER);
