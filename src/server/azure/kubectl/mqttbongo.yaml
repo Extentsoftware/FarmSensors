@@ -69,7 +69,7 @@ spec:
         "beta.kubernetes.io/os": linux
       containers:
       - name: mqttbridge
-        image: gluteusmaximus/mqttbridge
+        image: gluteusmaximus/mqttbridge:latest
         resources:
           requests:
             cpu: 100m

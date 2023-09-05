@@ -106,7 +106,7 @@ bool Adafruit_BME280::begin(uint8_t addr, TwoWire *theWire) {
 bool Adafruit_BME280::init() {
   // check if sensor, i.e. the chip ID is correct
   _sensorID = read8(BME280_REGISTER_CHIPID);
-    Serial.printf( "%d\n", _sensorID);
+    Serial.printf( "Init=%d\n", _sensorID);
   if (_sensorID != 0x58)
     return false;
 

@@ -111,6 +111,27 @@
             "group": "Bongo",
             "farmos_privatekey": "4665a2572dd9190b78eb19745a13b8b0",
             "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
+        },
+        "15170935":{
+            "name": "WS Cellar",
+            "geohash": null,
+            "group": "Austria"
+        },
+        "15170e15":{
+            "name": "HB Conservatory",
+            "geohash": null,
+            "group": "Austria"
+        },
+        "15170a10":{
+            "name": "HB BMP280-1",
+            "geohash": null,
+            "group": "UK"
+        },
+        "15173532":
+        {
+            "name":"WS 2nd Floor",
+            "geohash": null,
+            "group": "UK"
         }
     }
 }

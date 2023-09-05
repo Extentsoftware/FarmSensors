@@ -56,7 +56,7 @@ char rxpacket[BUFFER_SIZE];
 #define HOURS                                       60 * MINUTES
 #define DAYS                                        24 * HOURS
 #define TIME_UNTIL_WAKEUP_TEST                      5 * SECONDS
-#define TIME_UNTIL_WAKEUP_NORMAL                    5 * MINUTES
+#define TIME_UNTIL_WAKEUP_NORMAL                    5 * SECONDS
 #define TIME_UNTIL_WAKEUP_LOWPOWER                  60 * SECONDS 
 
 
@@ -246,7 +246,7 @@ void SendBM280Packet(float volts)
 {
     unsigned status;
     digitalWrite(Vext,LOW); // POWER ON
-    delay(100);             // stabilise
+    delay(500);             // stabilise
     
     status = bme.begin();  
     // You can also pass in a Wire library object like &Wire2
@@ -276,7 +276,7 @@ void SendBM280Packet(float volts)
     lpp.addTemperature(CH_AirTemp, temp);
     lpp.addBarometricPressure(CH_AirPressure, press);
 
-    Serial.printf("ID = %lx  %f v %f °C %f hPa %f %\n",id, volts, temp, press, hum);
+    Serial.printf("ID = %lx  %f v %f °C %f hPa %f %  ..",id, volts, temp, press, hum);
 
     digitalWrite(Vext,HIGH); // POWER OFF
 

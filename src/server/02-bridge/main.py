@@ -186,6 +186,7 @@ def process_sensor_message(payload:bytes):
     add_reading(frame, json_packet, 14, "snr" )
     add_reading(frame, json_packet, 15, "rssi" )
     add_reading(frame, json_packet, 16, "pfe" )
+    add_reading(frame, json_packet, 17, "airpress" )
     add_reading(frame, json_packet, 4, "airtemp" )
     add_reading(frame, json_packet, 5, "airhum" )
     add_reading(frame, json_packet, 6, "gndtemp" )

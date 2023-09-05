@@ -1,2 +1,2 @@
-kubectl apply -f mqttbongo.yml
+kubectl apply -f mqttbongo.yaml
 pause
