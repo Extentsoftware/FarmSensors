@@ -16,8 +16,7 @@
 
 #ifdef HAS_BME280
 #include <SPI.h>
-//#include "Seeed_BME280.h"
-#include "BME280.h"
+#include "bme280.h"
 #endif
 
 #include "CubeCell_NeoPixel.h"
@@ -46,7 +45,7 @@ uint8_t  _codingRate                                = 1;            // LORA_CR_4
 #define COLOR_SENT                                  0x00FF00   //color green
 #define COLOR_FAIL_SENSOR                           0xFF0000   // red 
 #define COLOR_FAIL_TX                               0xFF00FF
-#define COLOR_DURATION                              30
+#define COLOR_DURATION                              100
 
 char txpacket[BUFFER_SIZE];
 char rxpacket[BUFFER_SIZE];
@@ -55,9 +54,9 @@ char rxpacket[BUFFER_SIZE];
 #define MINUTES                                     60 * SECONDS
 #define HOURS                                       60 * MINUTES
 #define DAYS                                        24 * HOURS
-#define TIME_UNTIL_WAKEUP_TEST                      5 * SECONDS
-#define TIME_UNTIL_WAKEUP_NORMAL                    5 * SECONDS
-#define TIME_UNTIL_WAKEUP_LOWPOWER                  60 * SECONDS 
+#define TIME_UNTIL_WAKEUP_TEST                      10 * MINUTES
+#define TIME_UNTIL_WAKEUP_NORMAL                    10 * MINUTES
+#define TIME_UNTIL_WAKEUP_LOWPOWER                  10 * MINUTES
 
 
 static TimerEvent_t wakeUp;
@@ -86,7 +85,7 @@ DHT_Unified dht(DHTPIN, DHTTYPE);
 #endif
 
 #ifdef HAS_BME280
-Adafruit_BME280 bme;
+BME280 bme;
 #endif
 
 
@@ -113,16 +112,17 @@ void flash(uint32_t color,uint32_t time)
     pinMode(USER_KEY, INPUT);
     if (isDebug())
     {    
+    }
         turnOnRGB(color, time);
         turnOffRGB();
-    }
 }
 
 void setup() {
     boardInitMcu( );
     Serial.begin(115200);
     delay(250);
-    
+    Serial.printf( "Start\n");    
+
     state=TX;
     TimerInit( &wakeUp, onWakeUp );
 
@@ -139,8 +139,7 @@ void setup() {
 
     // setting the sync work breaks the transmission.
     // Radio.SetSyncWord(SYNCWORD); 
-    digitalWrite(Vext,HIGH); //POWER OFF
-    
+    digitalWrite(Vext,HIGH); //POWER OFF    
 }
 
 #ifdef HAS_DHT
@@ -245,21 +244,21 @@ void SendDhtPacket(float volts)
 void SendBM280Packet(float volts) 
 {
     unsigned status;
-    digitalWrite(Vext,LOW); // POWER ON
+    digitalWrite(Vext, LOW); // POWER ON
     delay(500);             // stabilise
-    
-    status = bme.begin();  
+
+    status = bme.init();  
+
     // You can also pass in a Wire library object like &Wire2
     // status = bme.begin(0x76, &Wire2)
     if (!status) {
         Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
-        Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(),16);
-        Serial.print("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085\n");
-        Serial.print("   ID of 0x56-0x58 represents a BMP 280,\n");
-        Serial.print("        ID of 0x60 represents a BME 280.\n");
-        Serial.print("        ID of 0x61 represents a BME 680.\n");
+        //Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(),16);
+        sense_t_success = false;
         return;
     }
+
+    delay(100);
     
     CayenneLPP lpp(64);
     lpp.reset();
@@ -267,9 +266,12 @@ void SendBM280Packet(float volts)
     uint32_t l = id & 0x0000FFFF;
     uint32_t h = (id >> 16 ) & 0x0000FFFF;
     
-    float temp = bme.readTemperature();
-    float press = bme.readPressure() / 100.0F;
-    float hum = bme.readHumidity();
+    float temp = bme.getTemperature();
+    float press = bme.getPressure() / 100.0F + 43;
+    uint32 hum = bme.getHumidity();
+
+    Wire.end();
+    digitalWrite(Vext,HIGH); // POWER OFF
 
     lpp.addGenericSensor(CH_ID_LO,l);     // id of this sensor
     lpp.addGenericSensor(CH_ID_HI,h);     // id of this sensor
@@ -277,8 +279,7 @@ void SendBM280Packet(float volts)
     lpp.addBarometricPressure(CH_AirPressure, press);
 
     Serial.printf("ID = %lx  %f v %f °C %f hPa %f %  ..",id, volts, temp, press, hum);
-
-    digitalWrite(Vext,HIGH); // POWER OFF
+    sense_t_success = true;
 
     Radio.Send( lpp.getBuffer(), lpp.getSize() );    
 }
@@ -315,12 +316,15 @@ void loop()
                 if ( sense_t_success )
                 {                    
                     flash(COLOR_SENDING, COLOR_DURATION);
+                    state= LOWPOWERTX;
                 }
                 else
                 {
                     flash(COLOR_FAIL_SENSOR, COLOR_DURATION);
+                    onSleepNormal();
+                    state= LOWPOWER;
                 }
-                state= LOWPOWERTX;
+                
             }
 		    break;
 		case LOWPOWERTX:
@@ -328,6 +332,7 @@ void loop()
             Radio.IrqProcess( );
 		    break;
 		case LOWPOWER:
+            Serial.printf( " lp\n");
 			lowPowerHandler();
 		    break;
         default:
@@ -357,6 +362,7 @@ void OnRxDone( unsigned char* buf, unsigned short a, short b, signed char c)
 
 void onSleep(uint32_t duration)
 {
+    Serial.printf( " onSleep %d\n", duration);
     state = LOWPOWER;
     Radio.Sleep();
     TimerSetValue( &wakeUp, duration );
