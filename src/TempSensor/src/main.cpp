@@ -88,33 +88,31 @@ DHT_Unified dht(DHTPIN, DHTTYPE);
 BME280 bme;
 #endif
 
-
-
 bool sense_t_success=false;
 bool sense_h_success=false;
 
 bool isDebug()
 {
+    return false;
+    pinMode(USER_KEY, INPUT);
     bool debug = digitalRead(USER_KEY)==0;
-    if (debug)
-        Serial.printf( "debug mode ON\n");
+
+    Serial.printf( "debug mode %d\n", debug);
     return debug;
 }
 
 void onSleepNormal()
-{
-    pinMode(USER_KEY, INPUT);
+{    
     onSleep( isDebug() ? TIME_UNTIL_WAKEUP_TEST : TIME_UNTIL_WAKEUP_NORMAL);
 }
 
 void flash(uint32_t color,uint32_t time)
 {
-    pinMode(USER_KEY, INPUT);
     if (isDebug())
     {    
-    }
         turnOnRGB(color, time);
         turnOffRGB();
+    }
 }
 
 void setup() {
