@@ -113,7 +113,7 @@
             "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
         },
         "15170935":{
-            "name": "WS Cellar",
+            "name": "WS 1st Floor",
             "geohash": null,
             "group": "Austria"
         },
@@ -123,15 +123,22 @@
             "group": "Austria"
         },
         "15170a10":{
-            "name": "HB BMP280-1",
+            "name": "WS Cellar",
             "geohash": null,
-            "group": "UK"
+            "group": "Austria"
         },
         "15173532":
         {
             "name":"WS 2nd Floor",
             "geohash": null,
             "group": "UK"
+        },
+        "15172718":
+        {
+            "name":"???",
+            "geohash": null,
+            "group": "UK"
         }
+        
     }
 }

@@ -245,6 +245,7 @@ void SendBM280Packet(float volts)
     digitalWrite(Vext, LOW); // POWER ON
     delay(500);             // stabilise
 
+    Serial.println("Init sensor");
     status = bme.init();  
 
     // You can also pass in a Wire library object like &Wire2

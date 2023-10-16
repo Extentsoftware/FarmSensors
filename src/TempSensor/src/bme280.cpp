@@ -3,8 +3,10 @@
 bool BME280::init(void)
 {
   Wire.begin();
+  uint8 id = BME280Read8(BME280_REG_CHIPID);
+  Serial.printf("Id is %d\n!", id);
 
-  if(BME280Read8(BME280_REG_CHIPID) != 0x58)
+  if(id != 0x58)
     return false;
 
   dig_T1 = BME280Read16LE(BME280_REG_DIG_T1);

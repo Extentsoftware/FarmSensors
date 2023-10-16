@@ -249,7 +249,7 @@ def main():
 
 if __name__ == '__main__':
     logging.config.dictConfig(LOGGING_CONFIG)
-    logging.info('MQTT to InfluxDB bridge v1.14')
+    logging.info('MQTT to InfluxDB bridge v1.16')
 
     _read_config()
     
