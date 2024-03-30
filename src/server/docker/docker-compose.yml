@@ -44,3 +44,6 @@ services:
       - mosquitto
       - influxdb
     restart: always
+    environment:
+        - INFLUXDB_ADDRESS=influxdb
+        - MOSQUITTO_ADDRESS=mosquitto

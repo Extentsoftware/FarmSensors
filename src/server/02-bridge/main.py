@@ -220,14 +220,14 @@ def process_sensor_message(payload:bytes):
 
 
 def _init_influxdb_database():
-    logging.info('Connecting to influx db')
+    logging.info('Connecting to influx db @ ' + INFLUXDB_ADDRESS)
     databases = influxdb_client.get_list_database()
     if len(list(filter(lambda x: x['name'] == INFLUXDB_DATABASE, databases))) == 0:
         influxdb_client.create_database(INFLUXDB_DATABASE)
     influxdb_client.switch_database(INFLUXDB_DATABASE)
 
 def _init_mqtt():
-    logging.info('Connecting to MQTT')
+    logging.info('Connecting to MQTT @ ' + MQTT_ADDRESS)
     mqtt_client = mqtt.Client(MQTT_CLIENT_ID)
     mqtt_client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
     mqtt_client.on_disconnect = disconnect_callback
@@ -249,7 +249,7 @@ def main():
 
 if __name__ == '__main__':
     logging.config.dictConfig(LOGGING_CONFIG)
-    logging.info('MQTT to InfluxDB bridge v1.16')
+    logging.info('MQTT to InfluxDB bridge v1.17')
 
     _read_config()
     

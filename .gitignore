@@ -8,3 +8,4 @@
 vesoil.code-workspace
 .env
 **/venv/*
+src/server/docker/influxdb2/*
