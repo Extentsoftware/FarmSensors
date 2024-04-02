@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -c
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: mosquitto
+  name: mosquitto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: mosquitto
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -c
+        kompose.version: 1.26.0 (40646f47)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/esnet: "true"
+        io.kompose.service: mosquitto
+    spec:
+      containers:
+        - image: eclipse-mosquitto:1.6
+          name: mosquitto
+          ports:
+            - containerPort: 1883
+          resources: {}
+          volumeMounts:
+            - mountPath: /mosquitto/data
+              name: mosquitto-data
+            - mountPath: /mosquitto/log
+              name: mosquitto-log
+      restartPolicy: Always
+      volumes:
+        - name: mosquitto-data
+          persistentVolumeClaim:
+            claimName: mosquitto-data
+        - name: mosquitto-log
+          persistentVolumeClaim:
+            claimName: mosquitto-log
+status: {}

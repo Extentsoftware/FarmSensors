@@ -1,0 +1,3 @@
+helm install sensors sensors
+
+-- helm uninstall sensors

@@ -1,2 +1,0 @@
-void GetMyMacAddress();
-void setup();
