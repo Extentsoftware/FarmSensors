@@ -3,25 +3,29 @@ kind: Ingress
 metadata:
     name: sensor-ingress
     annotations:
-        nginx.ingress.kubernetes.io/use-regex: "true"
-        nginx.ingress.kubernetes.io/rewrite-target: /$2
+    #    nginx.ingress.kubernetes.io/use-regex: "true"
+    #    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
     ingressClassName: public
     rules:
-        - host:
+        - host: iot.vestrong.eu
           http:
               paths:
-                  - path: /bongofn
+                  - path: /
                     pathType: Prefix
                     backend:
                         service:
                             name: bongofn
                             port:
                                 number: 80
-                  - path: /grafana(/|$)(.*)
-                    pathType: ImplementationSpecific
+        - host: grafana.vestrong.eu
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
                     backend:
                         service:
                             name: grafana
                             port:
-                                number: 3000                                
+                                number: 3000
+                                                                                            
