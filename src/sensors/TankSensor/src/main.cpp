@@ -2,7 +2,7 @@
 // pio device monitor -p COM12 -b 115200
 #include <Arduino.h>
 #include <SPI.h>
-#include "LoRa.h"
+#include <LoRa.h>
 #include <TBeamPower.h>
 #include <TinyGPS++.h>
 #include <CayenneLPP.h>
