@@ -15,9 +15,9 @@ spec:
                     pathType: Prefix
                     backend:
                         service:
-                            name: bongofn
+                            name: mosquitto
                             port:
-                                number: 80
+                                number: 1883
         - host: grafana.vestrong.eu
           http:
               paths:

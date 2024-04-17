@@ -1,13 +1,3 @@
-// https://github.com/Xinyuan-LilyGO/LilyGO-T-SIM7000G
-//
-// Sim recharge https://www.thingsmobile.com/portal?step=sim_detail&msisdn=882360012311307
-//
-//  Todo: 
-//     Configure APN via BT
-//     Get cached entries via BT
-//     phone app to display moisture
-//    
-
 #define APP_VERSION 1
 
 #include <vesoil.h>
@@ -17,12 +7,13 @@
 #endif
 
 #include <Wire.h>  
-#include "mqtt_gsm.h"
 #include "main.h"
 #include <wd.h>
 #include <Preferences.h>
 #include <CayenneLPP.h>
 #include "base64.hpp"
+#include <WiFi.h>
+#include "AsyncMqttClient.h"
 
 #ifdef HAS_BLUETOOTH
 #include "messagebuffer.h"
@@ -32,14 +23,19 @@
 static const char * TAG = "Hub1.1";
 
 #ifdef HAS_BLUETOOTH
+
 BleServer bt;
 MessageBuffer messageBuffer(128);
 #endif
 
-#ifdef HAS_GSM
-MqttGsmClient *mqttGPRS;
-MqttGsmStats gprsStatus;
-#endif
+#define MQTT_HOST         DEFAULT_BROKER
+#define MQTT_PORT         1883
+#define WIFI_SSID         "VM7518894"
+#define WIFI_PASSWORD     "9scvfpkKcygt"
+
+AsyncMqttClient mqttClient;
+TimerHandle_t mqttReconnectTimer;
+TimerHandle_t wifiReconnectTimer;
 
 Preferences preferences;
 
@@ -48,6 +44,8 @@ bool gprsConnected=false;
 int packetcount=0;
 int duppacketcount=0;
 struct HubConfig config;
+char topic[64];
+char connStatus[64];
 
 const int connectionTimeout = 15 * 60000; //time in ms to trigger the watchdog
 Watchdog connectionWatchdog;
@@ -57,6 +55,106 @@ SPIClass * hspi = NULL;
 #endif
 
 const int lockupTimeout = 1000; //time in ms to trigger the watchdog
+
+void connectToWifi()
+{
+  sprintf(connStatus, "Connecting Wifi");
+  Serial.println("Connecting to Wi-Fi...");
+  Serial.printf("SSID %s Pwd %s \n", WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+}
+
+void connectToMqtt()
+{
+  sprintf(connStatus, "Connecting MQTT");
+  mqttClient.connect();
+}
+
+void onMqttConnect(bool sessionPresent)
+{
+  sprintf(connStatus, "Connected to MQTT");
+}
+
+void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
+{
+  (void) reason;
+
+  sprintf(connStatus, "Disconnected from MQTT");
+  
+  if (WiFi.isConnected())
+  {
+    xTimerStart(mqttReconnectTimer, 0);
+  }
+  else
+  {
+    xTimerStart(wifiReconnectTimer, 2000);
+  }
+}
+
+void onMqttSubscribe(const uint16_t& packetId, const uint8_t& qos)
+{
+  Serial.println("Subscribe acknowledged.");
+  Serial.print("  packetId: ");
+  Serial.println(packetId);
+  Serial.print("  qos: ");
+  Serial.println(qos);
+}
+
+void onMqttUnsubscribe(const uint16_t& packetId)
+{
+  Serial.println("Unsubscribe acknowledged.");
+  Serial.print("  packetId: ");
+  Serial.println(packetId);
+}
+
+void onMqttMessage(char* topic, char* payload, const AsyncMqttClientMessageProperties& properties,
+                   const size_t& len, const size_t& index, const size_t& total)
+{
+  (void) payload;
+
+  Serial.println("Publish received.");
+  Serial.print("  topic: ");
+  Serial.println(topic);
+  Serial.print("  qos: ");
+  Serial.println(properties.qos);
+  Serial.print("  dup: ");
+  Serial.println(properties.dup);
+  Serial.print("  retain: ");
+  Serial.println(properties.retain);
+  Serial.print("  len: ");
+  Serial.println(len);
+  Serial.print("  index: ");
+  Serial.println(index);
+  Serial.print("  total: ");
+  Serial.println(total);
+}
+
+void onMqttPublish(const uint16_t& packetId)
+{
+  Serial.println("Publish acknowledged.");
+  Serial.print("  packetId: ");
+  Serial.println(packetId);
+}
+
+bool sendMQTTBinary(unsigned char *report, int packetSize)
+{  
+  if (mqttClient.connected())
+  {
+      if (!mqttClient.publish(topic,0,false, (char *)report, packetSize))
+      {
+        sprintf(connStatus, "MQTT Fail");
+      } 
+      else
+      {
+        sprintf(connStatus,"MQTT Sent %d", packetSize);
+      }
+      return true;
+  }
+  else
+    sprintf(connStatus,"MQTT Not connected");
+  Serial.println(connStatus);
+  return false;
+}
 
 void resetModuleFromLockup() {
   ets_printf("WDT triggered from lockup\n");
@@ -97,14 +195,6 @@ void callback_mqqt(char* topic, byte* payload, unsigned int len) {
   // receiving stuff back from the cloud
 }
 
-// Status updates every so often from gsm
-void callback_status(MqttGsmStats * status)
-{
-    CayenneLPP lpp( sizeof(MqttGsmStats) + 20);
-    lpp.addGPS(CH_GPS, status->lat, status->lon, status->alt);
-    mqttGPRS->sendMQTTBinary(lpp._buffer, lpp._cursor, "hub");
-}
-
 void GetMyMacAddress()
 {
   uint8_t array[6];
@@ -137,6 +227,8 @@ void LoraReceive(int packetSize)
     lpp.addGenericSensor(CH_RSSI, rssi);
     lpp.addGenericSensor(CH_PFE, (float)pfe);  
 
+    sendMQTTBinary(lpp._buffer, lpp._cursor);
+
 #ifdef HAS_BLUETOOTH
     // convert to base64
     int size = lpp._cursor * 2;
@@ -157,10 +249,6 @@ void LoraReceive(int packetSize)
       free(base64_buffer);
       return;
     }
-#endif
-
-#ifdef HAS_GSM
-  mqttGPRS->sendMQTTBinary(lpp._buffer, lpp._cursor, "sensor");
 #endif
 
   Serial.printf("lora receive complete\n");
@@ -204,20 +292,39 @@ void startLoRa() {
 }
 #endif
 
-
 void loop() {
   static int counter = 0;
   counter += 1;
+
+  static wl_status_t lastStatus=WL_NO_SHIELD;
+
+  delay(10);
+
+  if ( (counter % 300) == 0)
+  { 
+    wl_status_t status = WiFi.status();
+
+    if (status == WL_CONNECTED && lastStatus!=WL_CONNECTED)
+    {
+        Serial.printf("WIFI Connected\n");
+        connectToMqtt();
+    }
+
+    if (status != WL_CONNECTED && lastStatus==WL_CONNECTED)
+    {
+      Serial.printf("WIFI Disconnected\n");
+        connectToWifi();
+    }
+
+    Serial.printf("%s\n",connStatus);
+
+
+    lastStatus = status;
+  }
   
 #ifdef HAS_BLUETOOTH
   bt.loop();
 #endif  
-
-#ifdef HAS_GSM
-  gprsConnected = mqttGPRS->ModemCheck();
-  if (gprsConnected)
-    connectionWatchdog.clrWatchdog();
-#endif
 
 #ifdef HAS_LORA
   int packetSize = LoRa.parsePacket();
@@ -240,11 +347,7 @@ void setup() {
   getConfig();
   SystemCheck();
   GetMyMacAddress();
-
-#ifdef HAS_GSM
-  mqttGPRS = new MqttGsmClient();
-  mqttGPRS->init(config.broker, macStr, config.apn, config.gprsUser, config.gprsPass, config.simPin, callback_mqqt, callback_status);
-#endif
+  sprintf(topic, "bongo/%s/sensor", macStr);
 
 #ifdef HAS_LORA
   startLoRa();
@@ -257,5 +360,27 @@ void setup() {
 
   Serial.printf("End of setup\n");
 
-  connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
+  //connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
+
+  mqttClient.onPublish(onMqttPublish);
+  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+
+  mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0,
+                                    reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+  
+  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(5000), pdFALSE, (void*)0,
+                                    reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
+
+  mqttClient.onConnect(onMqttConnect);
+  mqttClient.onDisconnect(onMqttDisconnect);
+  mqttClient.onSubscribe(onMqttSubscribe);
+  mqttClient.onUnsubscribe(onMqttUnsubscribe);
+  mqttClient.onMessage(onMqttMessage);
+  mqttClient.onPublish(onMqttPublish);
+  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+
+  Serial.printf("topics %s\n", topic);
+  
+  WiFi.disconnect(true);
+  connectToWifi();
 }
