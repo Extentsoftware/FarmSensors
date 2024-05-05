@@ -8,24 +8,14 @@ metadata:
 spec:
     ingressClassName: public
     rules:
-        - host: iot.vestrong.eu
+        - host: bongofn.vestrong.eu
           http:
               paths:
                   - path: /
                     pathType: Prefix
                     backend:
                         service:
-                            name: mosquitto
+                            name: bongofn
                             port:
                                 number: 1883
-        - host: grafana.vestrong.eu
-          http:
-              paths:
-                  - path: /
-                    pathType: Prefix
-                    backend:
-                        service:
-                            name: grafana
-                            port:
-                                number: 3000
                                                                                             
