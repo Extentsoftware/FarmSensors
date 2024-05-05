@@ -1,8 +1,13 @@
 #define APP_VERSION 1
+// Add this to board manager URLs https://resource.heltec.cn/download/package_heltec_esp32_index.json
+// And install:Heltec ESP32 Series Dev-boards
+// Then select the board, and it works.
+// https://docs.heltec.org/en/node/esp32/esp32_general_docs/quick_start.html#via-arduino-board-manager
 
 #include "heltec.h"
 
 #include <vesoil.h>
+#ifdef XXX
 #include <Wire.h>  
 #include "main.h"
 #include <CayenneLPP.h>
@@ -23,7 +28,7 @@ const int connectionTimeout = 15 * 60000; //time in ms to trigger the watchdog
 #define SYNCWORD                                    0
 #define CHANNEL                                     5
 
-#define DEFAULT_BROKER            "bongomqtt.uksouth.cloudapp.azure.com"
+#define DEFAULT_BROKER  "iot.vestrong.eu"
 
 extern "C"
 {
@@ -298,3 +303,4 @@ void setup()
 
   Serial.printf("End of setup\n");
 }
+#endif

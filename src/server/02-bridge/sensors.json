@@ -113,7 +113,7 @@
             "farmos_publickey": "44d91434490a4711a6dac50f5cc31dee"
         },
         "15170935":{
-            "name": "WS 1st Floor",
+            "name": "WS Cellar",
             "geohash": null,
             "group": "Austria"
         },
@@ -123,13 +123,13 @@
             "group": "Austria"
         },
         "15170a10":{
-            "name": "WS Cellar",
+            "name": "WS 1st Floor",
             "geohash": null,
             "group": "Austria"
         },
         "15173532":
         {
-            "name":"WS 2nd Floor",
+            "name":"WS Office",
             "geohash": null,
             "group": "UK"
         },
