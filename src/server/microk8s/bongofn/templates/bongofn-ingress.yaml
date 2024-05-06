@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-    name: sensor-ingress
+    name: bongofn-ingress
     annotations:
     #    nginx.ingress.kubernetes.io/use-regex: "true"
     #    nginx.ingress.kubernetes.io/rewrite-target: /$2
@@ -17,5 +17,5 @@ spec:
                         service:
                             name: bongofn
                             port:
-                                number: 1883
+                                number: 8080
                                                                                             
