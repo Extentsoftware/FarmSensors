@@ -26,7 +26,7 @@ spec:
         io.kompose.service: mosquitto
     spec:
       containers:
-        - image: eclipse-mosquitto:1.6
+        - image: gluteusmaximus/mosquitto:1.0.27
           name: mosquitto
           ports:
             - containerPort: 1883

@@ -30,7 +30,7 @@ spec:
               value: influxdb
             - name: MOSQUITTO_ADDRESS
               value: mosquitto
-          image: gluteusmaximus/mqttbridge
+          image: gluteusmaximus/mqttbridge:1.0.28
           name: mqttbridge
           resources: {}
       restartPolicy: Always

@@ -1,3 +1,4 @@
 influxdb
 paho-mqtt
 requests
+typing_extensions

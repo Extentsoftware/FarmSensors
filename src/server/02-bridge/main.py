@@ -22,12 +22,11 @@ INFLUXDB_PORT = 8086
 INFLUXDB_USER = 'root'
 INFLUXDB_PASSWORD = 'root'
 INFLUXDB_DATABASE = 'home_db'
- 
+
+mqttbridge_version = os.environ.get('mqttbridge_version')
 MQTT_PORT= 1883
 MQTT_ADDRESS = os.environ.get('MOSQUITTO_ADDRESS')
 #MQTT_ADDRESS = 'localhost'
-MQTT_USER = 'mqttuser'
-MQTT_PASSWORD = 'mqttpassword'
 MQTT_SENSOR_TOPIC = 'bongo/+/+'
 MQTT_REGEX = 'bongo/([^/]+)/([^/]+)'
 MQTT_CLIENT_ID = 'MQTTInfluxDBBridgeB'
@@ -75,15 +74,15 @@ def send_to_farmos(sensor, data):
         else:
             logging.info(f"Sensor {sensor} does not exist in sensor config file" )
 
-def on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, reason_code, properties):
     """ The callback for when the client receives a CONNACK response from the server."""
-    logging.info(f"Connected with result code {str(rc)}" )    
+    logging.info(f"Connected with result code {str(reason_code)}" )    
     client.subscribe(MQTT_SENSOR_TOPIC)
 
-def disconnect_callback(client, userdata, rc):
-    logging.info(f"Disconnected with result code {str(rc)}" )    
+def disconnect_callback(client, userdata, flags, reason_code, properties):
+    logging.info(f"Disconnected with result code {str(reason_code)}" )    
 
-def subscribe_callback(client, userdata, mid, granted_qos):
+def subscribe_callback(client, userdata, mid, reason_codes, properties):
     logging.info(f"On subscribe from {client._host}" )    
 
 def on_message(client, userdata, msg):
@@ -227,13 +226,13 @@ def _init_influxdb_database():
     influxdb_client.switch_database(INFLUXDB_DATABASE)
 
 def _init_mqtt():
-    logging.info('Connecting to MQTT @ ' + MQTT_ADDRESS)
-    mqtt_client = mqtt.Client(MQTT_CLIENT_ID)
-    mqtt_client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
+    logging.info('Connecting to MQTT @ ' + MQTT_ADDRESS + ":" + str(MQTT_PORT))
+    mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    mqtt_client._client_id = MQTT_CLIENT_ID
     mqtt_client.on_disconnect = disconnect_callback
     mqtt_client.on_connect = on_connect
     mqtt_client.on_message = on_message    
-    mqtt_client.on_subscribe = subscribe_callback
+#    mqtt_client.on_subscribe = subscribe_callback
     mqtt_client.connect(MQTT_ADDRESS, MQTT_PORT)
     mqtt_client.loop_forever()
 
@@ -249,7 +248,7 @@ def main():
 
 if __name__ == '__main__':
     logging.config.dictConfig(LOGGING_CONFIG)
-    logging.info('MQTT to InfluxDB bridge v1.17')
+    logging.info('MQTT to InfluxDB bridge v' + mqttbridge_version)
 
     _read_config()
     
