@@ -25,10 +25,17 @@ spec:
         io.kompose.service: bongofn
     spec:
       containers:
-        - image: gluteusmaximus/bongofunctions
+        - image: gluteusmaximus/bongofunctions:latest
           name: functions
           ports:
             - containerPort: 80
           resources: {}
+          volumeMounts:
+            - mountPath: /home/site/wwwroot/store
+              name: bongofn
       restartPolicy: Always
+      volumes:
+        - name: bongofn
+          persistentVolumeClaim:
+            claimName: bongofn
 status: {}
