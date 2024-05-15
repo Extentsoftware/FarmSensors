@@ -3,17 +3,15 @@ kind: Ingress
 metadata:
     name: bongofn-ingress
     annotations:
-    #    nginx.ingress.kubernetes.io/use-regex: "true"
-    #    nginx.ingress.kubernetes.io/rewrite-target: /$2
+      cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
     ingressClassName: public
 
     tls:
     - hosts:
         - bongofn.vestrong.eu
-      secretName: bongosecret-tls
-    privateCA: true
-    
+      secretName: letsencrypt-prod
+#    
     rules:
         - host: bongofn.vestrong.eu
           http:
