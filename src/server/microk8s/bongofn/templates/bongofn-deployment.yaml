@@ -25,7 +25,7 @@ spec:
         io.kompose.service: bongofn
     spec:
       containers:
-        - image: gluteusmaximus/bongofunctions:20240623080405
+        - image: gluteusmaximus/bongofunctions:20241013130016
           name: functions
           ports:
             - containerPort: 80
