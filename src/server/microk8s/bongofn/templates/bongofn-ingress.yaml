@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
     name: bongofn-ingress
     annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: 50m
       cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
     ingressClassName: public
