@@ -5,8 +5,7 @@
 #include "CubeCell_NeoPixel.h"
 #include "LoRaWan_APP.h"
 #include <CayenneLPP.h>
-#include <CayenneLPPDecode.h>
-#include "../../../common/vesoil.h"
+#include "vesoil.h"
 
 #define RF_FREQUENCY                                868E6           // Hz
 uint32_t _bandwidth                                 = 0;            // [0: 125 kHz,  4 = LORA_BW_041
