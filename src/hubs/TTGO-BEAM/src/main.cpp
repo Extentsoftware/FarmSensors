@@ -30,8 +30,8 @@ MessageBuffer messageBuffer(128);
 
 #define MQTT_HOST         DEFAULT_BROKER
 #define MQTT_PORT         1883
-#define WIFI_SSID         "Poulton"
-#define WIFI_PASSWORD     "12345678"
+#define WIFI_SSID         "poulton"
+#define WIFI_PASSWORD     "9scvfpkKcygt"
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
