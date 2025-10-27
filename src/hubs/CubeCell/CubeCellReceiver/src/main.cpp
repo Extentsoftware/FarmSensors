@@ -39,6 +39,26 @@ bool isDebug()
     return debug;
 }
 
+void setupWire()
+{
+    bool ok=false;
+
+    for (int i=0; i<3;i++)
+    {
+        Serial.printf("Start I2\n");
+        if (Wire.begin())
+        {
+            Serial.printf("I2C started, clock %d\n", Wire.getClock());
+            break;
+        }
+        else
+        {
+            Wire.end();
+            Serial.printf("I2C failed to start\n");
+        }
+    }
+}
+
 void flash(uint32_t color,uint32_t time)
 {
     pinMode(USER_KEY, INPUT);
@@ -67,8 +87,7 @@ void setup() {
                                 LORA_CRC, LORA_FREQ_HOP, LORA_HOP_PERIOD, LORA_IQ_INVERSION_ON, true );
 
     Radio.Rx( 0 );
-    if (Wire.begin())
-        Serial.printf("I2C started, clock %d\n", Wire.getClock());
+    setupWire();
 }
 
 void loop() 
@@ -92,6 +111,8 @@ void OnRxDone( unsigned char* payload, unsigned short size, short rssi, signed c
     Wire.beginTransmission(CHANNEL);          // transmit to device #9
     Wire.write(rxpacket, size);
     uint8_t err = Wire.endTransmission();    // stop transmitting
-    Serial.printf("I2C ERROR %d %s\n", err);
+    Serial.printf("I2C ERROR %d %s\n", err, Wire.getErrorText(err));
+    if (err!=0)
+        setupWire();
 }
 

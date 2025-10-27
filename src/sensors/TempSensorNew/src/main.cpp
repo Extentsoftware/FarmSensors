@@ -247,6 +247,7 @@ void SendBM280Packet(float volts)
 
     Serial.println("Init sensor");
     status = bme.init();  
+    Serial.println("Init sensor complete");
 
     // You can also pass in a Wire library object like &Wire2
     // status = bme.begin(0x76, &Wire2)
@@ -256,7 +257,7 @@ void SendBM280Packet(float volts)
         sense_t_success = false;
         return;
     }
-
+    Serial.println("sensor found");
     delay(100);
     
     CayenneLPP lpp(64);
