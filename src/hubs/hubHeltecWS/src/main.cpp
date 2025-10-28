@@ -64,7 +64,7 @@ void updateDisplay()
 #else
 void updateDisplay()
 {
-  Serial.printf(connStatus);
+  Serial.println(connStatus);
 }
 #endif
 
@@ -80,8 +80,6 @@ void connectToWifi()
 {
   sprintf(connStatus, "Connecting Wifi");
   updateDisplay();
-  Serial.println("Connecting to Wi-Fi...");
-  Serial.printf("SSID %s Pwd %s \n", WIFI_SSID, WIFI_PASSWORD);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   mqttClient.begin(MQTT_HOST, MQTT_PORT, net);
 }
@@ -175,8 +173,9 @@ void loop() {
   i++;
   if ( (i % 300000) == 0)
   {    
-    Serial.printf(" %d-%d-%d",Wire1.available(), WiFi.status(),mqttClient.connected());
-    Serial.printf(connStatus);
+    sprintf(connStatus, " 1W %d WIFI %d MQTT %d",Wire1.available(), WiFi.status(),mqttClient.connected());
+    updateDisplay();
+
     if (!mqttClient.connected())
     {
       mqttClient.connect("hub");
@@ -202,6 +201,21 @@ void receiveEvent(int howMany)
   updateDisplay();
 }
 
+void wireBegin()
+{
+  for (;;)
+  {
+    if (Wire1.begin(CHANNEL, 1 ,2 ,0 ))
+    {
+      Serial.printf("I2C started slave %d clock %d\n",CHANNEL, Wire1.getClock());
+      Wire1.onReceive(receiveEvent); 
+      break;
+    }
+    Serial.printf("I2C failed to start\n");
+    delay(1000);
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -222,18 +236,8 @@ void setup()
   display.display();
   #endif
 
-  for (;;)
-  {
-    if (Wire1.begin(CHANNEL, 1 ,2 ,0 ))
-    {
-      Serial.printf("I2C started slave %d clock %d\n",CHANNEL, Wire1.getClock());
-      break;
-    }
-    Serial.printf("I2C failed to start\n");
-    delay(1000);
-  }
+  wireBegin();
 
-  Wire1.onReceive(receiveEvent); 
   GetMyMacAddress();
   sprintf(topic, "bongo/%s/sensor", macStr);
 
