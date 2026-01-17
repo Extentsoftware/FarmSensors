@@ -9,10 +9,12 @@ metadata:
     io.kompose.service: mosquitto
   name: mosquitto
 spec:
+  type: NodePort
   ports:
     - name: "1883"
       port: 1883
       targetPort: 1883
+      nodePort: 30183
   selector:
     io.kompose.service: mosquitto
 status:

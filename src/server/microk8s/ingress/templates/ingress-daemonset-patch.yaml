@@ -1,0 +1,12 @@
+# This file contains the patch needed for the nginx ingress controller DaemonSet
+# To apply this patch, run:
+# kubectl patch daemonset nginx-ingress-microk8s-controller -n ingress --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/ports/-", "value": {"containerPort": 1883, "hostPort": 1883, "name": "mqtt", "protocol": "TCP"}}]'
+#
+# Or manually edit with:
+# kubectl edit daemonset nginx-ingress-microk8s-controller -n ingress
+#
+# Then add to the ports array in the container spec:
+# - containerPort: 1883
+#   hostPort: 1883
+#   name: mqtt
+#   protocol: TCP
