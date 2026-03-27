@@ -1,5 +1,0 @@
-helm install sensors sensors
-helm upgrade sensors 
-
--- helm uninstall sensors
--- sudo snap install helm
