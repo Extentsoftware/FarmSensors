@@ -362,9 +362,6 @@ void setup() {
 
   //connectionWatchdog.setupWatchdog(connectionTimeout, resetModuleFromNoConnection);
 
-  mqttClient.onPublish(onMqttPublish);
-  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0,
                                     reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
   
