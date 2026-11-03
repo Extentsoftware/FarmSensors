@@ -1,0 +1,142 @@
+# KiCad PCB Layout - Interdigitated Soil Moisture Sensor
+# Enhanced design with soldermask, air reference, and guard ring
+
+# PCB Specifications
+# - Size: 50mm x 35mm (increased for better electrode design)
+# - Layers: 2 (Top and Bottom)
+# - Thickness: 1.6mm
+# - Copper weight: 1oz
+# - Soldermask: Green (over copper traces)
+
+# Electrode Design Specifications
+# - Primary Sensor: 25mm x 15mm interdigitated electrodes
+# - Air Reference: 10mm x 10mm interdigitated electrodes  
+# - Guard Ring: 2mm wide trace surrounding sensor areas
+# - Finger width: 0.5mm
+# - Finger spacing: 0.5mm
+# - Finger length: 10mm (primary), 5mm (reference)
+
+# Primary Soil Sensor Electrodes (Top Layer)
+# Location: Center of PCB (25mm x 15mm area)
+# Design: Interdigitated fingers with soldermask overlay
+#
+# Electrode A (connected to oscillator input):
+# - 12 fingers, each 0.5mm wide x 10mm long
+# - Spacing: 0.5mm between fingers
+# - Total width: 11.5mm (12 * 0.5mm + 11 * 0.5mm spacing)
+# - Connected to 74HC14 Pin 1 (oscillator input)
+#
+# Electrode B (connected to oscillator output):
+# - 12 fingers, each 0.5mm wide x 10mm long  
+# - Spacing: 0.5mm between fingers
+# - Interleaved with Electrode A
+# - Connected to 74HC14 Pin 2 (oscillator output)
+#
+# Soldermask: Applied over entire electrode area
+# - Prevents direct contact with soil
+# - Reduces corrosion and contamination
+# - Maintains capacitive coupling through soldermask
+
+# Air Reference Electrodes (Top Layer)
+# Location: Top-right corner (10mm x 10mm area)
+# Design: Interdigitated fingers WITHOUT soldermask
+#
+# Reference Electrode A (connected to oscillator input):
+# - 8 fingers, each 0.5mm wide x 5mm long
+# - Spacing: 0.5mm between fingers
+# - Connected to 74HC14 Pin 1 (oscillator input)
+#
+# Reference Electrode B (connected to oscillator output):
+# - 8 fingers, each 0.5mm wide x 5mm long
+# - Spacing: 0.5mm between fingers
+# - Interleaved with Reference Electrode A
+# - Connected to 74HC14 Pin 2 (oscillator output)
+#
+# No Soldermask: Exposed copper for air reference
+# - Provides temperature compensation baseline
+# - Measures environmental changes
+# - Compensates for oscillator drift
+
+# Guard Ring (Top Layer)
+# Location: Surrounding both sensor areas
+# Design: 2mm wide copper trace
+#
+# Guard Ring Features:
+# - Connected to 74HC14 Pin 2 (oscillator output)
+# - Surrounds primary sensor area (25mm x 15mm)
+# - Surrounds air reference area (10mm x 10mm)
+# - 2mm clearance from electrode edges
+# - Bootstrap effect reduces parasitic capacitance
+# - Minimizes fringe field effects
+# - Improves measurement stability
+
+# Component Placement (Top Layer)
+# 
+# Power Supply Section (Top Left):
+# - AMS1117-3.3V regulator
+# - Input capacitor: 100uF
+# - Output capacitor: 100uF
+# - Input: 5V (J1)
+# - Output: 3.3V rail
+#
+# 74HC14 Section (Left Center):
+# - U1: 74HC14 (DIP-14)
+# - R1: 10kΩ resistor (timing)
+# - C1: 100nF decoupling capacitor
+# - C2: Variable capacitor (soil sensor)
+# - C3: Variable capacitor (air reference)
+#
+# ATTINY85 Section (Bottom Left):
+# - U2: ATTINY85 (DIP-8)
+# - C4: 100nF decoupling capacitor
+# - R2: 10kΩ pull-up resistor (reset)
+# - J2: Programming header (6-pin)
+#
+# CubeCell Section (Bottom Right):
+# - U3: CubeCell module (SMD)
+# - C5: 100nF decoupling capacitor
+# - Antenna connector (optional)
+
+# Trace Routing:
+# - Power traces: 0.5mm width
+# - Signal traces: 0.25mm width
+# - Guard ring: 2mm width
+# - Electrode traces: 0.5mm width
+# - Ground plane: Bottom layer (avoid under sensor areas)
+# - VCC plane: Top layer (where possible)
+
+# Via Specifications:
+# - Size: 0.2mm drill, 0.4mm pad
+# - Plated through holes
+# - Minimum 4 vias for power distribution
+# - No vias in sensor areas
+
+# Silkscreen Labels:
+# - Component designators
+# - Pin numbers
+# - Power indicators
+# - Sensor area markings
+# - "SOLDERSIDE" marking on sensor area
+# - "AIR REFERENCE" marking on reference area
+
+# Solder Mask:
+# - Green solder mask
+# - Applied over primary sensor electrodes
+# - NOT applied over air reference electrodes
+# - Exposed pads for programming header
+# - Exposed pads for power connector
+
+# Assembly Notes:
+# - All components on top layer
+# - CubeCell module requires reflow soldering
+# - Other components can be hand-soldered
+# - Primary sensor area must be protected from moisture
+# - Air reference area must remain exposed to air
+# - Guard ring must be connected to oscillator output
+
+# Testing Considerations:
+# - Measure capacitance between electrode pairs
+# - Verify guard ring connection to oscillator output
+# - Test temperature compensation with air reference
+# - Calibrate with known moisture levels
+# - Verify soldermask integrity over primary sensor

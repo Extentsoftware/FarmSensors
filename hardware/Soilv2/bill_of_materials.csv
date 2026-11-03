@@ -1,0 +1,26 @@
+Reference,Description,Value,Package,Quantity,Supplier,Part Number,Notes
+U1,Hex Schmitt Trigger Inverter,74HC14,DIP-14,1,Digi-Key,296-1601-5-ND,74HC14N
+U2,8-bit Microcontroller,ATTINY85-20PU,DIP-8,1,Digi-Key,ATTINY85-20PU-ND,ATTINY85-20PU
+U3,Voltage Regulator,AMS1117-3.3V,SOT-223,1,Digi-Key,AMS1117-3.3CT-ND,AMS1117-3.3V
+U4,LoRa Module,CubeCell RA-01,SMD,1,Heltec,RA-01,RA-01 or RA-02
+R1,Resistor,10kΩ,0603,1,Digi-Key,10KQBK-ND,10kΩ ±5%
+R2,Resistor,10kΩ,0603,1,Digi-Key,10KQBK-ND,10kΩ ±5%
+C1,Ceramic Capacitor,100nF,0603,1,Digi-Key,399-4151-1-ND,100nF X7R
+C2,Electrolytic Capacitor,100µF,1206,1,Digi-Key,493-1527-1-ND,100µF 16V
+C3,Ceramic Capacitor,100nF,0603,1,Digi-Key,399-4151-1-ND,100nF X7R
+C4,Ceramic Capacitor,100nF,0603,1,Digi-Key,399-4151-1-ND,100nF X7R
+C5,Electrolytic Capacitor,100µF,1206,1,Digi-Key,493-1527-1-ND,100µF 16V
+J1,Power Connector,2-pin Header,2.54mm,1,Digi-Key,952-1902-ND,2-pin header
+J2,Programming Header,6-pin Header,2.54mm,1,Digi-Key,952-1906-ND,6-pin ISP header
+J3,Antenna Connector,SMA Connector,SMA,1,Digi-Key,A105125-ND,SMA connector (optional)
+PCB,Printed Circuit Board,40mm x 30mm,2-layer,1,Custom,Custom,2-layer PCB
+Enclosure,Waterproof Enclosure,IP65,Plastic,1,Digi-Key,1597-1001-ND,Optional
+Battery,Li-ion Battery,3.7V 2000mAh,18650,1,Digi-Key,1690-1001-ND,Optional
+Battery Holder,Battery Holder,18650,Plastic,1,Digi-Key,1690-1002-ND,Optional
+Programming Cable,USBasp Programmer,USB-A to ISP,USB,1,Amazon,USBasp,For ATTINY85 programming
+USB Cable,USB Cable,Micro-USB,USB,1,Amazon,Micro-USB,For CubeCell programming
+Solder Wire,Solder Wire,0.6mm,Lead-free,1,Amazon,Lead-free solder,0.6mm diameter
+Flux,Flux Paste,No-clean,Tube,1,Amazon,Flux paste,Optional but recommended
+Conformal Coating,Conformal Coating,Waterproof,Spray,1,Amazon,Conformal coating,For sensor protection
+Heatsink,Heatsink,Small,Aluminum,1,Digi-Key,HS-100-ND,For voltage regulator (optional)
+Antenna,External Antenna,868MHz,Helical,1,Digi-Key,ANT-868-MS-ND,Optional external antenna

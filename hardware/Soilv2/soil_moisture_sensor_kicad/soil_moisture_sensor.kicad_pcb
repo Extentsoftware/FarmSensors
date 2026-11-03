@@ -1,0 +1,96 @@
+(kicad_pcb (version 20230121) (generator pcbnew)
+
+  (general
+    (thickness 1.6)
+    (legacy_teardrops no)
+  )
+
+  (paper "A4")
+  (layers
+    (0 "F.Cu" signal)
+    (31 "B.Cu" signal)
+    (32 "B.Adhes" user "B.Adhesive")
+    (33 "F.Adhes" user "F.Adhesive")
+    (34 "B.Paste" user)
+    (35 "F.Paste" user)
+    (36 "B.SilkS" user "B.Silkscreen")
+    (37 "F.SilkS" user "F.Silkscreen")
+    (38 "B.Mask" user)
+    (39 "F.Mask" user)
+    (40 "Dwgs.User" user "User.Drawings")
+    (41 "Cmts.User" user "User.Comments")
+    (42 "Eco1.User" user "User.Eco1")
+    (43 "Eco2.User" user "User.Eco2")
+    (44 "Edge.Cuts" user)
+    (45 "Margin" user)
+    (46 "B.CrtYd" user "B.Courtyard")
+    (47 "F.CrtYd" user "F.Courtyard")
+    (48 "B.Fab" user)
+    (49 "F.Fab" user)
+  )
+
+  (setup
+    (stackup
+      (layer "F.SilkS" (type "Top Silk Screen"))
+      (layer "F.Paste" (type "Top Solder Paste"))
+      (layer "F.Mask" (type "Top Solder Mask"))
+      (layer "F.Cu" (type "copper" (thickness 0.035)))
+      (layer "dielectric 1" (type "core" (thickness 1.51) (material "FR4" (epsilon_r 4.5) (loss_tan 0.02))))
+      (layer "B.Cu" (type "copper" (thickness 0.035)))
+      (layer "B.Mask" (type "Bottom Solder Mask"))
+      (layer "B.Paste" (type "Bottom Solder Paste"))
+      (layer "B.SilkS" (type "Bottom Silk Screen"))
+    )
+    (pad_to_mask_clearance 0)
+    (pad_to_paste_clearance 0)
+    (pad_to_paste_clearance_override 0)
+    (aux_axis_origin 0 0)
+    (grid_origin 0 0)
+  )
+
+  (net 0 "")
+  (net 1 "GND")
+  (net 2 "VCC")
+  (net 3 "SOIL_FREQ")
+  (net 4 "AIR_FREQ")
+  (net 5 "ONE_WIRE")
+  (net 6 "SENSOR_SEL")
+
+  (gr_rect (start 10 10) (end 90 70) (stroke (width 0.12) (type default)) (fill none) (layer "Edge.Cuts"))
+
+  (gr_text "Primary Soil Sensor" (at 25 15) (layer "F.SilkS")
+    (effects (font (size 1.27 1.27) bold))
+  )
+
+  (gr_text "Air Reference" (at 65 15) (layer "F.SilkS")
+    (effects (font (size 1.27 1.27) bold))
+  )
+
+  (gr_text "Guard Ring" (at 50 5) (layer "F.SilkS")
+    (effects (font (size 1.27 1.27) bold))
+  )
+
+  (zone (net 1) (net_name "GND") (layer "B.Cu") (hatch edge 0.5) (connect_pads (clearance 0.508))
+    (min_thickness 0.254)
+    (filled_areas_thickness no)
+    (keepout (tracks not_allowed) (vias not_allowed) (pads not_allowed) (copperpour not_allowed) (footprints not_allowed))
+    (fill (thermal_gap 0.508) (thermal_bridge_width 0.508))
+    (polygon
+      (pts
+        (xy 10 10) (xy 90 10) (xy 90 70) (xy 10 70)
+      )
+    )
+  )
+
+  (zone (net 2) (net_name "VCC") (layer "F.Cu") (hatch edge 0.5) (connect_pads (clearance 0.508))
+    (min_thickness 0.254)
+    (filled_areas_thickness no)
+    (keepout (tracks not_allowed) (vias not_allowed) (pads not_allowed) (copperpour not_allowed) (footprints not_allowed))
+    (fill (thermal_gap 0.508) (thermal_bridge_width 0.508))
+    (polygon
+      (pts
+        (xy 10 10) (xy 90 10) (xy 90 70) (xy 10 70)
+      )
+    )
+  )
+)

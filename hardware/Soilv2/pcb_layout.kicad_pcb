@@ -1,0 +1,68 @@
+# KiCad PCB Layout for Soil Moisture Sensor
+# This is a simplified text representation of the PCB layout
+
+# PCB Specifications
+# - Size: 40mm x 30mm
+# - Layers: 2 (Top and Bottom)
+# - Thickness: 1.6mm
+# - Copper weight: 1oz
+
+# Component Placement (Top Layer)
+# 
+# Power Supply Section (Top Left):
+# - AMS1117-3.3V regulator
+# - Input capacitor: 100uF
+# - Output capacitor: 100uF
+# - Input: 5V (J1)
+# - Output: 3.3V rail
+#
+# 74HC14 Section (Top Center):
+# - U1: 74HC14 (DIP-14)
+# - R1: 10kΩ resistor (timing)
+# - C1: 100nF decoupling capacitor
+# - C2: Variable capacitor (soil sensor)
+#
+# ATTINY85 Section (Center):
+# - U2: ATTINY85 (DIP-8)
+# - C3: 100nF decoupling capacitor
+# - R2: 10kΩ pull-up resistor (reset)
+# - J2: Programming header (6-pin)
+#
+# CubeCell Section (Top Right):
+# - U3: CubeCell module (SMD)
+# - C4: 100nF decoupling capacitor
+# - Antenna connector (optional)
+#
+# Soil Sensor Section (Bottom):
+# - Two parallel copper traces
+# - Size: 20mm x 10mm
+# - Spacing: 2mm between traces
+# - Coated with waterproof epoxy
+
+# Trace Routing:
+# - Power traces: 0.5mm width
+# - Signal traces: 0.25mm width
+# - Ground plane: Bottom layer
+# - VCC plane: Top layer (where possible)
+
+# Via Specifications:
+# - Size: 0.2mm drill, 0.4mm pad
+# - Plated through holes
+# - Minimum 4 vias for power distribution
+
+# Silkscreen Labels:
+# - Component designators
+# - Pin numbers
+# - Power indicators
+# - Sensor area marking
+
+# Solder Mask:
+# - Green solder mask
+# - Exposed pads for sensor area
+# - Exposed pads for programming header
+
+# Assembly Notes:
+# - All components on top layer
+# - CubeCell module requires reflow soldering
+# - Other components can be hand-soldered
+# - Sensor area must be protected from moisture
