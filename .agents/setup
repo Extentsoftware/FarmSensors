@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Prepares an Amp orb for this repository: PlatformIO with every firmware
+# project's platforms, toolchains, and libraries, plus the MQTT bridge's
+# Python virtualenv. Must stay idempotent and fast on a warm snapshot.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+step() {
+  local name="$1"
+  shift
+  echo "==> $name"
+  local start=$SECONDS
+  "$@"
+  echo "    done in $((SECONDS - start))s"
+}
+
+export PATH="$HOME/.local/bin:$PATH"
+export PLATFORMIO_SETTING_ENABLE_TELEMETRY=no
+export PLATFORMIO_SETTING_CHECK_PLATFORMIO_INTERVAL=36500
+
+install_platformio() {
+  if command -v pio >/dev/null 2>&1; then
+    echo "    PlatformIO already installed: $(pio --version)"
+  else
+    uv tool install --quiet platformio
+  fi
+}
+
+# Download platforms, toolchains, frameworks, and lib_deps for every project.
+# A project with a broken dependency only produces a warning, so one bad
+# platformio.ini cannot block the snapshot for the rest of the repository.
+install_firmware_packages() {
+  local failed=()
+  local ini dir
+  while IFS= read -r ini; do
+    dir="$(dirname "$ini")"
+    echo "    $dir"
+    if ! pio pkg install --silent -d "$dir"; then
+      failed+=("$dir")
+    fi
+  done < <(git ls-files '*platformio.ini' | sort)
+  if ((${#failed[@]})); then
+    echo "    WARNING: package install failed for: ${failed[*]}" >&2
+  fi
+}
+
+install_bridge_venv() {
+  local bridge="src/server/02-bridge"
+  [ -x "$bridge/venv/bin/python" ] || uv venv --quiet "$bridge/venv"
+  uv pip install --quiet --python "$bridge/venv/bin/python" -r "$bridge/requirements.txt"
+}
+
+step "Install PlatformIO Core" install_platformio
+step "Install PlatformIO packages" install_firmware_packages
+step "Create MQTT bridge virtualenv" install_bridge_venv
