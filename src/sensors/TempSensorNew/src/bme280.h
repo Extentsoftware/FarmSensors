@@ -4,7 +4,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#define BME280_ADDRESS   0x76
+#define BME280_ADDRESS       0x76
+#define BME280_ADDRESS_ALT   0x77
 
 #define BME280_REG_DIG_T1    0x88
 #define BME280_REG_DIG_T2    0x8A
@@ -47,9 +48,16 @@ public:
   bool init(void);
   float getTemperature(void);
   uint32_t getPressure(void);
-  uint32_t getHumidity(void);
+  float getHumidity(void);       // 0 on a BMP280
+  bool hasHumidity(void) const { return _hasHumidity; }
+  // true if any I2C transfer failed since init()
+  bool ioError(void) const { return _ioError; }
   float calcAltitude(float pressure);
 private:
+  uint8_t _addr = BME280_ADDRESS;
+  bool _hasHumidity = false;
+  bool _ioError = false;
+  bool probe(uint8_t addr);
   // Calibratino data
   uint16_t dig_T1;
   int16_t dig_T2;

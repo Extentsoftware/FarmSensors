@@ -56,6 +56,14 @@ char rxpacket[BUFFER_SIZE];
 #define DAYS                                        24 * HOURS
 #define TIME_UNTIL_WAKEUP_TEST                      10 * MINUTES
 #define TIME_UNTIL_WAKEUP_NORMAL                    30 * MINUTES
+
+// Per-device calibration - override with -D in platformio.ini build_flags
+#ifndef PRESSURE_OFFSET_HPA
+#define PRESSURE_OFFSET_HPA                         0.0f
+#endif
+#ifndef TEMP_OFFSET_C
+#define TEMP_OFFSET_C                               0.0f
+#endif
 #define TIME_UNTIL_WAKEUP_LOWPOWER                  60 * MINUTES
 
 
@@ -239,46 +247,56 @@ void SendDhtPacket(float volts)
 #endif
 
 #ifdef HAS_BME280
-void SendBM280Packet(float volts) 
+void BmeReadAndPowerOff(bool &ok, float &temp, float &press, float &hum)
 {
-    unsigned status;
     digitalWrite(Vext, LOW); // POWER ON
     delay(500);             // stabilise
 
     Serial.println("Init sensor");
-    status = bme.init();  
-    Serial.println("Init sensor complete");
+    ok = bme.init();
+    if (ok)
+    {
+        delay(100);         // let the first measurement complete
+        temp  = bme.getTemperature() + TEMP_OFFSET_C;
+        press = bme.getPressure() / 100.0F + PRESSURE_OFFSET_HPA;
+        hum   = bme.getHumidity();
+        ok = !bme.ioError();
+    }
 
-    // You can also pass in a Wire library object like &Wire2
-    // status = bme.begin(0x76, &Wire2)
-    if (!status) {
-        Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
-        //Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(),16);
+    // single power-down path for success and failure
+    Wire.end();
+    digitalWrite(Vext, HIGH); // POWER OFF
+}
+
+void SendBM280Packet(float volts)
+{
+    bool ok;
+    float temp = 0, press = 0, hum = 0;
+    BmeReadAndPowerOff(ok, temp, press, hum);
+
+    if (!ok) {
+        Serial.println("Could not read BME280/BMP280 sensor, check wiring, address, sensor ID!");
         sense_t_success = false;
         return;
     }
-    Serial.println("sensor found");
-    delay(100);
-    
+    Serial.println("sensor read ok");
+
     CayenneLPP lpp(64);
     lpp.reset();
     uint64_t id = getID();
     uint32_t l = id & 0x0000FFFF;
     uint32_t h = (id >> 16 ) & 0x0000FFFF;
-    
-    float temp = bme.getTemperature();
-    float press = bme.getPressure() / 100.0F + 43;
-    uint32 hum = bme.getHumidity();
-
-    Wire.end();
-    digitalWrite(Vext,HIGH); // POWER OFF
 
     lpp.addGenericSensor(CH_ID_LO,l);     // id of this sensor
     lpp.addGenericSensor(CH_ID_HI,h);     // id of this sensor
     lpp.addTemperature(CH_AirTemp, temp);
     lpp.addBarometricPressure(CH_AirPressure, press);
+    if (bme.hasHumidity())
+        lpp.addRelativeHumidity(CH_AirHum, hum);
+    lpp.addVoltage(CH_VoltsS, volts);
 
-    Serial.printf("ID = %lx  %f v %f °C %f hPa %f %  ..",id, volts, temp, press, hum);
+    Serial.printf("ID = %08lx%08lx  %.3f v %.2f C %.2f hPa %.1f %%  ..",
+        (unsigned long)(id >> 32), (unsigned long)id, volts, temp, press, hum);
     sense_t_success = true;
 
     Radio.Send( lpp.getBuffer(), lpp.getSize() );    

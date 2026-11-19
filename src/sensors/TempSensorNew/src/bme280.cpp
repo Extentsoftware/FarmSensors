@@ -1,13 +1,36 @@
 #include "BME280.h"
 
+// Returns true if a BME280 (0x60) or BMP280 (0x58) answers at addr.
+bool BME280::probe(uint8_t addr)
+{
+  Wire.beginTransmission(addr);
+  if (Wire.endTransmission() != 0)
+    return false;
+
+  _addr = addr;
+  _ioError = false;
+  uint8_t id = BME280Read8(BME280_REG_CHIPID);
+  if (_ioError)
+    return false;
+
+  Serial.printf("Found device at 0x%02x, chip id 0x%02x\n", addr, id);
+  if (id != 0x60 && id != 0x58)
+    return false;
+
+  _hasHumidity = (id == 0x60);
+  return true;
+}
+
 bool BME280::init(void)
 {
   Wire.begin();
-  uint8 id = BME280Read8(BME280_REG_CHIPID);
-  Serial.printf("Id is %d\n!", id);
 
-  if(id != 0x58)
+  // The sensor can be strapped to 0x76 or 0x77
+  if (!probe(BME280_ADDRESS) && !probe(BME280_ADDRESS_ALT))
+  {
+    Serial.printf("No BME280/BMP280 at 0x%02x or 0x%02x\n", BME280_ADDRESS, BME280_ADDRESS_ALT);
     return false;
+  }
 
   dig_T1 = BME280Read16LE(BME280_REG_DIG_T1);
   dig_T2 = BME280ReadS16LE(BME280_REG_DIG_T2);
@@ -23,17 +46,24 @@ bool BME280::init(void)
   dig_P8 = BME280ReadS16LE(BME280_REG_DIG_P8);
   dig_P9 = BME280ReadS16LE(BME280_REG_DIG_P9);
 
-  dig_H1 = BME280Read8(BME280_REG_DIG_H1);
-  dig_H2 = BME280Read16LE(BME280_REG_DIG_H2);
-  dig_H3 = BME280Read8(BME280_REG_DIG_H3);
-  dig_H4 = (BME280Read8(BME280_REG_DIG_H4) << 4) | (0x0F & BME280Read8(BME280_REG_DIG_H4 + 1));
-  dig_H5 = (BME280Read8(BME280_REG_DIG_H5 + 1) << 4) | (0x0F & BME280Read8(BME280_REG_DIG_H5) >> 4);
-  dig_H6 = (int8_t)BME280Read8(BME280_REG_DIG_H6);
+  // Humidity registers only exist on the BME280
+  if (_hasHumidity)
+  {
+    dig_H1 = BME280Read8(BME280_REG_DIG_H1);
+    dig_H2 = BME280Read16LE(BME280_REG_DIG_H2);
+    dig_H3 = BME280Read8(BME280_REG_DIG_H3);
+    dig_H4 = (BME280Read8(BME280_REG_DIG_H4) << 4) | (0x0F & BME280Read8(BME280_REG_DIG_H4 + 1));
+    dig_H5 = (BME280Read8(BME280_REG_DIG_H5 + 1) << 4) | (0x0F & BME280Read8(BME280_REG_DIG_H5) >> 4);
+    dig_H6 = (int8_t)BME280Read8(BME280_REG_DIG_H6);
 
-  writeRegister(BME280_REG_CONTROLHUMID, 0x05);   //Choose 16X oversampling
+    writeRegister(BME280_REG_CONTROLHUMID, 0x05);   //Choose 16X oversampling
+  }
   writeRegister(BME280_REG_CONTROL, 0xB7);        //Choose 16X oversampling
 
-  return true;
+  if (_ioError)
+    Serial.println("I2C error reading calibration data");
+
+  return !_ioError;
 }
 
 float BME280::getTemperature(void)
@@ -82,8 +112,11 @@ uint32_t BME280::getPressure(void)
   return (uint32_t)p/256;
 }
 
-uint32_t BME280::getHumidity(void)
+float BME280::getHumidity(void)
 {
+  if (!_hasHumidity)
+    return 0;
+
   int32_t v_x1_u32r, adc_H;
 
   // Call getTemperature to get t_fine
@@ -96,7 +129,7 @@ uint32_t BME280::getHumidity(void)
   v_x1_u32r = (v_x1_u32r - (((((v_x1_u32r >> 15) * (v_x1_u32r >> 15)) >> 7) * ((int32_t)dig_H1)) >> 4));
   v_x1_u32r = (v_x1_u32r < 0 ? 0 : v_x1_u32r);
   v_x1_u32r = (v_x1_u32r > 419430400 ? 419430400 : v_x1_u32r);
-  return (uint32_t)(v_x1_u32r>>12)/1024.0;
+  return (v_x1_u32r>>12)/1024.0f;
 }
 
 float BME280::calcAltitude(float pressure)
@@ -111,12 +144,16 @@ float BME280::calcAltitude(float pressure)
 
 uint8_t BME280::BME280Read8(uint8_t reg)
 {
-  Wire.beginTransmission(BME280_ADDRESS);
+  Wire.beginTransmission(_addr);
   Wire.write(reg);
-  Wire.endTransmission();
+  if (Wire.endTransmission() != 0)
+    _ioError = true;
 
-  Wire.requestFrom(BME280_ADDRESS, 1);
-  while(!Wire.available());
+  if (Wire.requestFrom(_addr, (uint8_t)1) < 1)
+  {
+    _ioError = true;
+    return 0;
+  }
   return Wire.read();
 }
 
@@ -124,12 +161,16 @@ uint16_t BME280::BME280Read16(uint8_t reg)
 {
   uint8_t msb, lsb;
 
-  Wire.beginTransmission(BME280_ADDRESS);
+  Wire.beginTransmission(_addr);
   Wire.write(reg);
-  Wire.endTransmission();
+  if (Wire.endTransmission() != 0)
+    _ioError = true;
 
-  Wire.requestFrom(BME280_ADDRESS, 2);
-  while(Wire.available()<2);
+  if (Wire.requestFrom(_addr, (uint8_t)2) < 2)
+  {
+    _ioError = true;
+    return 0;
+  }
   msb = Wire.read();
   lsb = Wire.read();
 
@@ -156,12 +197,16 @@ uint32_t BME280::BME280Read24(uint8_t reg)
 {
   uint32_t data;
 
-  Wire.beginTransmission(BME280_ADDRESS);
+  Wire.beginTransmission(_addr);
   Wire.write(reg);
-  Wire.endTransmission();
+  if (Wire.endTransmission() != 0)
+    _ioError = true;
 
-  Wire.requestFrom(BME280_ADDRESS, 3);
-  while(Wire.available()<3);
+  if (Wire.requestFrom(_addr, (uint8_t)3) < 3)
+  {
+    _ioError = true;
+    return 0;
+  }
   data = Wire.read();
   data <<= 8;
   data |= Wire.read();
@@ -173,8 +218,9 @@ uint32_t BME280::BME280Read24(uint8_t reg)
 
 void BME280::writeRegister(uint8_t reg, uint8_t val)
 {
-  Wire.beginTransmission(BME280_ADDRESS); // start transmission to device
+  Wire.beginTransmission(_addr); // start transmission to device
   Wire.write(reg);       // send register address
   Wire.write(val);         // send value to write
-  Wire.endTransmission();     // end transmission
+  if (Wire.endTransmission() != 0)     // end transmission
+    _ioError = true;
 }
